@@ -1,0 +1,71 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(22)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+    // JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // MySQL Driver
+    implementation 'com.mysql:mysql-connector-j:8.0.33'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+	//
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    //JWT
+    implementation 	'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 	'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 	'io.jsonwebtoken:jjwt-jackson:0.11.5' // Jackson 사용 시
+
+	//DatatypeConverter(java 9 이상에서는 직접 추가)
+	//Java 8  : Java 8: "1.8.0_xxx" 앞에 '1'이 존재
+	//Java 9 이상: "9.x.x", "11.x", "17.x", "22.x" 식으로 앞에 '1'이 빠짐
+	implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
+
+	//JAXB
+	//Java 11 이상부터는 JAXB 관련 클래스가 기본 JDK에서 빠져있음
+	implementation 'org.glassfish.jaxb:jaxb-runtime:3.0.1'
+
+	//Bean Validation (@NotBlank, @Pattern, @Email, @Valid 사용가능
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-parameters"
+}
