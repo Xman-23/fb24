@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.example.demo.domain.member.memberenums.Role;
+
 import java.security.Key;
 import java.util.Date;
 
@@ -15,29 +17,30 @@ public class JwtUtil {
 
 	 // JWT 서명에 사용되는 비밀 키 (길이는 256비트 이상이어야 함)
 	 private final String secret = "mySecretKeymySecretKeymySecretKeymySecretKey"; 
-	
+
 	 // 액세스 토큰 만료 시간: 3시간 (1000ms * 60s * 60m * 3h)
 	 private final long accessExpirationMs = 1000 * 60 * 60 * 3;
-	
+
 	 // 리프레시 토큰 만료 시간: 7일
 	 private final long refreshExpirationMs = 1000 * 60 * 60 * 24 * 7;
-	
+
 	 // 비밀 키를 이용해 HMAC SHA 알고리즘을 적용한 키 객체 생성
 	 private final Key secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-	
+
 	 // 로그 출력을 위한 로거 생성
 	 private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 	
 	 // ======= 액세스 토큰 생성 =======
 	 // 이메일을 이용한 액세스 토큰 생성 (Subject: email)
-	 public String generateToken(String email) {
+	 public String generateToken(String email, Role role) {
 	     Date now = new Date(); // 현재 시간
 	     Date expiryDate = new Date(now.getTime() + accessExpirationMs); // 만료 시간 계산
 	
 	     // JWT 생성: 이메일을 subject로 하고, 발급 시간과 만료 시간을 설정
 	     String token = Jwts.builder()
 	             .setSubject(email) // token '주체'를 'email'로 설정
-	             .setIssuedAt(now) //현재 날짜를 기준으로
+	             .claim("role", role.name())
+	             .setIssuedAt(now) //현재 날짜를 기준으로 발급 시간 설정
 	             .setExpiration(expiryDate) // 액세스 토큰 만료기간 설정
 	             .signWith(secretKey, SignatureAlgorithm.HS256) // 서명 알고리즘 및 키 설정
 	             .compact(); // 토큰 생성
