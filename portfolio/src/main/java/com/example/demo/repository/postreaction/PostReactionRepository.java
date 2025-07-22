@@ -29,4 +29,11 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
    
     // 특정 게시글에 특정 사용자 반응 존재 여부 확인 (if문으로 유효성 체크할때 사용)
     boolean existsByPostAndUserId(Post post, Long userId);
+
+    // 리액션 갯수 조회
+    int countByPostId(Long postId);
+
+    // 각 '좋아요', '싫어요' 갯수 조회
+    int countByPostIdAndReactionType (Long postId, ReactionType reactionType);
+
 }

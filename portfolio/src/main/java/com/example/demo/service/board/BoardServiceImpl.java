@@ -8,12 +8,15 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.controller.member.MemberController;
 import com.example.demo.domain.board.Board;
 import com.example.demo.dto.board.BoardCreateRequestDTO;
+import com.example.demo.dto.board.BoardHierarchyResponsetDTO;
 import com.example.demo.dto.board.BoardResponseDTO;
 import com.example.demo.dto.board.BoardUpdateRequestDTO;
 import com.example.demo.repository.board.BoardRepository;
@@ -29,17 +32,19 @@ import lombok.RequiredArgsConstructor;
 public class BoardServiceImpl implements BoardService {
 
 	private final BoardRepository boardRepository;
+
 	private static final Logger logger = LoggerFactory.getLogger(BoardServiceImpl.class);
 
 	//*************************************************** Service START ***************************************************//
 
+	// 게시판 생성 Service
 	@Override
 	@Transactional
 	public BoardResponseDTO createBoard(BoardCreateRequestDTO trimBoardCreateRequestDTO) {
 
 		logger.info("BoardServiceImpl createBoard() Start");
 
-		// sortOrder 증감 처리
+		// sortOrder 증가 처리
 		Integer sortOrder = boardRepository.findMaxSortOrder();
 
 		// 'sortOrder'가 'null'이면 
@@ -52,6 +57,7 @@ public class BoardServiceImpl implements BoardService {
 		// DTO('Controller' 에서 'trim' 처리 후 'Service'도착)
 		String trimBoardName = trimBoardCreateRequestDTO.getName();
 		String trimBoardDescription = trimBoardCreateRequestDTO.getDescription();
+		Long   parentId = trimBoardCreateRequestDTO.getParentBoardId();
 
 		// 중복 체크
 		if(boardRepository.existsByName(trimBoardName)) {
@@ -59,10 +65,18 @@ public class BoardServiceImpl implements BoardService {
 			throw new IllegalArgumentException("이미 존재하는 게시판 이름입니다.");
 		}
 
+		// 'null'이면은 부모게시판 'Not null'이면은 자식 게시판을 의미
+		Board parent = null;
+		if(parentId !=null) {
+			parent = boardRepository.findById(parentId)
+					                .orElseThrow(() -> new NoSuchElementException("부모 게시판이 존재하지 않습니다."));
+		}
+
 		Board board = new Board();
 		board.setName(trimBoardName);
 		board.setDescription(trimBoardDescription);
 		board.setSortOrder(sortOrder);
+		board.setParentBoard(parent);
 		
 		// <S extends T> S save(S entity)
 		// 'S'는 'T'이거나 'T'의 '자식클래스'
@@ -73,6 +87,7 @@ public class BoardServiceImpl implements BoardService {
 		return BoardResponseDTO.convertToResponseDTO(saveBoard);
 	}
 
+	// 게시판 수정 Service
 	@Override
 	@Transactional
 	public BoardResponseDTO updateBoard(Long boardId, BoardUpdateRequestDTO boardUpdateRequestDTO) {
@@ -121,6 +136,7 @@ public class BoardServiceImpl implements BoardService {
 		return BoardResponseDTO.convertToResponseDTO(board);
 	}
 
+	// 게시판 삭제 Service
 	@Override
 	@Transactional
 	public void deleteBoard(Long boardId) {
@@ -137,7 +153,7 @@ public class BoardServiceImpl implements BoardService {
 		boardRepository.delete(board);
 	}
 
-	// 게시판 단건 조회
+	// 게시판 단건 조회 Service
 	@Override
 	public BoardResponseDTO getBoard(Long boardId) {
 
@@ -152,14 +168,34 @@ public class BoardServiceImpl implements BoardService {
 		return BoardResponseDTO.convertToResponseDTO(board);
 	}
 
-	@Override
-	public List<BoardResponseDTO> getAllBoards() {
+	// 특정 게시판(boardId) 기준 계층(자식) 구조 조회
+	public BoardHierarchyResponsetDTO getBoardHierarchyByParent(Long boardId) {
 
-		logger.info("BoardServiceImpl  getAllBoards() Start");
+		logger.info("BoardServiceImpl  getBoardHierarchyByParent() Start");
+
+		Board board = boardRepository.findById(boardId)
+				                     .orElseThrow(() -> new NoSuchElementException("부모 게시판이 존재하지 않습니다."));
+
+		BoardHierarchyResponsetDTO response = BoardHierarchyResponsetDTO.convertToHierarchy(board);
+
+		logger.info("BoardServiceImpl  getBoardHierarchyByParent() Success End");
+		return response;
+	}
+
+	// 부모 게시판 조회 Service
+	@Override
+	public List<BoardResponseDTO> getParentBoards() {
+
+		logger.info("BoardServiceImpl getAllBoards() Start");
 
 		// 'sort_order'필드를 이용하여 게시판 'ASC(오름차순)'으로 정렬 한 후,
 		// 전체 게시판 가져오기
 		List<Board> boards = boardRepository.findAll(Sort.by(Sort.Direction.ASC,"sortOrder"));
+
+		if(boards.isEmpty()) {
+			logger.error("BoardServiceImpl getAllBoards() 'boards   :"+ boards + "'이므로, 조회할 부모 게시판이 존재하지 않습니다.");
+			throw new NoSuchElementException("조회할 부모 게시판이 존재하지 않습니다.");
+		}
 
 										  // -> 'List'안에 'Board'객체를 'Stream' 변환
 		List<BoardResponseDTO> response = boards.stream() 
@@ -170,9 +206,32 @@ public class BoardServiceImpl implements BoardService {
 			     						  // -> 반환된 'ResponseDTO'객체를 'List<ResponseDTO>'반환
 			     						  .collect(Collectors.toList());
 		
-		logger.info("BoardServiceImpl  getAllBoards() End");
+		logger.info("BoardServiceImpl getAllBoards() End");
 		return response;
-		
+	}
+
+	// 전체 게시판 조회 Service
+	@Override
+	public List<BoardHierarchyResponsetDTO> getBoardFullHierarchy() {
+
+		logger.info("BoardServiceImpl  getBoardFullHierarchy() Start");
+
+		List<Board> parents = boardRepository.findByParentBoardIsNull();
+
+		if(parents.isEmpty()) {
+			logger.error("BoardServiceImpl getAllBoards() 'parents   :"+ parents + "'이므로, 조회할 게시판이 존재하지 않습니다.");
+			throw new NoSuchElementException("조회할 게시판이 존재하지 않습니다.");
+		}
+		logger.info("BoardServiceImpl getBoardFullHierarchy() parents   :"+ parents );
+
+		List<BoardHierarchyResponsetDTO> response = parents.stream()
+				                                           .map(BoardHierarchyResponsetDTO :: convertToHierarchy)
+													       .collect(Collectors.toList());
+
+		logger.info("BoardServiceImpl getBoardFullHierarchy() response   :"+ response );
+
+		logger.info("BoardServiceImpl  getBoardFullHierarchy() Success End");
+		return response;
 	}
 
 	//*************************************************** Service END ***************************************************//

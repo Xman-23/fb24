@@ -1,5 +1,6 @@
 package com.example.demo.repository.board;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,5 +28,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 	// JPQL에서는 'b.sortOrder'로 써야 한다.
 	@Query("SELECT MAX(b.sortOrder) FROM Board b")
 	Integer findMaxSortOrder();
+
+	List<Board> findByParentBoardIsNull();
 
 }

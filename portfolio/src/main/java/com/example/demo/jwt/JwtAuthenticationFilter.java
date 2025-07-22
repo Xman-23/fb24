@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.info("JwtAuthenticationFilter doFilterInternal token  :" + token);
             // ================================================================================================================
             // 임시 토큰(TEMP : 이메일, RESET : 비밀번호) 검사 시작
-            logger.info("JwtAuthenticationFilter doFilterInternal 임시토큰 검사 시작 'IF문' Start");
+            logger.info("JwtAuthenticationFilter doFilterInternal '임시토큰' 검사 'IF문' Start");
             if (token != null) {
                 Claims claims = null;
                 logger.info("JwtAuthenticationFilter doFilterInternal 'IF' Pass" );
@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.info("JwtAuthenticationFilter doFilterInternal try claims  :" + claims);
                     logger.info("JwtAuthenticationFilter doFilterInternal try문 End");
                 } catch (ExpiredJwtException e) {
-                	logger.info("JwtAuthenticationFilter doFilterInternal ExpiredJwtException catch Start");
+                	logger.info("JwtAuthenticationFilter doFilterInternal ExpiredJwtException Error catch Start");
                     // 3. 만료된 토큰에서 subject 추출
                     Claims expiredClaims = e.getClaims();
                     logger.info("JwtAuthenticationFilter doFilterInternal expiredClaims  :" + expiredClaims);
@@ -85,9 +85,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     if (jwtUtil.validateToken(token)) {
                         logger.debug("TEMP || RESET token is still valid."); // TEMP 토큰이 아직 유효한 경우 로그만 남김
                     }
-
+                    // 다음 필터로 넘김
+                    logger.info("JwtAuthenticationFilter doFilterInternal '임시토큰' End : 다음 필터로 넘김");
                     filterChain.doFilter(request, response); // 인증 없이 통과
-                    return;
                 }
                 logger.info("JwtAuthenticationFilter doFilterInternal 임시토큰 검사 END");
                 // 임시 토큰 검사 끝

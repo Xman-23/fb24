@@ -10,7 +10,7 @@ import com.example.demo.dto.board.BoardResponseDTO;
 public class BoardValidation {
 
 	// 게시판 ID(boardId) 유효성 검사
-	public static boolean isValidBoardid (Long boardId) {
+	public static boolean isValidBoardId (Long boardId) {
 		if(boardId < 0) {
 			return false;
 		}

@@ -55,6 +55,8 @@ import lombok.ToString;
 	reactions		(좋아요/싫어요 기록 : OneToMany))
 	created_at		(생성일자)
 	updated_at		(수정일자)
+	isNotice 		(공지 여부(공지글 인지, 일반글 인지))
+	status			(게시글 상태(정상 게시글, 삭제 게시글(물리적 삭제X, 논리적 삭제O(DB에는 남아있음)), 관리자에 의해 차단된 게시글)
 */
 
 @Entity //테이블,속성 생성과 매핑을  위한 어노테이션

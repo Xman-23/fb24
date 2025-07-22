@@ -52,15 +52,14 @@ public class SecurityConfig {
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // JWT는 세션 사용 안함
             .and()
             .authorizeHttpRequests()
-            	//403 -> 로그인 인증은 성공했지만, 해당 페이지에 접근권한이 없을경우에는 403에러 발생.
+
+            //403 -> 로그인 인증은 성공했지만, 해당 페이지에 접근권한이 없을경우에는 403에러 발생.
+
             // * 관리자 전용 * (접근시 'Header'에 액세스 토큰 꼭 보내야함)
-            // SecurityConfig에서 권한 설정 부분
+            // SecurityConfig에서 권한 설정 부분 ('접두어 ROLE_'을 제외한 "ADMIN", "USER"만 명시)
             // .hasRole("ADMIN") 은 내부적으로 "ROLE_ADMIN" 권한을 체크하기 때문에 getAuthorities()가 "ROLE_ADMIN"을 반환해야 함
             // 따라서 관리자 전용 URL에 대해 ADMIN 권한만 접근 가능하도록 설정
-            .requestMatchers("/boards/admin/create-board",
-            				 "/boards/admin/create-board",
-                             "/boards/admin/*",
-                             "/boards/admin/**").hasRole("ADMIN")
+            .requestMatchers("/boards/admin/**").hasRole("ADMIN")
 
             // * 비로그인 사용자도 접근 가능 *
             .requestMatchers("/members/signup",
@@ -72,7 +71,6 @@ public class SecurityConfig {
                              "/members/show-email",
                              "/auth/refresh",
                              "/auth/login",
-                             "/boards/*",
                              "/boards/**").permitAll()
 
             // * 로그인 사용자만 접근 가능  (접근시 'Header'에 액세스 토큰 꼭 보내야함)* 

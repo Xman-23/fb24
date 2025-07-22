@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 
 	Response	(응답)
 	boardId		(게시판ID)
-	name		(패스워드)
+	name		(게시판 제목)
 	description	(게시판 설명)
 	isActive	(게시판 숨김기능)
 	sortOrder 	(게시판 순서나열기능)

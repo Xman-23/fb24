@@ -10,9 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.example.demo.controller.auth.AuthController;
 import com.example.demo.domain.member.Member;
-import com.example.demo.domain.member.memberenums.Role;
 
 public class CustomUserDetails implements UserDetails {
 

@@ -22,4 +22,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
 	// 특정 부모 댓글의 대댓글 조회
 	List<Comment> findByParentComment(Comment parentComment);
+
+	// 댓글 개수 조회
+	int countByPostId (Long postId);
+	
 }

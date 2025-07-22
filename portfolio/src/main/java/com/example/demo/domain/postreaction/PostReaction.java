@@ -41,6 +41,7 @@ import lombok.Setter;
 	createdAt			(이미지 업로드(생성)일자)
 */
 
+//클라이언트(사용자)가 특정 게시글에 대해 좋아요 또는 싫어요 같은 반응을 했는지 기록(한번만 리액션)
 @Entity // 테이블,속성 생성과 매핑을  위한 어노테이션
 @Table(
 		name = "post_reaction",

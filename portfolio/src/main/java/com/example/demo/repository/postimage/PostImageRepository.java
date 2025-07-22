@@ -10,7 +10,7 @@ import java.util.*;
 @Repository
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
-	// 특정 게시글에 첨부된 이미지 리승트 조회
+	// 특정 게시글에 첨부된 이미지 리스트 조회
 	List<PostImage> findByPost(Post post);
 
 }
