@@ -54,4 +54,7 @@ public class CustomUserDetails implements UserDetails {
 		return this.member.getNickname();
 	}
 
+	public Long getMemberId() {
+		return this.member.getId();
+	}
 }

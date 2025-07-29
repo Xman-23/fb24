@@ -31,4 +31,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 
 	List<Board> findByParentBoardIsNull();
 
+	// 부모 ID로 자식 게시판 리스트 조회
+	List<Board> findByParentId(Long parentId);
+
 }

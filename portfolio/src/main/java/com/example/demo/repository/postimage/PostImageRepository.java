@@ -10,7 +10,8 @@ import java.util.*;
 @Repository
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
-	// 특정 게시글에 첨부된 이미지 리스트 조회
-	List<PostImage> findByPost(Post post);
+	// findBy[참조 필드명][참조 대상 필드명] -> findByPostPostId 
+	// ManyToOne, 즉 외래키를 가진 엔티티 클래스 에서만 가능
+	List<PostImage> findByPostPostId(Long postId);
 
 }

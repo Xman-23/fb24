@@ -11,7 +11,7 @@ public class BoardValidation {
 
 	// 게시판 ID(boardId) 유효성 검사
 	public static boolean isValidBoardId (Long boardId) {
-		if(boardId < 0) {
+		if( boardId == null || boardId < 0 ) {
 			return false;
 		}
 		return true;

@@ -60,6 +60,9 @@ dependencies {
 
 	//Bean Validation (@NotBlank, @Pattern, @Email, @Valid 사용가능
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	//com.github.benmanes.caffeine.cache.Cache 와 Caffeine 클래스를 사용
+	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 }
 
 tasks.named('test') {

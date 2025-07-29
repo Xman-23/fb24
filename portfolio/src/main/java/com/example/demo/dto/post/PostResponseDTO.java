@@ -15,16 +15,25 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /*
-	게시판 응답 DTO
+	게시글 응답 DTO
 
-Response	(응답)
-boardId		(게시판ID)
-name		(게시판 제목)
-description	(게시판 설명)
-isActive	(게시판 숨김기능)
-sortOrder 	(게시판 순서나열기능)
-createdAt	(등록일자)
-updatedAt	(수정일자)
+	Response	(응답)
+	postId			(게시글ID)
+	boardId			(게시판ID)
+	boardName		(게시판이름)
+	title			(게시글 제목)
+	content			(게시글 본문 내용)
+	authorID		(작성자ID)
+	viewCount		(조회수)
+	likeCount		(좋아요 수)
+	dislikeCount	(싫어요 수)
+	isNotice		(공지글 여부)
+	status			(게시글 상태)
+	createdAt		(게시글 생성일자)
+	updatedAt		(게시글 수정일자)
+	imageUrls		(이미지 URL)
+	commentCount	(댓글 총갯수)
+	reactionCount	(좋아요/싫어요 총 갯수)
 */
 
 @Getter
@@ -68,7 +77,7 @@ public class PostResponseDTO {
 	private int reactionCount;
 
 	// Entity(엔티티) -> DTO 변환 메서드
-	public static PostResponseDTO convertToPostResponseDTO(Post post, int commentCount, int reactionCount) {
+	public static PostResponseDTO convertToPostResponseDTO(Post post, int commentCount) {
 
 		List<String> images = post.getImages() // List<PostImage>
                 				  .stream() // Stream<PostImage>
@@ -95,7 +104,6 @@ public class PostResponseDTO {
 							  .updatedAt(post.getUpdatedAt())
 							  .imageUrls(images)
 							  .commentCount(commentCount)
-							  .reactionCount(reactionCount)
 							  .build();
 	}
 }

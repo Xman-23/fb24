@@ -1,6 +1,7 @@
 package com.example.demo.domain.post;
 
 import java.time.LocalDateTime;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +30,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -123,5 +123,8 @@ public class Post {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private PostStatus status = PostStatus.ACTIVE;
+
+	@Column(name ="is_pinned")
+	private boolean isPinned = false;
 
 }

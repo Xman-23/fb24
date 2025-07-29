@@ -2,18 +2,16 @@ package com.example.demo.service.board;
 
 
 import java.util.List;
+
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.demo.controller.member.MemberController;
 import com.example.demo.domain.board.Board;
 import com.example.demo.dto.board.BoardCreateRequestDTO;
 import com.example.demo.dto.board.BoardHierarchyResponsetDTO;
@@ -234,6 +232,6 @@ public class BoardServiceImpl implements BoardService {
 		return response;
 	}
 
-	//*************************************************** Service END ***************************************************//
+	//*************************************************** Service END ***************************************************
 
 }

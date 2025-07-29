@@ -3,6 +3,8 @@ package com.example.demo.repository.comment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.comment.Comment;
@@ -24,6 +26,19 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 	List<Comment> findByParentComment(Comment parentComment);
 
 	// 댓글 개수 조회
-	int countByPostId (Long postId);
+	int countByPostPostId (Long postId);
+
+	@Query("""
+		    SELECT c
+		    FROM Comment c
+		    WHERE c.post.postId = :postId
+		    ORDER BY (
+		        SELECT COUNT(cr)
+		        FROM CommentReaction cr
+		        WHERE cr.comment = c AND cr.reactionType = 'LIKE'
+		    ) DESC, c.createdAt ASC
+		    """)
+	// 좋아요 수 기준 상위 댓글(대댓글)3개 조회
+	List<Comment> findTop3MostLikedComments(@Param("postId") Long postId, Pageable pageable);
 	
 }

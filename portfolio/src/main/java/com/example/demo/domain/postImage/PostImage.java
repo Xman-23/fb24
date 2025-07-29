@@ -21,6 +21,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -43,6 +44,7 @@ import lombok.ToString;
 @Entity //테이블,속성 생성과 매핑을  위한 어노테이션
 @Table(name = "post_image")
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 //등록,수정 일자를 자동관리하기 위한 어노테이션

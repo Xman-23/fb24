@@ -105,7 +105,7 @@ public class BoardController {
 	@PatchMapping("/admin/{boardId}")
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public ResponseEntity<?> updateBoard (@PathVariable(name = "boardId") Long boardId,
-														 @RequestBody BoardUpdateRequestDTO boardUpdateRequestDTO) {
+										  @RequestBody BoardUpdateRequestDTO boardUpdateRequestDTO) {
 
 		logger.info("BoardController updateBoard() Start");
 
