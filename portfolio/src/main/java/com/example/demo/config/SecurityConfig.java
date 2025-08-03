@@ -39,6 +39,7 @@ public class SecurityConfig {
 		this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
 		this.memberRepository = memberRepository;
 	}
+
 	//비밀번호 암호화
 	//직접 자바 설정 파일(@Configuration)에서 메서드로 객체를 만들어 빈으로 등록하고 싶을 때
 	@Bean
@@ -82,25 +83,44 @@ public class SecurityConfig {
                 "/boards/**",
 
                 // 게시글 관련 - 비로그인 허용 목록 ([\\d]+ : 숫자 하나 이상(즉, 문자열X))
-                "/posts/{postId:[\\d]+}",                // 게시글 단건 조회
-                "/posts/board/**",                        // 게시판별 목록 조회
+                "/posts/{postId:[\\d]+}",                 // 게시글 단건 조회, 댓글 트리조회
+                "/posts/board/**",                        // 게시판별 목록 조회, 자식 게시판 정렬 조회
+                "/posts/boards/**",
                 "/posts/search",                          // 키워드 검색
                 "/posts/notices",                         // 전체 공지 조회
                 "/posts/notices/pinned",                  // 상단 고정 공지
-                "/posts/{postId:[\\d]+}/images"           // 게시글 이미지 조회
+                "/posts/{postId:[\\d]+}/images",          // 게시글 이미지 조회
+                "/posts/parent-boards/**",			      // 부모 게시판 정렬
+                "/posts/author/**",
+ 
+                // 댓글
+                "/comments/post/{postId:[\\d]+}"		 // 댓글 트리구조(정렬) 조회
+
             ).permitAll()
 
             // 로그인 사용자만 접근 가능 ([\\d]+ : 숫자 하나 이상(즉, 문자열X))
             .requestMatchers(
+            	// 게시글 
                 "/posts",                                // 게시글 생성 (POST)
                 "/posts/{postId:[\\d]+}",                // 게시글 수정 (PATCH), 삭제 (DELETE)
                 "/posts/{postId:[\\d]+}/view",           // 조회수 증가
                 "/posts/{postId:[\\d]+}/images/order",   // 이미지 정렬
                 "/posts/{postId:[\\d]+}/images",         // 이미지 단건 삭제
 
+                // 회원
                 "/members/me",
                 "/auth/refresh",
-                "/auth/logout"
+                "/auth/logout",
+
+                // 댓글
+                "/comments",							// 댓글 생성
+                "/comments/{commentId:[\\d]+}",			// 댓글 수정, 삭제
+
+                // 댓글 알림
+                "/notifications",								// 댓글 알림 목록조회
+                "/notifications/{notificationId:[\\d]+}/read",	// 알림 읽음
+                "/notifications/unread/count"					// 안 읽은 알림 개수 조회
+
             ).authenticated()
             // 나머지는 인증 필요
             .anyRequest().authenticated() 

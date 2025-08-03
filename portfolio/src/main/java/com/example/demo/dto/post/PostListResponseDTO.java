@@ -44,18 +44,33 @@ public class PostListResponseDTO {
     private LocalDateTime createdAt;
 
     private int reactionCount;
+
+    private String userNickname;
  
 
     public static PostListResponseDTO fromEntity(Post post, int reactionCount) {
         return PostListResponseDTO.builder()
-                .postId(post.getPostId())
-                .title(post.getTitle())
-                .boardName(post.getBoard().getName())
-                .viewCount(post.getViewCount())
-                .isNotice(post.isNotice())
-                .createdAt(post.getCreatedAt())
-                .reactionCount(reactionCount)
-                .build();
+                                  .postId(post.getPostId())
+                                  .title(post.getTitle())
+                                  .boardName(post.getBoard().getName())
+                                  .viewCount(post.getViewCount())
+                                  .isNotice(post.isNotice())
+                                  .createdAt(post.getCreatedAt())
+                                  .reactionCount(reactionCount)
+                                  .build();
+    }
+
+    public static PostListResponseDTO fromEntity(Post post, int reactionCount, String userNickname) {
+        return PostListResponseDTO.builder()
+                                  .postId(post.getPostId())
+                                  .title(post.getTitle())
+                                  .boardName(post.getBoard().getName())
+                                  .viewCount(post.getViewCount())
+                                  .isNotice(post.isNotice())
+                                  .createdAt(post.getCreatedAt())
+                                  .reactionCount(reactionCount)
+                                  .userNickname(userNickname)
+                                  .build();
     }
 
 }

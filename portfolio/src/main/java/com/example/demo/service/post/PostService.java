@@ -1,5 +1,7 @@
 package com.example.demo.service.post;
 
+import com.example.demo.domain.board.Board;
+import com.example.demo.domain.post.Post;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 
 import com.example.demo.dto.post.PostListResponseDTO;
@@ -12,6 +14,8 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -19,7 +23,8 @@ public interface PostService {
 
 	// 게시글 생성 Service
 	PostResponseDTO createPost(PostCreateRequestDTO postCreateRequestDTO,
-										  Long authorId);
+							   Long authorId,
+							   String userNickname);
 
 	// 게시글 단건 조회
 	PostResponseDTO getPost(Long postId);
@@ -27,10 +32,11 @@ public interface PostService {
 	// 게시글 수정
 	PostResponseDTO updatePost(Long postId, 
 							   PostUpdateRequestDTO postUpdateRequestDTO,
-							   Long authorId);
+							   Long authorId,
+							   String userNickname);
 
 	// 게시글 삭제
-	void deletePost(Long postId, Long authorId);
+	void deletePost(Long postId, Long authorId, boolean isDeleteImages);
 
 	// 전체 공지글 (공지 게시판 전용)
 	Page<PostListResponseDTO> getAllNotices(Pageable pageable);
@@ -41,8 +47,11 @@ public interface PostService {
 	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
 	Page<PostListResponseDTO> searchPostsByKeyword(String keyword, Pageable pageable);
 
-	// 인기순 정렬 (좋아요 + 댓글 수를 기준으로 내림차순으로 정렬한 후 생성일자로 다시한번 내림차순)
-	Page<PostListResponseDTO> getPostsSorted(String sortBy, Pageable pageable);
+	// 자식 게시판 정렬
+	Page<PostListResponseDTO> getPostsByBoardSorted(Long boardId, String sortBy, Pageable pageable);
+
+	// 부모 게시판 정렬
+	Page<PostListResponseDTO> getPostsByParentBoard(Long parentBoardId, String sortBy, Pageable pageable);
 
 	// 작성자별 게시글 조회
 	Page<PostListResponseDTO> getPostsByAuthorNickname(String nickname,Pageable pageable);
@@ -66,13 +75,15 @@ public interface PostService {
 	List<PostImageResponseDTO> getPostImages(Long postId);
 
 	// 이미지 정렬 순서 조정
-	void updateImageOrder(Long postId, List<ImageOrderDTO> orderList, Long requestAuthorId);
+	List<PostImageResponseDTO> updateImageOrder(Long postId, List<ImageOrderDTO> orderList, Long requestAuthorId);
 
 	// 이미지 단건 삭제
 	void deleteSingleImage(Long postId, Long imageId, Long requestAuthorId);
 
-	//
-	public Page<PostListResponseDTO> getPostsByParentBoard (Long parentBoardId, Pageable pageable);
+	// 이미지 모두 삭제
+	void deleteAllImages(Long postId, Long requestAuthorId);
+
+	Page<PostListResponseDTO> getPostsByParentBoard (Long parentBoardId, Pageable pageable);
 
 
 }

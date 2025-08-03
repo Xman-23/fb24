@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.board.Board;
@@ -26,12 +27,14 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 	// b.sortOrder는 Board 엔티티의 필드명을 가리킨다.
 	// 즉, 실제 DB 컬럼명이 'sort_order'여도 엔티티 필드명이 'sortOrder'라면
 	// JPQL에서는 'b.sortOrder'로 써야 한다.
-	@Query("SELECT MAX(b.sortOrder) FROM Board b")
+	@Query( "SELECT MAX(b.sortOrder) "
+		  + "  FROM Board b"
+		  )
 	Integer findMaxSortOrder();
 
 	List<Board> findByParentBoardIsNull();
 
-	// 부모 ID로 자식 게시판 리스트 조회
-	List<Board> findByParentId(Long parentId);
+    // 특정 부모 게시판 ID를 가진 자식 게시판 리스트 조회
+    List<Board> findByParentBoard_BoardId(Long parentBoardId);
 
 }

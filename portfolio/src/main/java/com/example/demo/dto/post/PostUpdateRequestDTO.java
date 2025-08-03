@@ -27,7 +27,7 @@ public class PostUpdateRequestDTO {
 
 	private String content;
 
-	private boolean isNotice = false;
+	private boolean notice = false;
 
 	private List<MultipartFile> images;
 

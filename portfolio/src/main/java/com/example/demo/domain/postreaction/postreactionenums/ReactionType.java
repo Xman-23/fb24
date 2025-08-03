@@ -1,4 +1,4 @@
-package com.example.demo.domain.postreaction.enums;
+package com.example.demo.domain.postreaction.postreactionenums;
 
 public enum ReactionType {
 

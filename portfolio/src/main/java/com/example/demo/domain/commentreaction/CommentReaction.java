@@ -6,7 +6,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.comment.Comment;
-import com.example.demo.domain.postreaction.enums.ReactionType;
+import com.example.demo.domain.postreaction.postreactionenums.ReactionType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,6 +24,19 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+/**
+ * Entity : comment_reaction
+ *
+ * Table : comment_reaction
+ *
+ * Columns:
+ * reaction_id      (PK, 자동 생성 ID)
+ * comment_id       (댓글 ID, ManyToOne 관계)
+ * user_id          (사용자 ID)
+ * reaction_type    (반응 타입, LIKE or DISLIKE)
+ * created_at       (생성일자)
+ */
 
 @Entity
 @Table(
@@ -45,7 +58,7 @@ public class CommentReaction {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "comment_id", nullable = false)
-	private Comment commnet;
+	private Comment comment;
 
 	@Column(name = "user_id", nullable = false)
 	private Long userId;

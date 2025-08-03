@@ -60,7 +60,7 @@ public class BoardController {
 		logger.info("BoardController createBoard() Start");
 
 		if(bindingResult.hasErrors()) {
-			logger.error("BoardController createBoard() Error :입력값이 유효하지 않습니다.");
+			logger.error("BoardController createBoard() Error : 'BoardCreateRequestDTO'가 유효하지 않습니다.");
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
 		}
 

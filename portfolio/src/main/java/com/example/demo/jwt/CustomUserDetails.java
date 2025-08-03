@@ -11,10 +11,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberenums.Role;
 
 public class CustomUserDetails implements UserDetails {
 
 	private final Member member;
+
     private static final Logger logger = LoggerFactory.getLogger(CustomUserDetails.class);
 
 	public CustomUserDetails(Member member) {
@@ -57,4 +59,9 @@ public class CustomUserDetails implements UserDetails {
 	public Long getMemberId() {
 		return this.member.getId();
 	}
+
+	public Role getRole() {
+		return this.member.getRole();
+	}
+
 }

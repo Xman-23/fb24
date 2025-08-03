@@ -135,6 +135,7 @@ public class MemberController {
 		// '@Vaild'에 의해 유효성 검사 결과가 BindingResult에 담김
 		// 예외가 있을 경우 hasError() 메서드 'True'
 		if(bindingResult.hasErrors()) {
+			logger.error("PostController registerMember() Error : 'MemberSignupDTO'가 유효하지 않습니다.");
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
 		}
 

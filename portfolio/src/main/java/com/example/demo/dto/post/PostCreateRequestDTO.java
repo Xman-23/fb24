@@ -39,7 +39,7 @@ public class PostCreateRequestDTO {
 	@NotBlank(message = "본문 내용은 필수입니다.")
 	private String content;
 
-	private boolean isNotice = false;
+	private boolean notice = false;
 
 	/* 
 	 JSON 형태의 데이터와 이미지 파일을 동시에 받을려면, 

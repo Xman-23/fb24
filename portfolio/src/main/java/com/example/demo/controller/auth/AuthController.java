@@ -49,6 +49,7 @@ public class AuthController {
     	
     	logger.info("AuthController login() Start");
         if (bindingResult.hasErrors()) {
+        	logger.error("AuthController login() Error : 'AuthLoginDTO'가 유효하지 않습니다.");
             return ResponseEntity.badRequest().body("Invalid input.");
         }
         

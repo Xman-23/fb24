@@ -1,6 +1,8 @@
 package com.example.demo.domain.member;
 
+import com.example.demo.domain.comment.commentnotification.CommentNotification;
 import com.example.demo.domain.member.memberenums.Role;
+import java.util.*;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -79,5 +82,8 @@ public class Member {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "role", nullable = false)
 	private Role role;
+
+	@OneToMany(mappedBy = "receiver")
+	private List<CommentNotification> notifications = new ArrayList<>();
 
 }

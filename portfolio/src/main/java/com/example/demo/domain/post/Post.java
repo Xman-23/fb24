@@ -127,4 +127,9 @@ public class Post {
 	@Column(name ="is_pinned")
 	private boolean isPinned = false;
 
+	public void addImage(PostImage image) {
+	    this.images.add(image);
+	    image.setPost(this); // 양방향 동시 설정
+	}
+
 }

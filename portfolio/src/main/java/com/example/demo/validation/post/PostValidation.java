@@ -2,10 +2,10 @@ package com.example.demo.validation.post;
 
 public class PostValidation {
 
-	// 게시판 유효성 검사
+	// 게시글 유효성 검사
 	public static boolean isPostId(Long postId) {
 
-		if(postId == null || postId < 0 ) {
+		if(postId == null || postId <= 0 ) {
 			return false;
 		}
 

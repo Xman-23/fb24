@@ -7,7 +7,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.postImage.PostImage;
-import com.example.demo.domain.postreaction.enums.ReactionType;
+import com.example.demo.domain.postreaction.postreactionenums.ReactionType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

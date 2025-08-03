@@ -76,8 +76,11 @@ public class PostResponseDTO {
 
 	private int reactionCount;
 
+	private String userNickname;
+
+
 	// Entity(엔티티) -> DTO 변환 메서드
-	public static PostResponseDTO convertToPostResponseDTO(Post post, int commentCount) {
+	public static PostResponseDTO convertToPostResponseDTO(Post post, int commentCount, String userNickname) {
 
 		List<String> images = post.getImages() // List<PostImage>
                 				  .stream() // Stream<PostImage>
@@ -104,6 +107,7 @@ public class PostResponseDTO {
 							  .updatedAt(post.getUpdatedAt())
 							  .imageUrls(images)
 							  .commentCount(commentCount)
+							  .userNickname(userNickname)
 							  .build();
 	}
 }

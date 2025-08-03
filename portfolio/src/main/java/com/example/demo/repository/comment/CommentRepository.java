@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.comment.Comment;
+import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.post.Post;
 
 import java.util.*;
@@ -28,17 +29,23 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 	// 댓글 개수 조회
 	int countByPostPostId (Long postId);
 
-	@Query("""
-		    SELECT c
-		    FROM Comment c
-		    WHERE c.post.postId = :postId
-		    ORDER BY (
-		        SELECT COUNT(cr)
-		        FROM CommentReaction cr
-		        WHERE cr.comment = c AND cr.reactionType = 'LIKE'
-		    ) DESC, c.createdAt ASC
-		    """)
+	// 'JPQL'이 아닌 '전통 SQL' 'value = ' 필요 
+	@Query(value = 
+			"SELECT c.* "
+		  + "  FROM comment c "
+		  + "  LEFT JOIN comment_reaction cr "
+		  + "         ON cr.comment_id = c.comment_id "
+		  + "        AND cr.reaction_type = 'LIKE' "
+		  + " WHERE c.post_id = :postId "
+		  + " GROUP BY c.comment_id "
+		  + " ORDER BY COUNT(cr.comment_id) DESC,"
+		  + "          c.created_at DESC"
+		  ,nativeQuery =  true
+		  )
 	// 좋아요 수 기준 상위 댓글(대댓글)3개 조회
 	List<Comment> findTop3MostLikedComments(@Param("postId") Long postId, Pageable pageable);
-	
+
+	List<Comment>findByPostAndStatus(Post post, CommentStatus status);
+
+	List<Comment> findByParentCommentCommentIdIn(List<Long> parentCommentIds);
 }

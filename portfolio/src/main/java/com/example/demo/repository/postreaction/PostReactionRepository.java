@@ -1,14 +1,11 @@
 package com.example.demo.repository.postreaction;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.postreaction.PostReaction;
-import com.example.demo.domain.postreaction.enums.ReactionType;
-import com.example.demo.dto.post.PostListResponseDTO;
+import com.example.demo.domain.postreaction.postreactionenums.ReactionType;
 
 import java.util.*;
 
@@ -33,11 +30,10 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
     // 특정 게시글에 특정 사용자 반응 존재 여부 확인 (if문으로 유효성 체크할때 사용)
     boolean existsByPostAndUserId(Post post, Long userId);
 
- // 리액션 갯수 조회
+    // 리액션 갯수 조회
     int countByPostPostId(Long postId);
 
     // 각 '좋아요', '싫어요' 갯수 조회
     int countByPostPostIdAndReactionType(Long postId, ReactionType reactionType);
-
 
 }
