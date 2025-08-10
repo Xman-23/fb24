@@ -56,7 +56,7 @@ public class AES256Util {
 			//복호화된 바이트 배열을 String 클래스로 평문 문자열로 변환 후 Return
 			return new String(decrypted);
 		}catch (Exception e) {
-			throw new RuntimeException("AES 복호화 실패", e);
+			throw new RuntimeException("AES256Util decrypt() : AES 복호화 실패", e);
 		}
 	}
 

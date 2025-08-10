@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,28 +23,15 @@ import org.springframework.data.domain.Pageable;
 public interface PostRepository extends JpaRepository<Post, Long> {
 
 	// 전체 공지글 (공지 게시판 전용)
-	@Query( "SELECT p "
+	@Query(
+			"SELECT p "
 		  + "  FROM Post p "
-		  + " WHERE p.board.boardId = :boardId "
+		  + " WHERE p.board.boardId = 1 "
+		  + "   AND p.status = 'ACTIVE' "
 		  + "   AND p.isNotice = true "
-		  + "   AND p.status = :status"
+		  + " ORDER BY p.createdAt DESC "
 		  )
-	Page<Post> findNoticePosts(@Param("boardId") Long boardId, 
-			                   @Param("status") PostStatus status, 
-			                   Pageable pageable);
-
-	// 공지 게시판에서 핀으로 고정된 게시글만 조회
-	@Query( "SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.id = :boardId "
-		  + "   AND p.isPinned = true "
-		  + "   AND p.status = 'ACTIVE'"
-		  + " ORDER BY p.createdAt DESC"
-		  )
-	List<Post> findPinnedNoticesByBoard(@Param("boardId") Long boardId, Pageable pageable);
-
-	// 게시글 상태가 ACTIVE인 게시글만 조회 (전체 게시글 목록 중 ACTIVE 상태만 필터링) // 사용
-	Page<Post> findByStatus(PostStatus status, Pageable pageable);
+	Page<Post> findNoticePosts(Pageable pageable);
 
 	// 게시판별 게시글 중 ACTIVE 상태이고 공지가 아닌 게시글만 조회 (메인페이지 body, 특정 게시판 페이징) 사용
 	Page<Post> findByBoardAndStatusAndIsNoticeFalse(Board board, PostStatus status, Pageable pageable);
@@ -53,10 +41,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "  FROM Post p " 
 		  + " WHERE p.status = 'ACTIVE' " 
 		  + "   AND (" 
-		  + "        LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " 
-		  +          "OR "
-		  +          "LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))" 
-		  +        ")")
+		  + "         LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " 
+		  +           "OR "
+		  +           "LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))" 
+		  +        ")"
+		  )
 	Page<Post> searchByKeyword(@Param("keyword")String keyword, Pageable pageable);
 
 	// 자식게시판 인기순 정렬
@@ -78,30 +67,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	Page<Post> findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(Board board, 
 																		PostStatus status, 
 																		Pageable pageable);
-	
-	// 부모게시판 최신순 정렬
-	@Query( "SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.boardId  IN (:boardIds) "
-		  + "   AND p.status = 'ACTIVE' "
-		  + "   AND p.isNotice  = false "
-		  + " ORDER BY p.createdAt DESC")
-	Page<Post> findByBoardIds(@Param("boardIds") List<Long> boardIds, Pageable pageable);
-
-	// 부모게시판 인기순 정렬
-	@Query( "SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.boardId IN (:boardIds) "
-		  + "   AND p.status = 'ACTIVE' "
-		  + "   AND p.isNotice = false "
-		  + " ORDER BY (SELECT COUNT(r) "
-		  + "             FROM PostReaction r "
-		  + "            WHERE r.post = p"
-		  + "			   AND r.reactionType = 'LIKE'"
-		  + "          )DESC,"
-		  + "          p.createdAt DESC"
-		  )
-	Page<Post> findActiveNonNoticePostsByBoardIdsOrderByLikesDescCreatedAtDesc(@Param("boardIds") List<Long> boardIds, Pageable pageable);
 
 	// 'ACTIVE 게시글'에서 '작성자ID(memberId)'를 검색 하여 페이징 처리 
 	Page<Post> findByAuthorIdAndStatus(Long authorId, PostStatus status, Pageable pageable);
@@ -109,37 +74,197 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	// 3개의 핀으로 설정된 공지 게시글 모든 게시판에 보여주기
 	List<Post> findTop3ByBoardAndIsPinnedTrueAndIsNoticeTrueAndStatusOrderByCreatedAtDesc (Board board,
 			                                                                               PostStatus status);
-	// 조회수 증가
-	@Modifying
+	/* 조회수 증가
+	   @Modifying(clearAutomatically = true)
+	   JPQL UPDATE 후 1차 캐시를 자동으로 비워줘서,
+	   다음 조회 시 DB에서 최신 데이터를 가져오도록 함
+	*/
+	@Modifying(clearAutomatically = true)
+	@Transactional
 	@Query( "UPDATE Post p "
 		  + "   SET p.viewCount = p.viewCount + 1 "
-		  + "WHERE p.postId = :postId"
+		  + " WHERE p.postId = :postId "
 		  )
 	int incrementViewCount(@Param("postId") Long postId);
 
-	// 자식 게시판에서 공지글이 아닌 'ACTIVE'인 게시글 모두 조회 
-	@Query( "SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.boardId IN (:boardIds) "
-		  + "  AND p.status = 'ACTIVE' "
-		  + "  AND p.isNotice = false"
-		  )
-	Page<Post> findActiveNonNoticePostsByBoardIds(@Param("boardIds")List<Long> boardIds, Pageable pageable);
-
-	// 좋아요 게시글 뽑기
-	@Query( "SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.boardId IN (:boardIds) "
-		  + "   AND p.isNotice = false "
-		  + "   AND p.isPinned = false "
+	// 자식 게시판 상단 인기글 뽑기 3개 뽑기 (총 갯수를 뽑는게 아니므로 = 'List')
+	//'nativeSQL'사용하므로, @PageableDefault 에서 페이징 조건(size page)만 명시, 정렬(sort, direction)은 명시해도 적용이 되지않음
+	@Query(value = 
+			"SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ( "
+		  + "			  SELECT pr.post_id, "
+		  + "                    SUM(CASE "
+		  + "							 WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                            WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                            ELSE 0 "
+		  + "						  END) AS net_like_count,"
+		  + "                    SUM(CASE WHEN pr.reaction_type = 'LIKE' THEN 1 ELSE 0 END) AS like_count "
+		  + "               FROM post_reaction pr "
+		  + "              GROUP BY pr.post_id "
+		  + "            ) AS pr_summary "
+		  + "    ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id = :boardId "
+		  + "   AND p.is_notice = false "
 		  + "   AND p.status = 'ACTIVE' "
-		  + "   AND p.likeCount >= :likeThreshold "
-		  + "   AND p.createdAt >= :recentThreshold "
-		  + " ORDER BY p.likeCount DESC, p.createdAt DESC "
+		  + "   AND p.created_at >= :recentThreshold "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold "
+		  + " ORDER BY COALESCE(pr_summary.like_count, 0) DESC, "
+		  + "          p.created_at DESC "
+		  + " LIMIT :limit ", 
+		  nativeQuery = true)
+	List<Post> findTopPostsByBoardWithNetLikes(@Param("boardId") Long boardId,
+											   @Param("likeThreshold") int likeThreshold,
+											   @Param("netLikeThreshold") int netLikeThreshold,
+											   @Param("recentThreshold") LocalDateTime recentThreshold,
+											   @Param("limit") int limit);
+
+	// 상단 공지 게시글 3개뽑기
+	@Query(
+			"SELECT p "
+		  + "  FROM Post p "
+		  + " WHERE p.board.boardId = 1 "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.isNotice = true "
+		  + "   AND p.isPinned = true "
+		  + " ORDER BY p.createdAt DESC "
 		  )
-	List<Post> findTopPopularPostsByBoards(@Param("boardIds")List<Long> boardIds,
-										   @Param("likeThreshold") int likeThreshold,
-										   @Param("recentThreshold") LocalDateTime recentThreshold,
-										   Pageable pageable);
+	List<Post> findTop3FixedNotices(Pageable pageable);
+
+	/* 좋아요 30일 기준으로 가중치 계산 
+	 한 페이지당 받을 데이터(content)와 데이터의 총 갯수 (totalElements) 구하기
+	 파라미터로 'Pageable'을 받을시에 개발자가 직접 정해준 'size'에 의해 'totlaPage' 구해짐
+	 */
+	@Query(value = 
+		    "SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "							  WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "							  ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold "
+		  + " ORDER BY (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, 30 - DATEDIFF(NOW(), p.created_at))) DESC, "
+		  + "          p.created_at DESC ",
+		  countQuery = 
+		    "SELECT COUNT(*) "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                              WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                              WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                              ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold ",
+		  nativeQuery = true)
+	Page<Post> findPopularPostsByWeightedScore(@Param("childBoardIds") List<Long> childBoardIds,
+			                                   @Param("likeThreshold") int likeThreshold,
+			                                   @Param("netLikeThreshold") int netLikeThreshold,
+			                                   @Param("dayLimit") int dayLimit,
+			                                   Pageable pageable);
+
+	/** 게시글 배치 조회
+	    조건 : 수정일자 기준으로 5년 지나고, 조회수가 100이하이며, 
+	          공지글이 아니며, ACTIVE상태인 게시글, 'pin'으로 고정된 글 X
+	 @return : 삭제돨 게시글 수(레코드) 반환
+	*/
+	@Query(value = 
+			"SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN comment c ON p.post_id = c.post_id "
+		  + " WHERE p.updated_at <= :cutDate "
+		  + "   AND p.view_count <= :maxViewCount "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.is_pinned = false "
+		  + " GROUP BY p.post_id "
+		  + "HAVING COUNT(c.comment_id) = 0", nativeQuery = true)
+	List<Post> findByDeadPost (@Param("cutDate")LocalDateTime cutDate,
+			                   @Param("maxViewCount") int maxViewCount);
+
+	/** 게시글 배치 삭제 
+	    조건 : 수정일자 기준으로 5년 지나고, 조회수가 100이하이며, 
+	          공지글이 아니며, ACTIVE상태인 게시글, pin으로 고정된 글 X
+	 @return : 삭제된 게시글 수(레코드) 반환
+	*/
+	@Modifying
+	@Query(value = 
+			"DELETE FROM post "
+		  + " WHERE post_id IN ( "
+		  + "                   SELECT p.post_id "
+		  + "                     FROM post p "
+		  + "                     LEFT JOIN comment c ON p.post_id = c.post_id "
+		  + "                    WHERE p.updated_at <= :cutDate "
+		  + "                      AND p.view_count <= :maxViewCount "
+		  + "                      AND p.status = 'ACTIVE' "
+		  + "                      AND p.is_notice = false "
+		  + "                      AND p.is_pinned = false "
+		  + "                    GROUP BY p.post_id "
+		  + "                   HAVING COUNT(c.comment_id) = 0 "
+		  + "                  )", nativeQuery =  true)
+	int deleteDeadPost (@Param("cutDate") LocalDateTime cutDate,
+			            @Param("maxViewCount") int maxViewCount);
+
+	/** 공지글 배치 조회
+		조건 : 수정일자 기준으로 5년 지나고, 공지글(notice = true), ACTIVE인 게시글
+	 @return : 삭제된 공직즐 List 반환
+	*/
+	@Query(value = 
+			"SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN comment c ON p.post_id = c.post_id "
+		  + " WHERE p.updated_at <= :cutDate "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.is_notice = true "
+		  + " GROUP BY p.post_id "
+		  + "HAVING COUNT(c.comment_id) = 0", nativeQuery = true)
+	List<Post> findByDeadNoticePost (@Param("cutDate")LocalDateTime cutDate);
+
+	/** 공지글 배치 삭제 
+	    조건 : 수정일자 기준으로 5년 지나고, 공지글(notice = true), ACTIVE인 게시글 
+	    @return : 삭제된 게시글 수(레코드) 반환
+	*/
+	@Modifying
+	@Query(value = 
+			"DELETE FROM post "
+		  + " WHERE post_id IN ( "
+		  + "                   SELECT p.post_id "
+		  + "                     FROM post p "
+		  + "                     LEFT JOIN comment c ON p.post_id = c.post_id "
+		  + "                    WHERE p.updated_at <= :cutDate "
+		  + "                      AND p.status = 'ACTIVE' "
+		  + "                      AND p.is_notice = true "
+		  + "                    GROUP BY p.post_id "
+		  + "                   HAVING COUNT(c.comment_id) = 0 "
+		  + "                  )", nativeQuery =  true)
+	int deleteDeadNoticePost (@Param("cutDate") LocalDateTime cutDate);
 
 }

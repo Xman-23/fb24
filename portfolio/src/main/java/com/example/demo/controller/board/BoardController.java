@@ -2,9 +2,9 @@ package com.example.demo.controller.board;
 
 import java.util.List;
 
+
 import java.util.NoSuchElementException;
 
-import org.apache.catalina.connector.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

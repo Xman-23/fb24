@@ -12,8 +12,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.example.demo.domain.board.Board;
 import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.post.postenums.PostStatus;
-import com.example.demo.domain.postImage.PostImage;
-import com.example.demo.domain.postreaction.PostReaction;
+import com.example.demo.domain.post.postimage.PostImage;
+import com.example.demo.domain.post.postreaction.PostReaction;
+import com.example.demo.domain.post.postreport.PostReport;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -100,14 +101,25 @@ public class Post {
 	@Column(name = "dislike_count", nullable = false)
 	private int dislikeCount = 0;
 
+	// 하나의 게시글은 여러개의 이미지를 가질 수 있으므로, @OneToMany
+	// 'null' 추가시 'NullPonintException'방지 위해 'ArrayList<>()'로 초기화
 	@OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<PostImage> images = new ArrayList<PostImage>();
 
+	// 하나의 게시글은 여러개의 댓글을 가질 수 있으므로, @OneToMany
+	// 'null' 추가시 'NullPonintException'방지 위해 'ArrayList<>()'로 초기화
 	@OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval =  true)
 	private List<Comment> comments = new ArrayList<Comment>();
 
+	// 하나의 게시글은 여러개의 리액션(좋아요, 싫어요)를 가질 수 있으므로, @OneToMany
+	// 'null' 추가시 'NullPonintException'방지 위해 'ArrayList<>()'로 초기화
 	@OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<PostReaction> reactions = new ArrayList<PostReaction>();
+
+	// 하나의 게시글은 여러개의 신고를 가질 수 있으므로, @OneToMany
+	// 'null' 추가시 'NullPonintException'방지 위해 'ArrayList<>()'로 초기화
+	@OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<PostReport> reports = new ArrayList<PostReport>();
 
 	@CreatedDate
 	@Column(name = "created_at", nullable = false, updatable = false)
@@ -126,6 +138,18 @@ public class Post {
 
 	@Column(name ="is_pinned")
 	private boolean isPinned = false;
+
+	// 추후에 'nullable = false'로 변경해야됨
+	@Column(name = "report_count", nullable = true)
+	private Long reportCount = 0L;
+
+    // 신고 누적 카운트 증가 메서드
+    public void incrementReportCount() {
+        if(this.reportCount == null ) {
+            this.reportCount = 0L;
+        }
+        this.reportCount = this.getReportCount() +1L;
+    }
 
 	public void addImage(PostImage image) {
 	    this.images.add(image);

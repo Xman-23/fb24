@@ -1,7 +1,8 @@
 package com.example.demo.controller.comment;
 
+import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
-import java.util.*;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +10,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.config.annotation.web.configurers.HttpsRedirectConfigurer;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,12 +21,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriUtils;
 
 import com.example.demo.dto.comment.CommentPageResponseDTO;
 import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
 import com.example.demo.dto.comment.CommentUpdateRequestDTO;
-import com.example.demo.dto.commentreport.CommentReportRequestDTO;
+import com.example.demo.dto.comment.commentreport.CommentReportRequestDTO;
 import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.comment.CommentService;
 import com.example.demo.validation.comment.CommentValidation;
@@ -102,8 +103,7 @@ public class CommentController {
 		logger.info("CommentController updateComment() Start");
 
 		if(bindingResult.hasErrors()) {
-			logger.error("CommentController updateComment() Error : 'CommentUpdateRequestDTO"
-					+ ".'가 유효하지 않습니다.");
+			logger.error("CommentController updateComment() Error : 'CommentUpdateRequestDTO가 유효하지 않습니다.");
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
 		}
 
@@ -112,8 +112,9 @@ public class CommentController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
 		}
 
+
 		Long requestAuthorId = customUserDetails.getMemberId();
-		String requestNewContent = commentUpdateRequestDTO.getContent();
+		String requestNewContent = UriUtils.decode(commentUpdateRequestDTO.getContent(), StandardCharsets.UTF_8);
 
 		CommentResponseDTO response = null;
 
@@ -126,6 +127,9 @@ public class CommentController {
 		} catch (NoSuchElementException e) {
 			logger.error("CommentController updateComment() NoSuchElementException Error : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("CommentController updateComment() IllegalArgumentException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		if(response == null) {
@@ -175,12 +179,36 @@ public class CommentController {
 	}
 
 	// 4. 댓글 신고 API엔드포인트
+	/**
+	 * 신고 API의 HTTP 메서드 선택 기준
+	 *
+	 * 1. 단순 컬럼 변경만 수행하는 경우
+	 *    - 예: reportCount 값을 단순히 1 증가시키는 경우
+	 *    - 이때는 리소스 일부를 수정하는 것이므로 PATCH가 적절하다.
+	 *
+	 * 2. 여러 도메인(=여러 service) 로직이 복합적으로 수행되는 경우
+	 * 		reportCount 증가 + 상태(HIDDEN) 변경(= 댓글 신고 서비스)
+	 * 		알림 생성 + 신고 이력 저장 등(= 댓글 알림 생성 서비스)
+	 *    - => reportCount 증가 + 상태(HIDDEN) 변경 + 알림 생성 + 신고 이력 저장 등
+	 *    - 이러한 복합 행위는 단순 필드 수정이 아니라, '신고'라는 새로운 행위를 생성하는 것에 해당함.
+	 *    - 따라서 POST 메서드를 사용하는 것이 RESTful 설계에 부합한다.
+	 *
+	 * 결론:
+	 * - 단순 수정만 있다면 PATCH,
+	 * - 복합적인 행위(도메인 이벤트 발생 등)를 동반한다면 POST를 사용.
+	 */
 	@PostMapping("/{commentId}/report")
 	public ResponseEntity<?> reportComment(@PathVariable(name = "commentId") Long commentId,
-			                               @RequestBody(required = false) CommentReportRequestDTO commentReportRequestDTO,
+			                               @RequestBody@Valid CommentReportRequestDTO commentReportRequestDTO,
+			                               BindingResult bindingResult,
 			                               @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
 		logger.info("CommentController reportComment() Start");
+
+		if(bindingResult.hasErrors()) {
+			logger.error("CommentController reportComment() Error : 'CommentReportRequestDTO'가 유효하지 않습니다.");
+			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
+		}
 
 		String reason = commentReportRequestDTO == null ? null : commentReportRequestDTO.getReason();
 		Long requestReporterId = customUserDetails.getMemberId();

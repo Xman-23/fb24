@@ -23,7 +23,6 @@ import lombok.Setter;
 	childBoards	(자식 게시판들)
 */
 @Setter
-@Getter
 public class BoardHierarchyResponsetDTO {
 
 	private Long boardId;

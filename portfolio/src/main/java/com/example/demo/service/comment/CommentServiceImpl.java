@@ -1,22 +1,23 @@
 package com.example.demo.service.comment;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,21 +25,18 @@ import org.springframework.web.util.UriUtils;
 
 import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.comment.commentenums.CommentStatus;
-import com.example.demo.domain.comment.commentnotification.CommentNotification;
-import com.example.demo.domain.comment.commentnotification.commentnotificationenums.CommentNotificationType;
-import com.example.demo.domain.commentreport.CommentReport;
+import com.example.demo.domain.comment.commentreport.CommentReport;
 import com.example.demo.domain.post.Post;
-import com.example.demo.domain.postreaction.postreactionenums.ReactionType;
+import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
 import com.example.demo.dto.comment.CommentPageResponseDTO;
 import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
 import com.example.demo.repository.comment.CommentRepository;
-import com.example.demo.repository.commentreaction.CommentReactionRepository;
-import com.example.demo.repository.commentreport.CommentReportRepository;
+import com.example.demo.repository.comment.commentreaction.CommentReactionRepository;
+import com.example.demo.repository.comment.commentreport.CommentReportRepository;
 import com.example.demo.repository.post.PostRepository;
-import com.example.demo.service.comment.commentnotification.NotificationService;
-import com.example.demo.service.comment.commentnotification.NotificationServiceImpl;
-import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.example.demo.service.notification.NotificationService;
+import com.example.demo.validation.string.WordValidation;
 
 import lombok.RequiredArgsConstructor;
 
@@ -51,7 +49,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentReportRepository commentReportRepository;
     private final PostRepository postRepository;
     private final CommentReactionRepository commentReactionRepository;
-    private final NotificationService notificationService;
+    private final NotificationService notificationServiceImpl;
 
     // 좋아요 기준
     @Value("${comment.topPinned.likeThreshold}")
@@ -60,8 +58,12 @@ public class CommentServiceImpl implements CommentService {
     // 댓글 상위 탑 3개
     @Value("${comment.topPinned.limit}")
     private int topLimit;
+ 
+    // 댓글 좋아요 싫어요 차이 기준
+    @Value("${comment.topPinned.netLikeThreshold}")
+    private int netLikeThreshold;
 
-    // 신고 제한
+    // 댓글 신고 제한
     @Value("${comment.report.threshold}")
     private int reportThreshold;
 
@@ -122,6 +124,11 @@ public class CommentServiceImpl implements CommentService {
 		String requestContent = UriUtils.decode(commentRequestDTO.getContent(), StandardCharsets.UTF_8);
 		Long requestParentCommentId = commentRequestDTO.getParentCommentId();
 
+		if(!WordValidation.containsForbiddenWord(requestContent)) {
+			logger.error("CommentServiceImpl createComment() IllegalArgumentException : 댓글 내용에 비속어가 포함되어있습니다.");
+			throw new IllegalArgumentException("댓글 내용에 비속어가 포함되어있습니다.");
+		}
+
 		// 게시글 유효검사
 		Post post = postRepository.findById(requestPostId)
 		                          .orElseThrow(() -> {
@@ -140,8 +147,9 @@ public class CommentServiceImpl implements CommentService {
 					                        	 logger.error("CommentServiceImpl createComment() NoSuchElementException Error : 부모 댓글이 존재하지 않습니다.");
 					                        	 return new NoSuchElementException("부모 댓글이 존재하지 않습니다.");
 					                         });
-		}
 
+		}
+		
 		// @Bulider가 붙은 클래스는 객체 생성시 초기값을 무시할 수 있으므로, 직접 값을 넣어주는게 안전하다
 		Comment comment = Comment.builder()
 				                 .post(post)
@@ -156,34 +164,34 @@ public class CommentServiceImpl implements CommentService {
 		// 'INSERT' 후 'Comment' Entity 반환
 		Comment saved = commentRepository.save(comment);
 
-		// 알림 타입 결정 : COMMENT (댓글), REPLY(대댓글)
-		CommentNotificationType notificationType = null;
-
 		// 알림을 받을 대상자 (게시글 작성자(자신제외), 부모댓글 작성자)
-		Long receiverId = null;
 
 		if(saved.getParentComment() == null) {
 			// 만약 부모 댓글(일반 댓글)이라면, 게시글 작성자에게 알림 보내야됨
 			// 게시글 작성자 ID
-			receiverId = saved.getPost().getAuthorId();
-			// 댓글(Comment)
-			notificationType = CommentNotificationType.COMMENT;
+			Long receiverPostId = saved.getPost().getAuthorId();
+
+			// 게시글 작성자가 작성한 댓글은 알림 제외 
+			if(!receiverPostId.equals(authorId)) {
+				// 댓글 작성자와 게시글 작성자가 다를시 알림 전송
+				notificationServiceImpl.notifyPostComment(saved);
+			}
 		}else {
-			// 만약 대댓글이라면, 부모 댓글 작성자에게 알림 보내기
+			// 만약 대댓글(parentComment!=null)이라면, 부모 댓글 작성자에게 알림 보내기
 			// 부모댓글(댓글)작성자 ID
-			receiverId = saved.getParentComment().getAuthorId();
-			notificationType = CommentNotificationType.REPLY;
+			Long receiverCommentId = saved.getParentComment().getAuthorId();
+			// 부모댓글(댓글)작성자와 대댓글 작성자가 다를 경우에만 '대댓글 알림' 전송
+			if(!receiverCommentId.equals(authorId)) {
+				notificationServiceImpl.notifyChildComment(comment);
+			}
+			// 그리고 대댓글도 게시글의 댓글이므로, 
+			// 게시글 작성자에게 알림을 보내야하므로 게시글 작성자 ID 가져옴
+			Long receiverPostId = saved.getPost().getAuthorId();
+			// 게시글 작성자와 대댓글 작성자가 다를 경우에만 '게시글 댓글' 알림 전송
+			if(!receiverPostId.equals(authorId)) {
+				notificationServiceImpl.notifyPostComment(comment);
+			}
 		}
-
-		// 게시글 작성자가 작성한 댓글은 알림 제외
-		if(!receiverId.equals(authorId)) {
-			// 댓글 작성자와 게시글 작성자가 다를시 알림 전송
-			notificationService.createNotification(receiverId, 
-					                               saved.getCommentId(), 
-					                               notificationType, 
-					                               saved.getContent());
-		}
-
 		logger.info("CommentServiceImpl createComment() End");
 		return CommentResponseDTO.fromEntity(saved, 0, 0, false);
 	}
@@ -200,17 +208,40 @@ public class CommentServiceImpl implements CommentService {
 		                                	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
 		                                   } );
 
+
+		// DB 변경여부
+		boolean dbSetting = false;
+
+		// DB
+		String dbComment = comment.getContent();
+
+		if(!WordValidation.containsForbiddenWord(content)) {
+			logger.error("CommentServiceImpl updateComment() IllegalArgumentException : 댓글 내용에 비속어가 포함되어있습니다.");
+			throw new IllegalArgumentException("댓글 내용에 비속어가 포함되어있습니다.");
+		}
+
 		if(!comment.getAuthorId().equals(authorId)) {
-			logger.error("CommentServiceImpl updateComment() SecurityException Error : {}");
+			logger.error("CommentServiceImpl updateComment() SecurityException Error : 본인의 댓글만 수정할 수 있습니다.");
 			throw new SecurityException("본인의 댓글만 수정할 수 있습니다.");
 		}
 
-		String requestContent = UriUtils.decode(content, StandardCharsets.UTF_8);
 
-		comment.setContent(requestContent);
 
-		int likeCount = commentReactionRepository.countByCommentAndReactionType(comment, ReactionType.LIKE);
-		int dislikeCount = commentReactionRepository.countByCommentAndReactionType(comment, ReactionType.DISLIKE);
+		// 수정 요청 댓글과 기존의 DB댓글과 다를겨웅에만 업데이트
+		if(!content.equals(dbComment)) {
+			comment.setContent(content);
+			dbSetting = true;
+		}
+
+		// 만약 DB에 한번이라도 업데이트가 이뤄지지 않았다면,
+		if(dbSetting == false) {
+			// 예외 처리로 조기 종료
+			logger.error("CommentServiceImpl updateComment() IllegalArgumentException : 잘못된 접근 입니다.");
+			throw new IllegalArgumentException("잘못된 접근 입니다.");
+		}
+
+		int likeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.LIKE);
+		int dislikeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.DISLIKE);
 
 		logger.info("CommentServiceImpl updateComment() End");
 		return CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false);
@@ -229,15 +260,15 @@ public class CommentServiceImpl implements CommentService {
 				                           });
 
 		if(!comment.getAuthorId().equals(authorId)) {
-			logger.error("CommentServiceImpl deleteComment() SecurityException Error: {}");
+			logger.error("CommentServiceImpl deleteComment() SecurityException Error: 본인의 댓글만 삭제할 수 있습니다.");
 			throw new SecurityException("본인의 댓글만 삭제할 수 있습니다.");
 		}
 
 		comment.setStatus(CommentStatus.DELETED);
 
 	    // 좋아요/싫어요 수는 0 또는 실제 집계 조회
-	    int likeCount = commentReactionRepository.countByCommentAndReactionType(comment, ReactionType.LIKE);
-	    int dislikeCount = commentReactionRepository.countByCommentAndReactionType(comment, ReactionType.DISLIKE);
+	    int likeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.LIKE);
+	    int dislikeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.DISLIKE);
 
 		logger.info("CommentServiceImpl deleteComment() End");
 		return CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false);
@@ -249,46 +280,42 @@ public class CommentServiceImpl implements CommentService {
 
 		logger.info("CommentServiceImpl reportComment() Start");
 
+		// 신고당한 댓글 가져오기 Entity
+		// 'JPA'의해 영속성 상태
 		Comment comment = commentRepository.findById(commentId)
 				                           .orElseThrow(() -> {
 				                        	   logger.error("CommentServiceImpl reportComment() NoSuchElementException : 댓글이 존재하지 않습니다.");
 				                        	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
 				                           });
 
-		if(comment.getAuthorId().equals(reporterId)) {
-			throw new IllegalStateException("본인이 본인 댓글을 신고할 수 없습니다.");
+		// 삭제된 댓글은 신고 X
+		if(comment.getStatus() == CommentStatus.DELETED) {
+			logger.error("CommentServiceImpl reportComment() IllegalStateException : 삭제된 댓글은 신고할 수 없습니다.");
+			throw new IllegalStateException("삭제된 댓글은 신고할 수 없습니다.");
 		}
 
-		// 댓글 신고 중복 방지
+		// 작성자와 신고자가 같을경우 신고X
+		if(comment.getAuthorId().equals(reporterId)) {
+			logger.error("CommentServiceImpl reportComment() IllegalStateException : 본인이 본인 댓글을 신고할 수 없습니다. ");
+			throw new IllegalStateException("자신이 자신의 댓글을 신고할 수 없습니다.");
+		}
+
+		// 댓글 신고 중복 방지(댓글 신고 테이블에 '해당'댓글을 신고한 회원이 존재하는지 여부 체크)
 		boolean alreadyReported  = commentReportRepository.existsByCommentAndReporterId(comment, reporterId);
 
 		if(alreadyReported) {
+			logger.error("CommentServiceImpl IllegalStateException : 이미 신고한 댓글입니다.");
 			throw new IllegalStateException("이미 신고한 댓글입니다.");
 		}
 
 		// 신고 저장
 		CommentReport report = CommentReport.builder()
 		                                    .comment(comment) // 신고할 댓글
-		                                    .reporterId(reporterId) // 신고자의 id(PK)
+		                                    .reporterId(reporterId) // 신고자의ID(PK)
 		                                    .reason(reason) // 신고 이유
 		                                    .build();
 
-		CommentReport saved = commentReportRepository.save(report);
-
-		// 댓글 작성자 에게 알림 보내기
-		Long receiverId = comment.getAuthorId();
-
-		// 댓글 작성자 ID가 신고한 reporterId와 같지 않다면
-		if(!receiverId.equals(saved.getReporterId())) {
-			// 신고 알림 댓글 작성자에게 보내기
-			String content = "회원님의 댓글이 신고되었습니다.\n사유 :" + reason;
-
-			notificationService.createNotification(receiverId,
-					                               comment.getCommentId(), 
-					                               CommentNotificationType.REPORT, 
-					                               content);
-
-		}
+		commentReportRepository.save(report);
 
 		// 신고 누적 수 증가
 		comment.incrementReportCount();
@@ -296,9 +323,11 @@ public class CommentServiceImpl implements CommentService {
 		// 신고 갯수 가져오기
 		Long reportCount = comment.getReportCount();
 
-		// 신고가 15번 당할시 상태 변경
-		if(reportCount >= this.reportThreshold) {
+		// 신고가 15번 당할시 상태 변경 (report_count(DB) == 15)
+		// 그리고(AND(&&)), CommentStatus.ACTIVE
+		if(Objects.equals(reportCount, this.reportThreshold) && comment.getStatus().equals(CommentStatus.ACTIVE)) {
 			comment.setStatus(CommentStatus.HIDDEN);
+			notificationServiceImpl.notifyCommentWarned(comment);
 		}
 
 		logger.info("CommentServiceImpl reportComment() End");
@@ -318,25 +347,13 @@ public class CommentServiceImpl implements CommentService {
 				                	  return new NoSuchElementException("게시글이 존재하지 않습니다.");
 				                  });
 
-		// 변경(25.08.03) : 부모 댓글만 페이지 단위로 조회
-		// '게시글'에서 'ParentComment'가 'null'이면 부모 댓글
-		Page<Comment> parentCommentsPage = commentRepository.findByPostAndParentCommentIsNull(post, pageable);
-		// 부모 댓글 가져오기
-		List<Comment> parentComments = parentCommentsPage.getContent();
+		List<CommentStatus> statuses = Arrays.asList(CommentStatus.ACTIVE,
+				                                     CommentStatus.DELETED,
+				                                     CommentStatus.HIDDEN); 
 
-		// 추가(25.08.03) : 부모 댓글 ID로 가져오기
-		List<Long> parentCommentIds = parentComments.stream()
-				                                    .map(comment -> comment.getCommentId())
-				                                    .collect(Collectors.toList());
 
-		// 추가(25.08.03) : 부모 댓글 ID로 자식댓글 'IN'으로 한번에 조회하기
-		List<Comment> childComments = commentRepository.findByParentCommentCommentIdIn(parentCommentIds);
-
-		// 추가(25.08.03) : '좋아요/싫오요' 집계시 부모 댓글과 자식 댓글을 모두 포함
-		// 부모, 자식 댓글 더할 댓글 List
-		List<Comment> allComments = new ArrayList<>();
-				      allComments.addAll(parentComments);
-				      allComments.addAll(childComments);
+		// 모든 댓글 상태 리스트(삭제됨, 숨김, 대댓글포함)
+		List<Comment> allComments = commentRepository.findByPostAndStatusIn(post, statuses);
 
 		// 모든 댓글,대댓글 ID(Long) 추출
 		List<Long> allCommentIds = allComments.stream()
@@ -352,11 +369,11 @@ public class CommentServiceImpl implements CommentService {
 		// Map<commentId, Map<ReactionType, count>>
 		// 댓글ID(commentId)의 '좋아요/싫어요(ReactionType)'의 총 갯수(count)
 		// ex) map.get(1).get(ReactionType.LIKE) = 좋아요 총 5개 
-		Map<Long, Map<ReactionType, Long>> reactionCountMap = new HashMap<>();
+		Map<Long, Map<PostReactionType, Long>> reactionCountMap = new HashMap<>();
 
 		for(CommentReactionRepository.ReactionCountProjection rc :reactionCounts) {
 			// Map.computeIfAbsent : 'Key(첫번쨰라미터)'가 있으면 'Value'를 반환,없으면 '두번쨰 파라미터 객체생성'
-			// 여기서 'Key'가 없으면 HashMap이 생성되는데 <K,V>는 Java가 주변 코드를 살펴서 알아서 추론 
+			// 여기서 'Key'가 없으면 HashMap이 생성되는데 <K,V>는 'Java'가 주변 코드를 살펴서 알아서 추론 
 			// 즉, 새로 생성된 HashMap은 'Key'의 'Value'인 Map<ReactionType,Long>으로 추론하여 반환
 			reactionCountMap.computeIfAbsent(rc.getCommentId(), k -> new HashMap<>())
 			// put() 을 사용하여, 반환된 Map<ReactionType,Long>에 맞게 값을 덮어씀.
@@ -369,15 +386,24 @@ public class CommentServiceImpl implements CommentService {
 		// 준비 단계 Entity -> DTO변환 -> new ArrayList<>()(setChildComments)
 		for(Comment comment : allComments) {
 
-			Map<ReactionType, Long> counts = reactionCountMap.getOrDefault(comment.getCommentId(), Collections.emptyMap());
-			int likeCount = counts.getOrDefault(ReactionType.LIKE, 0L).intValue();
-	        int dislikeCount = counts.getOrDefault(ReactionType.DISLIKE, 0L).intValue();
+			// 각 댓글마다 좋아요, 싫어요 '통계' 가져오기, 없을시에 비워진 맵을 기본값으로 셋팅 
+			// Map<Long, Map<PostReactionType, Long>>.getOrDefault -> 'Value'가 존재하는 Map<PostReactionType, Long> 'or' 'Value'가 없는 Map<PostReactionType, Long>
+			Map<PostReactionType, Long> counts = reactionCountMap.getOrDefault(comment.getCommentId(), Collections.emptyMap());
+			// Map<LIKE> -> 좋아요 갯수
+			int likeCount = counts.getOrDefault(PostReactionType.LIKE, 0L).intValue();
+			// Map<DISLIKE> -> 싫어요 갯수
+	        int dislikeCount = counts.getOrDefault(PostReactionType.DISLIKE, 0L).intValue();
 
 	        // Entity -> DTO
 	        CommentResponseDTO dto = CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false);
 
-	        // List<Comment> comments = null -> List<Comment> comments = new ArrayList<>();
-	        // 실제 객체를 만들어줘서, 'null'을 add() 가능
+	        /* 
+	         	comment 필드의 자식 댓글 관련 필드는 List 타입으로 선언되어 있으나,
+	         	기본적으로 null 상태일 수 있으므로,
+	         	부모 댓글은 항상 대댓글(자식 댓글)을 가지고 있지 않으므로 null 허용 필요.
+	        	하지만 자식 댓글 필드가 null인 상태에서 add() 호출 시 NullPointerException 발생하므로,
+	         	null 대신 빈 ArrayList를 생성하여 할당해야 안전하게 add() 가능 
+	         */
 	        dto.setChildComments(new ArrayList<>());
 	        dtoMap.put(comment.getCommentId(), dto);
 		}
@@ -391,13 +417,13 @@ public class CommentServiceImpl implements CommentService {
 			CommentResponseDTO dto = dtoMap.get(comment.getCommentId());
 			// 'comment'의 'parentComment'가 'null'이면 최상위 댓글
 			if(comment.getParentComment() == null) {
-				// 루트 댓글(최상위 댓글)
+				// 루트 댓글(최상위 댓글), 
 				rootComments.add(dto);
 			}else {
 				// 대댓글
 				// 부모 댓글의 'CommentResponseDTO' 가져오기
 				CommentResponseDTO parentDto = dtoMap.get(comment.getParentComment().getCommentId());
-				// parentDto 유효값 체크
+				// parentDto 유효다는것은 대댓글(자식댓글)이며, 부모 댓글이 존재하므로
 				if(parentDto != null) {
 					// 부모 댓글에 자식 'CommentResponseDTO' add
 					parentDto.getChildComments().add(dto);
@@ -411,8 +437,13 @@ public class CommentServiceImpl implements CommentService {
 		// 접근이 빠르고, 트리구조에 적합 
 		// HashMap<commentId,ResponseDTO> -> Stream<ResponseDTO> 원하는 자료구조형태로 변환 준비
 		List<CommentResponseDTO> top3Pinned = dtoMap.values().stream()
-															 // 'ResponseDTO'를 좋아요 30개 이상만 필터
-														     .filter(responseDto -> responseDto.getLikeCount() >= likeThreshold)
+															 // 'ResponseDTO'를 좋아요 30개 이상, 
+															 // 좋아요 싫어요 차이가 10개보다 큰 댓글 필터링
+														     .filter(responseDto -> { 
+														    	int diff = responseDto.getLikeCount() - responseDto.getDislikeCount();
+														    	return responseDto.getLikeCount() >= likeThreshold && diff >= netLikeThreshold;
+														     })
+														     // 'ResponseDTO'를 좋아요 - 싫어요 '
 
 														     /* 'b'댓글의 좋아요 수와 'a'댓글의 좋아요 수를 비교 하여 (sorted),
 														      *  Integer.compare(b.getLikeCount(), a.getLikeCount()))(내림차순)
@@ -434,13 +465,18 @@ public class CommentServiceImpl implements CommentService {
 														     .limit(topLimit) // 내림차순으로 정렬된 것중에 '3개만'
 														     .collect(Collectors.toList()); // Stream<ResponseDTO> -> List<ResponseDTO>
 
+		// 인기글에 딸린 대댓글은 빈 리스트로 초기화
+		for(CommentResponseDTO dto : top3Pinned ) {
+			dto.setChildComments(Collections.emptyList());
+		}
+
 		// List<CommentResponseDTO> -> Stream<CommentResponseDTO) 원하는 자료구조로 변환 준비
 		Set<Long> top3Ids = top3Pinned.stream()
-										// map : 타입 변환
-										// Stream<CommentResponseDTO> -> Stream<Long>(commentId)
-				                        .map(commentResponseDto -> commentResponseDto.getCommentId())
-				                        // 내림차순 순서유지를 위한 LinkedHashSet 변환
-				                        .collect(Collectors.toCollection(() -> new LinkedHashSet<>()));
+									  // map : 타입 변환
+									  // Stream<CommentResponseDTO> -> Stream<Long>(commentId)
+				                      .map(commentResponseDto -> commentResponseDto.getCommentId())
+				                      // 내림차순 순서유지를 위한 LinkedHashSet 변환
+				                      .collect(Collectors.toCollection(() -> new LinkedHashSet<>()));
 
 		// 상단 고정 댓글 'Pinned(true)' 작업
 		for(CommentResponseDTO dto : dtoMap.values()) {
@@ -453,12 +489,16 @@ public class CommentServiceImpl implements CommentService {
 
 		// 상단 3개 좋아요순 댓글 + 나머지 댓글은 최신순
 		// 상단 3개 좋아요 먼저 처리 ('List'는 순서 유지 때문에 먼저 상단 3개 댓글 부터 넣어줘야함)
-		List<CommentResponseDTO> sortedRoot = new ArrayList<>(top3Pinned);
+		List<CommentResponseDTO> sortedRoot = new ArrayList<>();
+
+		// 댓글 첫 페이지만 상단 3개 좋아요 보여주기
+		int currentPage = pageable.getPageNumber();
+		if(currentPage == 0) {
+			sortedRoot.addAll(top3Pinned);
+		}
 
 		// 나머지 댓글 최신순 작업 (부모 댓글 먼저)
 		List<CommentResponseDTO> restComments = rootComments.stream()
-															// 'top3Ids'에 포함되지 않은 나머지 댓글 필터링
-				                                            //.filter(responseDto -> !top3Ids.contains(responseDto.getCommentId()))
 				                                            // Comparator.comparing(CommentResponseDTO :: getCreatedAt) 생성일자 기준 오름차순
 				                                            // -> .reversed() 내림차순 -> sorted() 정렬
 				                                            .sorted((a,b) -> {
@@ -484,12 +524,62 @@ public class CommentServiceImpl implements CommentService {
 		// 정렬된 'List'를 재귀 함수를 통해 자식 댓글 최신순으로 정렬
 		sortChildComments(sortedRoot,true);
 
+	    // 페이징 수동 처리 (부모 댓글 기준)
+	    int totalParentCommentElements = sortedRoot.size();
+	    // 부모 댓글 총 갯수 / pageSize(10) -> Math.ceil(무조건 올림처리)
+	    // 총 15개의 데이터가 있다면은, 총 2페이지가 나와야하므로 올림처리해야함 (페이지 구하는 공식)
+	    int totalPages = (int)Math.ceil(((double)totalParentCommentElements/pageable.getPageSize()));
+	    // 페이지당 10개 보여주기('index'기준) start ex) 1페이지(0~9)10개, 2페이지(10~19)20개
+	    int start = (int) pageable.getOffset();
+	    int end = Math.min((start + pageable.getPageSize()), totalParentCommentElements);
+	    // 페이지당 10개 보여주기('index'기준) End
+
+	    List<CommentResponseDTO> paged = null;
+
+	    // start 가 총 데이터 갯수보다 많거나 같다면은 그건, 데이터가 없다는것이므로 빈페이지 반환
+	    if (start >= totalParentCommentElements) {
+	        paged = Collections.emptyList();
+	    } else {
+	    	// 그렇지 않다면은 10개씩 데이터 잘라서 'List'에 넣어주기
+	        paged = sortedRoot.subList(start, end);
+	    }
+
+	    // 버튼 활성화 Start
+	    // 이전 버튼 
+	    //ex) 현재 2페이지(index=1)이면, 1페이지 존재(index=0) 'true'
+	    boolean hasPreviousButton = (currentPage > 0);
+	    // 앞 버튼 
+	    //ex) 현재 20페이지(index=19)이면, 총페이지 20페이지(index = totalPages(20) -1) 'false' 
+	    boolean hasNextButton = (currentPage < totalPages -1);
+	    // 맨 앞 버튼 
+	    // ex) 현재 10페이지(index=9)이면 ,1페이지 존재(index=0) 'true', 현재 1페이지이면(index=0) 'false'
+	    boolean hasFirstButton = (currentPage > 0);
+	    // 맨 뒤 버튼
+	    // ex) 현재 5페이지(index=4)이면, 총 페이지 20페에지(index = totalPages(20)-1) 'true', 현재 20페이지(index=19)'false'
+	    boolean hasLastButton = (currentPage < totalPages-1);
+	    // 10 페이지 앞으로 버튼
+	    // ex) 현재 4페이지(index=3)이면, 10페이지 앞으로 버튼 누를시,
+	    // '3(currnetPage)-10'의해 '음수', 그러므로 페이지가 벗어나는걸 방지하기 위해 '첫페이지(index=0)' 설정
+	    int jumpBackwardPageButton = Math.max(currentPage-10,0);
+	    // 10 페이지 뒤로 버튼
+	    // ex) 현재 11페이지(index=10)이면, 10페이지 뒤로 버튼 눌르시,
+	    // '10(currentPage)+10'의해 index = 20이므로, 총페이지 20페이지(index = 19) 범위를 벗어나는것을 방지하기 위한 '맨뒤 페이지(totalPages-1)'설정 
+	    int jumpForwardPageButton = totalPages == 0 ?  0 : Math.min(currentPage+10, totalPages-1);
+	    // 버튼 활성화 End
+	    
+
 		CommentPageResponseDTO response = CommentPageResponseDTO.builder()
-                                                                .comments(sortedRoot)
-                                                                .pageNumber(parentCommentsPage.getNumber())
-                                                                .pageSize(parentCommentsPage.getSize())
-                                                                .totalElements(parentCommentsPage.getTotalElements())
-                                                                .totalPages(parentCommentsPage.getTotalPages())
+                                                                .comments(paged)
+                                                                .pageNumber(currentPage)
+                                                                .pageSize(pageable.getPageSize())
+                                                                .totalElements(totalParentCommentElements)
+                                                                .totalPages(totalPages)
+                                                                .hasPrevious(hasPreviousButton)
+                                                                .hasNext(hasNextButton)
+                                                                .hasFirst(hasFirstButton)
+                                                                .hasLast(hasLastButton)
+                                                                .jumpBackwardPage(jumpBackwardPageButton)
+                                                                .jumpForwardPage(jumpForwardPageButton)
                                                                 .build();
 
 		logger.info("CommentServiceImpl getCommentsTreeByPost() End");

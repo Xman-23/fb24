@@ -1,19 +1,27 @@
 package com.example.demo.domain.member;
 
-import com.example.demo.domain.comment.commentnotification.CommentNotification;
+
+import com.example.demo.domain.member.memberenums.MemberStatus;
 import com.example.demo.domain.member.memberenums.Role;
+import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
+import com.example.demo.domain.notification.Notification;
+
 import java.util.*;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,7 +46,9 @@ import lombok.Setter;
 
 @Entity //테이블,속성 생성과 매핑을  위한 어노테이션
 @Table(name = "member")
-@Data
+@Getter
+@Setter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class Member {
@@ -83,7 +93,22 @@ public class Member {
 	@Column(name = "role", nullable = false)
 	private Role role;
 
-	@OneToMany(mappedBy = "receiver")
-	private List<CommentNotification> notifications = new ArrayList<>();
+	// 회원의 계정상태('ACTIVE(정상)', 'DORMANT(휴면 회원), SUSPENDED(정지 회원), WITHDRAWN (탈퇴 회원)'
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = true)
+    private MemberStatus status = MemberStatus.ACTIVE;
+
+	/* 알림 설정과 1:1 양방향 매핑
+	   mappedBy = "member"는 MemberNotificationSetting 엔티티의 'member' 필드와 연결됨을 의미
+	   cascade = CascadeType.ALL 로 Member 저장/삭제 시 알림 설정도 같이 처리
+	   fetch = FetchType.LAZY 로 실제 사용 시점에 조회해 성능 최적화
+	   optional = false 는 알림 설정이 반드시 존재해야 함을 나타냄
+	*/
+	@OneToOne(mappedBy = "member", cascade = CascadeType.ALL, fetch =  FetchType.LAZY, optional = false )
+	private MemberNotificationSetting notificationSetting;
+
+	// 알림 양방향 매핑 
+	@OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Notification> notifications; 
 
 }

@@ -2,6 +2,7 @@ package com.example.demo.dto.comment;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class CommentRequestDTO {
 	private Long parentCommentId;
 
 	@NotBlank(message =  "댓글 내용은 필수 입니다.")
+	@Size(max = 500, message = "댓글 내용은 500글자 이하로 작성해야합니다.")
 	private String content;
 
 }

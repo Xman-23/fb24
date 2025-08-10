@@ -1,21 +1,22 @@
 package com.example.demo.service.post;
 
-import com.example.demo.domain.board.Board;
-import com.example.demo.domain.post.Post;
+
+import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
+
+import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 
 import com.example.demo.dto.post.PostListResponseDTO;
+import com.example.demo.dto.post.PostPageResponseDTO;
 import com.example.demo.dto.post.PostResponseDTO;
 import com.example.demo.dto.post.PostUpdateRequestDTO;
-import com.example.demo.dto.postimage.ImageOrderDTO;
-import com.example.demo.dto.postimage.PostImageResponseDTO;
+import com.example.demo.dto.post.postimage.ImageOrderDTO;
+import com.example.demo.dto.post.postimage.PostImageResponseDTO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -38,23 +39,23 @@ public interface PostService {
 	// 게시글 삭제
 	void deletePost(Long postId, Long authorId, boolean isDeleteImages);
 
+	// 게시글 신고
+	String reportPost(Long postId, Long reporterId, String reason);
+
 	// 전체 공지글 (공지 게시판 전용)
-	Page<PostListResponseDTO> getAllNotices(Pageable pageable);
+	PostNoticeBoardResponseDTO getAllNotices(Pageable pageable);
 
-	// 특정 게시판의 게시글 목록 조회 (ACTIVE + 공지글 제외)
-	Page<PostListResponseDTO> getPostsByBoard(Long boardId, Pageable pageable);
-
-	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
-	Page<PostListResponseDTO> searchPostsByKeyword(String keyword, Pageable pageable);
+	// 자식 게시판의 게시글 목록 조회 (ACTIVE + 공지글 제외)
+	PostPageResponseDTO getPostsByBoard(Long boardId, Pageable pageable);
 
 	// 자식 게시판 정렬
-	Page<PostListResponseDTO> getPostsByBoardSorted(Long boardId, String sortBy, Pageable pageable);
+	PostPageResponseDTO getPostsByBoardSorted(Long boardId, String sortBy, Pageable pageable);
 
-	// 부모 게시판 정렬
-	Page<PostListResponseDTO> getPostsByParentBoard(Long parentBoardId, String sortBy, Pageable pageable);
+	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
+	PostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable);
 
 	// 작성자별 게시글 조회
-	Page<PostListResponseDTO> getPostsByAuthorNickname(String nickname,Pageable pageable);
+	PostPageResponseDTO getPostsByAuthorNickname(String nickname,Pageable pageable);
 
 	// 조회수 중복 방지
 	void increaseViewCount(Long postId, String userIdentifier);
@@ -66,7 +67,7 @@ public interface PostService {
 	List<PostListResponseDTO> getTop3PinnedNoticesByBoard();
 
 	// 이미지 생성
-	List<String> savePostImages(Long postId, List<MultipartFile> files);
+	void savePostImages(Long postId, List<MultipartFile> files);
 
 	// 이미지 삭제
 	void deletePostImages(Long postId);
@@ -83,7 +84,13 @@ public interface PostService {
 	// 이미지 모두 삭제
 	void deleteAllImages(Long postId, Long requestAuthorId);
 
-	Page<PostListResponseDTO> getPostsByParentBoard (Long parentBoardId, Pageable pageable);
+	// 부모게시판 페이징
+	PostParentBoardPostPageResponseDTO getPostsByParentBoard (Long parentBoardId, Pageable pageable);
 
+	// 게시글 배치 삭제
+	int deleteDeadPost(LocalDateTime cutDate, int maxViewCount);
+
+	// 공지 게시글 배치 삭제
+	int deleteDeadNoticePost(LocalDateTime cutDate);
 
 }

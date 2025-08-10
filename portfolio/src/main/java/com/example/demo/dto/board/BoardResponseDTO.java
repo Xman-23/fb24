@@ -1,11 +1,11 @@
 package com.example.demo.dto.board;
 
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import com.example.demo.domain.board.Board;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /*
@@ -21,28 +21,41 @@ import lombok.NoArgsConstructor;
 	updatedAt	(수정일자)
 */
 
-@Data
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class BoardResponseDTO {
 
+	// 필드 Start
     private Long boardId;
+
     private String name;
+
     private String description;
+
     private boolean isActive;
+
     private int sortOrder;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
+    private String createdAt;
+ 
+    private String updatedAt;
+    // 필드 End
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static BoardResponseDTO convertToResponseDTO(Board board) {
  
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(board.getCreatedAt());
+    	String formatUpdatedAt = DATE_TIME_FORMATTER.format(board.getUpdatedAt());
+
     	BoardResponseDTO boardResponseDTO = new BoardResponseDTO(board.getBoardId(), 
     															 board.getName(), 
     															 board.getDescription(), 
     															 board.isActive(), 
     															 board.getSortOrder(), 
-    															 board.getCreatedAt(), 
-    															 board.getUpdatedAt());
+    															 formatCreatedAt, 
+    															 formatUpdatedAt);
 
     	return boardResponseDTO;
     }

@@ -1,10 +1,10 @@
 package com.example.demo.config;
 
 import org.slf4j.Logger;
+
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -14,7 +14,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.jwt.JwtAuthenticationFilter;
 import com.example.demo.jwt.JwtUtil;
 import com.example.demo.repository.member.MemberRepository;
@@ -85,7 +84,7 @@ public class SecurityConfig {
                 // 게시글 관련 - 비로그인 허용 목록 ([\\d]+ : 숫자 하나 이상(즉, 문자열X))
                 "/posts/{postId:[\\d]+}",                 // 게시글 단건 조회, 댓글 트리조회
                 "/posts/board/**",                        // 게시판별 목록 조회, 자식 게시판 정렬 조회
-                "/posts/boards/**",
+                "/posts/boards/**",						  // 자식게시판 정렬, 부모게시판 보기
                 "/posts/search",                          // 키워드 검색
                 "/posts/notices",                         // 전체 공지 조회
                 "/posts/notices/pinned",                  // 상단 고정 공지
@@ -103,9 +102,11 @@ public class SecurityConfig {
             	// 게시글 
                 "/posts",                                // 게시글 생성 (POST)
                 "/posts/{postId:[\\d]+}",                // 게시글 수정 (PATCH), 삭제 (DELETE)
+                "/posts/{postId:[\\d]+}/report",         // 댓글 신고
                 "/posts/{postId:[\\d]+}/view",           // 조회수 증가
                 "/posts/{postId:[\\d]+}/images/order",   // 이미지 정렬
-                "/posts/{postId:[\\d]+}/images",         // 이미지 단건 삭제
+                "/posts/{postId:[\\d]+}/images/{imageId:[\\d]+}",         // 이미지 단건 삭제
+                "/posts/{postId:[\\d]+}/images",		 // 이미지 모두 삭제
 
                 // 회원
                 "/members/me",
@@ -115,11 +116,16 @@ public class SecurityConfig {
                 // 댓글
                 "/comments",							// 댓글 생성
                 "/comments/{commentId:[\\d]+}",			// 댓글 수정, 삭제
+                "/comments/{commentId:[\\d]+}/report",	// 댓글 신고
 
-                // 댓글 알림
-                "/notifications",								// 댓글 알림 목록조회
-                "/notifications/{notificationId:[\\d]+}/read",	// 알림 읽음
-                "/notifications/unread/count"					// 안 읽은 알림 개수 조회
+                // 알림
+                "/notifications/**",					// 알림
+
+                // 게시글 리액션(좋아요, 싫어요)
+                "/postreactions/**",					// 게시글 리액션
+
+                // 댓글 리액션(좋아요, 싫어요)
+                "/commentreactions/**"					// 댓글 리액션
 
             ).authenticated()
             // 나머지는 인증 필요

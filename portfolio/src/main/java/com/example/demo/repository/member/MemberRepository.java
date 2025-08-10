@@ -4,9 +4,12 @@ import java.util.Optional;
 import java.util.*;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberenums.MemberStatus;
 
 //JpaRepository 상속받아 간단한 CRUD, 페이징 처리 가능
 @Repository
@@ -29,5 +32,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
 	// 회원정보 변경을 위한 추상메소드
 	Optional<Member> findByNickname(String nickname);
+
+	// 회원상태 'List' 조회
+	@Query(
+			"SELECT m "
+		  + "  FROM Member m "
+		  + " WHERE m.status In :statuses "
+		  )
+	List<Member> findByStatuses(@Param("statuses") List<MemberStatus> statuses);
 
 }

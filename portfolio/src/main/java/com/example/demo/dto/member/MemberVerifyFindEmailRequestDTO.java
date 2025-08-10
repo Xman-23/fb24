@@ -1,6 +1,5 @@
 package com.example.demo.dto.member;
 
-import com.example.demo.domain.member.Member;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -21,9 +20,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MemberVerifyFindEmailRequestDTO {
 
-	@NotBlank
+	@NotBlank(message = "사용자 이름은 필수 입니다.")
 	private String username;
-	@NotBlank
+	@NotBlank(message = "주민번호는 필수 입니다.")
 	private String residentNumber;
 
     public MemberVerifyFindEmailRequestDTO toDto() {

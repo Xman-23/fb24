@@ -1,14 +1,14 @@
 package com.example.demo.controller.post;
 
-import java.net.URLDecoder;
+
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -30,17 +30,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriUtils;
 
-import com.example.demo.controller.member.MemberController;
 import com.example.demo.domain.member.memberenums.Role;
-import com.example.demo.domain.post.Post;
-import com.example.demo.dto.post.PinUpdateRequestDTO;
+import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
+import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.post.PostPinUpdateRequestDTO;
+import com.example.demo.dto.comment.commentreport.CommentReportRequestDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 import com.example.demo.dto.post.PostDeleteRequestDTO;
 import com.example.demo.dto.post.PostListResponseDTO;
+import com.example.demo.dto.post.PostPageResponseDTO;
 import com.example.demo.dto.post.PostResponseDTO;
 import com.example.demo.dto.post.PostUpdateRequestDTO;
-import com.example.demo.dto.postimage.ImageOrderDTO;
-import com.example.demo.dto.postimage.PostImageResponseDTO;
+import com.example.demo.dto.post.postimage.ImageOrderDTO;
+import com.example.demo.dto.post.postimage.PostImageResponseDTO;
+import com.example.demo.dto.post.postreport.PostReportRequestDTO;
 import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.post.PostService;
 import com.example.demo.service.post.PostServiceImpl;
@@ -128,9 +131,15 @@ public class PostController {
 		} catch (NoSuchElementException e) {
 			logger.error("PostController createPost() NoSuchElementException Error : {}",e.getMessage(),e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController createPost() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		} catch (IllegalStateException e) {
+			logger.error("PostController createPost() IllegalStateException : {}",e.getMessage(),e );
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController createPost() IllegalArgumentException : {}",e.getMessage(),e );
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		} catch (RuntimeException e) {
+			logger.error("PostController createPost() RuntimeException : {}",e.getMessage(),e );
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		if(response == null) {
@@ -146,13 +155,20 @@ public class PostController {
 	/**테스트 완료*/
 	@PatchMapping("/{postId}")
 	public ResponseEntity<?> updatePost(@PathVariable(name = "postId") Long postId,
-										@ModelAttribute PostUpdateRequestDTO postUpdateRequestDTO,
+										@ModelAttribute@Valid PostUpdateRequestDTO postUpdateRequestDTO,
+										BindingResult bindingResult,
 										@AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
 		logger.info("PostController updatePost() Start");
 
+
 		if(!PostValidation.isPostId(postId)) {
-			logger.error("PostController updatePost() BAD_REQUEST Error : " + "입력값이 유효하지 않습니다.");
+			logger.error("PostController updatePost() BAD_REQUEST Error : 입력값이 유효하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+
+		if(bindingResult.hasErrors()) {
+			logger.error("PostController updatePost() BAD_REQUEST Error : 입력값이 유효하지 않습니다.");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
 		}
 
@@ -216,8 +232,8 @@ public class PostController {
 		} catch (NoSuchElementException e) {
 			logger.error("PostController deletePost() NoSuchElementException Error : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController deletePost() Exception Error : {}","서버 에러",e);
+		} catch (RuntimeException e) {
+			logger.error("PostController deletePost() RuntimeException Error : {}","서버 에러",e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
@@ -225,6 +241,260 @@ public class PostController {
 		// 반환할 데이터가 없고, 성공만 알리면 되는 경우,
 		// HTTP 200 OK 상태를 보내되, 응답 본문(body)은 비워서(noContent()) 반환한다
 		return ResponseEntity.noContent().build();
+	}
+
+	// 게시글 신고 API엔드포인트
+	/**
+	 * 신고 API의 HTTP 메서드 선택 기준
+	 *
+	 * 1. 단순 컬럼 변경만 수행하는 경우
+	 *    - 예: reportCount 값을 단순히 1 증가시키는 경우
+	 *    - 이때는 리소스 일부를 수정하는 것이므로 PATCH가 적절하다.
+	 *
+	 * 2. 여러 도메인(=여러 service) 로직이 복합적으로 수행되는 경우
+	 * 		reportCount 증가 + 상태(HIDDEN) 변경(= 댓글 신고 서비스)
+	 * 		알림 생성 + 신고 이력 저장 등(= 댓글 알림 생성 서비스)
+	 *    - => reportCount 증가 + 상태(HIDDEN) 변경 + 알림 생성 + 신고 이력 저장 등
+	 *    - 이러한 복합 행위는 단순 필드 수정이 아니라, '신고'라는 새로운 행위를 생성하는 것에 해당함.
+	 *    - 따라서 POST 메서드를 사용하는 것이 RESTful 설계에 부합한다.
+	 *
+	 * 결론:
+	 * - 단순 수정만 있다면 PATCH,
+	 * - 복합적인 행위(도메인 이벤트 발생 등)를 동반한다면 POST를 사용.
+	 */
+	@PostMapping("/{postId}/report")
+	public ResponseEntity<?> reportPost(@PathVariable(name = "postId") Long postId,
+			                            @RequestBody@Valid PostReportRequestDTO postReportRequestDTO,
+			                            BindingResult bindingResult,
+			                            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+		logger.info("PostController reportPost() Start");
+
+		if(bindingResult.hasErrors()) {
+			logger.error("PostController reportPost() Error : 'PostReportRequestDTO'가 유효하지 않습니다.");
+			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
+		}
+
+		String reason = postReportRequestDTO == null ? null : postReportRequestDTO.getReason();
+		Long requestReporterId = customUserDetails.getMemberId();
+
+		String response = null;
+
+		try {
+			response = postService.reportPost(postId, requestReporterId, reason);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController reportPost() NoSuchElementException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalStateException e) {
+			logger.error("PostController reportPost() IllegalStateException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		}
+
+		logger.info("PostController reportPost() End");
+		return ResponseEntity.ok(response);
+	}
+
+	// 이미지 목록 조회 API엔드포인트
+	/**테스트 완료*/
+	@GetMapping("/{postId}/images")
+	public ResponseEntity<?> getPostImages(@PathVariable(name = "postId") Long postId) {
+
+		logger.info("PostController getPostImages() Start");
+
+		if(!PostValidation.isPostId(postId)) {
+			logger.error("PostController getPostImages() BAD_REQUEST Error : " + "입력값이 유효하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+
+		List<PostImageResponseDTO> response = null;
+
+		try {
+			response = postService.getPostImages(postId);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController getPostImages() NoSuchElementException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (Exception e) {
+			logger.error("PostController getPostImages() Exception Error : {}","서버 에러",e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		if(response == null) {
+			logger.error("PostController getPostImages() INTERNAL_SERVER_ERROR : {}");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController getPostImages() Success End");
+		return ResponseEntity.ok(response);
+	}
+
+	// 이미지 정렬 순서 조정 API엔드포인트
+	/**테스트 완료*/
+	@PatchMapping("/{postId}/images/order")
+	public ResponseEntity<?> updateImageOrder(@PathVariable(name = "postId") Long postId,
+											  @RequestBody List<ImageOrderDTO> orderList,
+											  @AuthenticationPrincipal CustomUserDetails customUserDetails){
+
+		logger.info("PostController updateImageOrder() Start");
+
+		Long requestAuthorId = customUserDetails.getMemberId();
+
+		List<PostImageResponseDTO> response = null;
+		
+		try {
+			response = postService.updateImageOrder(postId, orderList, requestAuthorId);
+		} catch (SecurityException e) {
+			logger.error("PostController deleteImage() updateImageOrder : {}", e.getMessage(), e);
+			// 작성자 외에는 게시글을 수정할 수 없음 -> 접근권한 없음(403)
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+		} catch (Exception e) {
+			logger.error("PostController deleteImage() Exception : {}","서버 에러",e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController updateImageOrder() Success End");
+		return ResponseEntity.ok(response);
+	}
+
+	// 이미지 단건 삭제 API엔드 포인트
+	/**테스트 완료*/
+	// 'Delete'는 (@PathVariable, @RequestParam)으로 요청
+	@DeleteMapping("/{postId}/images/{imageId}")
+	public ResponseEntity<?> deleteImage(@PathVariable(name = "postId") Long postId,
+										 @PathVariable(name = "imageId") Long imageId,
+			                             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+		logger.info("PostController deleteImage() Start");
+
+		Long requestAuthorId = customUserDetails.getMemberId();
+
+		// ex) DELETE /posts/123/image?imageUrl=/images/abc.jpg
+		try {
+			postService.deleteSingleImage(postId, imageId, requestAuthorId);
+		} catch (SecurityException e) {
+			logger.error("PostController deleteImage() SecurityException : {}", e.getMessage(), e);
+			// 작성자 외에는 게시글을 수정할 수 없음 -> 접근권한 없음(403)
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+		} catch (NoSuchElementException e) {
+			logger.error("PostController deleteImage() NoSuchElementException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (RuntimeException e) {
+			logger.error("PostController deleteImage() RuntimeException : {}",e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController deleteImage() Success End");
+		return ResponseEntity.ok("이미지가 정상적으로 삭제되었습니다.");
+	}
+
+	// 이미지 모두 삭제 API엔드포인트
+	/**테스트 완료*/
+	@DeleteMapping("/{postId}/images")
+	public ResponseEntity<?> deleteAllImages(@PathVariable(name = "postId") Long postId,
+	                                         @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+	    logger.info("PostController deleteAllImages() Start");
+
+	    try {
+	        postService.deleteAllImages(postId, customUserDetails.getMemberId());
+	    } catch (SecurityException e) {
+	        logger.error("PostController deleteAllImages() SecurityException : {}", e.getMessage(), e);
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+	    } catch (NoSuchElementException e) {
+	        logger.error("PostController deleteAllImages() NoSuchElementException: {}", e.getMessage(), e);
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+	    } catch (RuntimeException e) {
+	        logger.error("PostController deleteAllImages() RuntimeException : {}", e.getMessage(), e);
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+	    }
+
+	    logger.info("PostController deleteAllImages() Success End");
+	    return ResponseEntity.ok("모든 이미지 삭제 완료");
+	}
+
+	// 조회수 증가
+	/**테스트 완료*/
+	@PatchMapping("/{postId}/view")
+	public ResponseEntity<?> increaseViewCount(@PathVariable(name = "postId") Long postId,
+											   @AuthenticationPrincipal CustomUserDetails customUserDetails,
+											   HttpServletRequest request) {
+
+		logger.info("PostController increaseViewCount() Start");
+
+        String userIdentifier;
+
+        if (customUserDetails != null) {
+            // 로그인 유저면 userId 사용
+            userIdentifier = String.valueOf(customUserDetails.getMemberId());
+        } else {
+            // 비로그인 유저면 IP 주소 사용
+            userIdentifier = this.getClientIp(request);
+        }
+
+        try {
+            postService.increaseViewCount(postId, userIdentifier);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+        }
+
+		logger.info("PostController increaseViewCount() Success End");
+		return ResponseEntity.ok().build();
+	}
+
+	// 핀 설정/해제 (관리자만 가능)
+	/**테스트 완료*/
+	@PatchMapping("/{postId}/pin")
+	// 관리자 권한만 가능
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	public ResponseEntity<?> togglePin(@PathVariable(name = "postId") Long postId,
+									   @RequestBody PostPinUpdateRequestDTO pinUpdateRequestDTO,
+									   @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+		logger.info("PostController togglePin() Start");
+
+		// Request
+		boolean dtoPinned  = pinUpdateRequestDTO.isPinned();
+
+		try {
+			postService.togglePinPost(postId, dtoPinned);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController togglePin() NoSuchElementException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (Exception e) {
+			logger.error("PostController togglePin() Exception Error : {}","서버 에러",e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController togglePin() Success Start");
+		return ResponseEntity.ok().build();
+	}
+
+	// 핀 설정된 공지사항 3개 최신순으로 조회
+	/**테스트 완료*/
+	@GetMapping("notices/pinned")
+	public ResponseEntity<?> getTopPinnedNoticesByBoard() {
+
+		logger.info("PostController getTopPinnedNoticesByBoard() Start");
+
+		List<PostListResponseDTO> response = null;
+
+		try {
+			response = postService.getTop3PinnedNoticesByBoard();
+		} catch (NoSuchElementException e) {
+			logger.error("PostController getTopPinnedNoticesByBoard() NoSuchElementException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (Exception e) {
+			logger.error("PostController getTopPinnedNoticesByBoard() Exception Error : {}","서버 에러",e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		if(response == null) {
+			logger.error("PostController getTopPinnedNoticesByBoard() INTERNAL_SERVER_ERROR : {}");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController getTopPinnedNoticesByBoard() Success End");
+		return ResponseEntity.ok(response);
 	}
 
 	// 게시글 단건 조회 API엔드포인트
@@ -278,7 +548,7 @@ public class PostController {
 		}
 
 		// Response
-		Page<PostListResponseDTO> response = null;
+		PostPageResponseDTO response = null;
 
 		try {
 			response = postService.getPostsByBoard(boardId, pageable);
@@ -292,7 +562,7 @@ public class PostController {
 
 
 		if(response == null) {
-			logger.error("PostController getPostsByBoard() INTERNAL_SERVER_ERROR : {}");
+			logger.error("PostController getPostsByBoard() INTERNAL_SERVER_ERROR : 서버에러");
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
@@ -309,7 +579,12 @@ public class PostController {
 
 		logger.info("PostController getPostsByBoardSorted() Start");
 
-		Page<PostListResponseDTO> response = null;
+		if(!BoardValidation.isValidBoardId(boardId)) {
+			logger.error("PostController getPostsByBoard() BAD_REQUEST Error : 입력값이 유효하지 않습니다." );
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+
+		PostPageResponseDTO response = null;
 
 	    try {
 	    	response = postService.getPostsByBoardSorted(boardId, sortBy, pageable);
@@ -320,6 +595,11 @@ public class PostController {
 	        logger.error("PostController getPostsByBoardSorted() Error: {}", e.getMessage());
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 	    }
+
+		if(response == null) {
+			logger.error("PostController getPostsByBoardSorted() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
 
 	    logger.info("PostController getPostsByBoardSorted() End");
 	    return ResponseEntity.ok(response);
@@ -333,7 +613,7 @@ public class PostController {
 		logger.info("PostController getAllNotices() Start");
 
 		// Response
-		Page<PostListResponseDTO> response = null;
+		PostNoticeBoardResponseDTO response = null;
 
 		try {
 			response = postService.getAllNotices(pageable);
@@ -354,57 +634,29 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 핀 설정된 공지사항 3개 최신순으로 조회
-	/**테스트 완료*/
-	@GetMapping("notices/pinned")
-	public ResponseEntity<?> getTopPinnedNoticesByBoard() {
-
-		logger.info("PostController getTopPinnedNoticesByBoard() Start");
-
-		List<PostListResponseDTO> response = null;
-
-		try {
-			response = postService.getTop3PinnedNoticesByBoard();
-		} catch (NoSuchElementException e) {
-			logger.error("PostController getTopPinnedNoticesByBoard() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController getTopPinnedNoticesByBoard() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		if(response == null) {
-			logger.error("PostController getTopPinnedNoticesByBoard() INTERNAL_SERVER_ERROR : {}");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController getTopPinnedNoticesByBoard() Success End");
-		return ResponseEntity.ok(response);
-	}
-
 	// 게시글 키워드 검색 API엔드포인트
 	/**테스트 완료*/
 	@GetMapping("/search")
 	public ResponseEntity<?> searchPosts (@RequestParam(name = "keyword") String keyword,
-			                              @PageableDefault(size = 10, sort = "createdAt" , direction = Sort.Direction.DESC) Pageable pageable) {
+			                              @PageableDefault(size = 10) Pageable pageable) {
 
 		logger.info("PostController searchPosts() Start");
 
+		logger.info("keywordUT : {}", keyword);
 		// 한글 깨짐 방지를 위한 UTF_8 인코더
 		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8);
 
+		logger.info("keywordUTF8 : {}", keywordUTF8);
 
 		if(!PostValidation.isValidString(keywordUTF8)) {
-
-			Page<PostListResponseDTO > emptyPage = Page.empty(pageable);
-
-			return ResponseEntity.ok(emptyPage); //빈페이지
+			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
 		}
 
-		Page<PostListResponseDTO> response = postService.searchPostsByKeyword(keywordUTF8, pageable);
+		PostPageResponseDTO response = postService.searchPostsByKeyword(keywordUTF8, pageable);
 
 		if(response == null) {
-			logger.error("PostController searchPosts() INTERNAL_SERVER_ERROR : 서버에러");
+			logger.error("PostController getAllNotices() INTERNAL_SERVER_ERROR : 서버에러");
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
@@ -424,14 +676,11 @@ public class PostController {
 		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8);
 
 		if(!PostValidation.isValidString(nicknameUTF8)) {
-
-			Page<PostListResponseDTO> emptyPage = Page.empty(pageable);
-
-			return ResponseEntity.ok(emptyPage); //빈페이지
+			logger.warn("PostServiceImpl getPostsByAuthor() : 'nickname'이 유효하지 않습니다.");
+			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
 		}
 
-
-		Page<PostListResponseDTO> response = null;
+		PostPageResponseDTO response = null;
 
 		try {
 			response = postService.getPostsByAuthorNickname(nicknameUTF8, pageable);
@@ -452,195 +701,15 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 조회수 증가
-	/**테스트 완료*/
-	@PatchMapping("/{postId}/view")
-	public ResponseEntity<?> increaseViewCount(@PathVariable(name = "postId") Long postId,
-											   @AuthenticationPrincipal CustomUserDetails customUserDetails,
-											   HttpServletRequest request) {
-
-		logger.info("PostController increaseViewCount() Start");
-
-        String userIdentifier;
-
-        if (customUserDetails != null) {
-            // 로그인 유저면 userId 사용
-            userIdentifier = String.valueOf(customUserDetails.getMemberId());
-        } else {
-            // 비로그인 유저면 IP 주소 사용
-            userIdentifier = this.getClientIp(request);
-        }
-
-        try {
-            postService.increaseViewCount(postId, userIdentifier);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-        }
-
-		logger.info("PostController increaseViewCount() Success End");
-		return ResponseEntity.ok().build();
-	}
-
-	// 핀 설정/해제 (관리자만 가능)
-	/**테스트 완료*/
-	@PatchMapping("/{postId}/pin")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public ResponseEntity<?> togglePin(@PathVariable(name = "postId") Long postId,
-									   @RequestBody PinUpdateRequestDTO pinUpdateRequestDTO,
-									   @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-
-		logger.info("PostController togglePin() Start");
-
-		// '핀설정'은 '관리자'만 작성 가능
-		if(customUserDetails.getRole() != Role.ROLE_ADMIN) {
-			logger.error("PostController togglePin Error : 핀설정은 관리자만 작성 가능합니다.");
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body("핀설정은 관리자만 작성 가능합니다.");
-		}
-
-		// Request
-		boolean dtoPinned  = pinUpdateRequestDTO.isPinned();
-
-		try {
-			postService.togglePinPost(postId, dtoPinned);
-		} catch (NoSuchElementException e) {
-			logger.error("PostController togglePin() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController togglePin() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController togglePin() Success Start");
-		return ResponseEntity.ok().build();
-	}
-
-	// 이미지 목록 조회 API엔드포인트
-	/**테스트 완료*/
-	@GetMapping("/{postId}/images")
-	public ResponseEntity<?> getPostImages(@PathVariable(name = "postId") Long postId) {
-
-		logger.info("PostController getPostImages() Start");
-
-		if(!PostValidation.isPostId(postId)) {
-			logger.error("PostController getPostImages() BAD_REQUEST Error : " + "입력값이 유효하지 않습니다.");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
-		}
-
-		List<PostImageResponseDTO> response = null;
-
-		try {
-			response = postService.getPostImages(postId);
-		} catch (NoSuchElementException e) {
-			logger.error("PostController getPostImages() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController getPostImages() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		if(response == null) {
-			logger.error("PostController getPostImages() INTERNAL_SERVER_ERROR : {}");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController getPostImages() Success End");
-		return ResponseEntity.ok(response);
-	}
-
-	// 이미지 정렬 순서 조정 API엔드포인트
-	/**테스트 해야함*/
-	@PatchMapping("/{postId}/images/order")
-	public ResponseEntity<?> updateImageOrder(@PathVariable(name = "postId") Long postId,
-											  @RequestBody List<ImageOrderDTO> orderList,
-											  @AuthenticationPrincipal CustomUserDetails customUserDetails){
-
-		logger.info("PostController updateImageOrder() Start");
-
-		Long requestAuthorId = customUserDetails.getMemberId();
-
-		List<PostImageResponseDTO> response = null;
-		
-		try {
-			response = postService.updateImageOrder(postId, orderList, requestAuthorId);
-		} catch (SecurityException e) {
-			logger.error("PostController deleteImage() updateImageOrder Error : {}", e.getMessage(), e);
-			// 작성자 외에는 게시글을 수정할 수 없음 -> 접근권한 없음(403)
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController deleteImage() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController updateImageOrder() Success End");
-		return ResponseEntity.ok(response);
-	}
-
-	// 이미지 단건 삭제 API엔드 포인트
-	/**테스트 완료*/
-	// 'Delete'는 (@PathVariable, @RequestParam)으로 요청
-	@DeleteMapping("/{postId}/images/{imageId}")
-	public ResponseEntity<?> deleteImage(@PathVariable(name = "postId") Long postId,
-										 @PathVariable(name = "imageId") Long imageId,
-			                             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-
-		logger.info("PostController deleteImage() Start");
-
-		Long requestAuthorId = customUserDetails.getMemberId();
-
-		// ex) DELETE /posts/123/image?imageUrl=/images/abc.jpg
-		try {
-			postService.deleteSingleImage(postId, imageId, requestAuthorId);
-		} catch (SecurityException e) {
-			logger.error("PostController deleteImage() SecurityException Error : {}", e.getMessage(), e);
-			// 작성자 외에는 게시글을 수정할 수 없음 -> 접근권한 없음(403)
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-		} catch (NoSuchElementException e) {
-			logger.error("PostController deleteImage() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController deleteImage() Exception Error : {}",e.getMessage(),e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController deleteImage() Success End");
-		return ResponseEntity.ok("이미지가 정상적으로 삭제되었습니다.");
-	}
-
-	// 이미지 모두 삭제 API엔드포인트
-	/**테스트 완료*/
-	@DeleteMapping("/{postId}/images")
-	public ResponseEntity<?> deleteAllImages(@PathVariable(name = "postId") Long postId,
-	                                         @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-	    logger.info("PostController deleteAllImages() Start");
-
-	    try {
-	        postService.deleteAllImages(postId, customUserDetails.getMemberId());
-	    } catch (SecurityException e) {
-	        logger.error("PostController deleteAllImages() SecurityException Error : {}", e.getMessage(), e);
-	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-	    } catch (NoSuchElementException e) {
-	        logger.error("PostController deleteAllImages() NoSuchElementException Error : {}", e.getMessage(), e);
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-	    } catch (Exception e) {
-	        logger.error("PostController deleteAllImages() Exception Error : {}", e.getMessage(), e);
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-	    }
-
-	    logger.info("PostController deleteAllImages() Success End");
-	    return ResponseEntity.ok("모든 이미지 삭제 완료");
-	}
-
 	// 부모 게시판으로 자식 게시판 게시글 모두 보기 API 엔드포인트
 	/**테스트 완료*/
 	@GetMapping("/boards/{parentBoardId}/posts")
 	public ResponseEntity<?> getPostsByParentBoard(@PathVariable(name = "parentBoardId") Long parentBoardId,
-			                                       @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+			                                       @PageableDefault(size = 10) Pageable pageable) {
 
 		logger.info("PostController getPostsByParentBoard() Start");
 
-		Page<PostListResponseDTO> response = null;
+		PostParentBoardPostPageResponseDTO response = null;
 
 		try {
 			response = postService.getPostsByParentBoard(parentBoardId, pageable);
@@ -658,31 +727,6 @@ public class PostController {
 		}
 
 		logger.info("PostController getPostsByParentBoard() SuccessEnd");
-		return ResponseEntity.ok(response);
-	}
-
-	// 부모 게시판 최신순, 인기순 정렬
-	/**테스트 완료*/
-	@GetMapping("/parent-boards/{parentBoardId}/posts/sorted")
-	public ResponseEntity<?> getPostsByParentBoard(@PathVariable(name = "parentBoardId") Long parentBoardId,
-												   @RequestParam(name = "sortBy", defaultValue = "latest") String sortBy,
-												   @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)Pageable pageable) {
-
-		logger.info("PostController getPostsByParentBoard() Start");
-
-		Page<PostListResponseDTO> response  = null;
-
-	    try {
-	        response = postService.getPostsByParentBoard(parentBoardId, sortBy, pageable);
-	    } catch (NoSuchElementException e) {
-	        logger.error("PostController getPostsByParentBoard() NotFound: {}", e.getMessage());
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-	    } catch (Exception e) {
-	        logger.error("PostController getPostsByParentBoard() Error: {}", e.getMessage());
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-	    }
-
-		logger.info("PostController getPostsByParentBoard() End");
 		return ResponseEntity.ok(response);
 	}
 

@@ -1,6 +1,7 @@
 package com.example.demo.domain.comment;
 
 import java.time.LocalDateTime;
+
 import java.util.*;
 
 import org.springframework.data.annotation.CreatedDate;
@@ -8,10 +9,9 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.comment.commentenums.CommentStatus;
-import com.example.demo.domain.comment.commentnotification.CommentNotification;
-import com.example.demo.domain.commentreaction.CommentReaction;
+import com.example.demo.domain.comment.commentreaction.CommentReaction;
+import com.example.demo.domain.comment.commentreport.CommentReport;
 import com.example.demo.domain.post.Post;
-import com.example.demo.domain.postImage.PostImage;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -29,7 +29,6 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -99,8 +98,8 @@ public class Comment {
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CommentReaction> reactions = new ArrayList<>();
 
-    @OneToMany(mappedBy = "comment")
-    private List<CommentNotification> notifications = new ArrayList<>();
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommentReport> reports = new ArrayList<>();
 
     @Column(name = "author_id", nullable = false)
     private Long authorId;
@@ -131,9 +130,10 @@ public class Comment {
         if(this.reportCount == null ) {
             this.reportCount = 0L;
         }
-        this.reportCount += 1;
+        this.reportCount = this.getReportCount() +1L;
     }
-    // 상태 변경 메서드 (필요시)
+
+    // 상태 변경 메서드 
     public void setStatus(CommentStatus status) {
         this.status = status;
     }

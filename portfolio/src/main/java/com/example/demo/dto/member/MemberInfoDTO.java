@@ -2,6 +2,7 @@ package com.example.demo.dto.member;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /*
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 	주민번호
 */
 
-@Data
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class MemberInfoDTO {

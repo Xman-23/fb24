@@ -1,6 +1,7 @@
 package com.example.demo.dto.comment;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 public class CommentUpdateRequestDTO {
 
 	@NotBlank(message = "댓글 내용은 필수입니다.")
+	@Size(max = 500, message = "댓글 내용은 500글자 이하로 작성해야합니다.")
 	private String content;
 
 }

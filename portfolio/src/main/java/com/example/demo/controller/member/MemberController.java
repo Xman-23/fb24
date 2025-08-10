@@ -21,26 +21,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.demo.repository.member.MemberRepository;
 import com.example.demo.security.AES256Util;
 import com.example.demo.service.member.MemberService;
-import com.example.demo.validation.email.EmailValidation;
-import com.example.demo.validation.nickname.NickNameValidation;
-import com.example.demo.validation.password.PasswordValidation;
-import com.example.demo.validation.phone.PhoneValidation;
-import com.example.demo.validation.residentnumber.ResidentNumberValidation;
+import com.example.demo.validation.member.email.EmailValidation;
+import com.example.demo.validation.member.password.PasswordValidation;
+import com.example.demo.validation.member.phone.PhoneValidation;
+import com.example.demo.validation.member.residentnumber.ResidentNumberValidation;
+import com.example.demo.validation.string.WordValidation;
 import com.example.demo.domain.member.Member;
-import com.example.demo.dto.auth.AuthLoginDTO;
 import com.example.demo.dto.member.MemberInfoDTO;
 import com.example.demo.dto.member.MemberResetPasswordDTO;
 import com.example.demo.dto.member.MemberSignupDTO;
 import com.example.demo.dto.member.MemberUpdateRequestDTO;
 import com.example.demo.dto.member.MemberVerifyFindEmailRequestDTO;
 import com.example.demo.dto.member.MemberVerifyResetPasswordDTO;
+import com.example.demo.dto.member.memberauth.AuthLoginDTO;
 import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.jwt.JwtUtil;
+import com.example.demo.repository.member.MemberRepository;
 
 import io.jsonwebtoken.Claims;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
@@ -107,7 +108,7 @@ public class MemberController {
 		logger.info("MemberController checkNickname() Start");
 		String trimNickname = nickname.trim();
 
-		if(!NickNameValidation.isValidNickname(trimNickname)) {
+		if(!WordValidation.isValidNickname(trimNickname)) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("유효하지 않은 닉네임입니다.");
 		}
 
@@ -177,7 +178,7 @@ public class MemberController {
 		memberSignupDto.setPhoneNumber(removeTrimPhoneNumber);
 
 		// 비정상 닉네임일 경우 BadRequest(400) 반환
-		if(!NickNameValidation.isValidNickname(trimNickName)) {
+		if(!WordValidation.isValidNickname(trimNickName)) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("닉네임이 유효하지 않습니다.");
 		}
 		
@@ -329,7 +330,7 @@ public class MemberController {
 	@PatchMapping("/reset-password")
 	public ResponseEntity<?> resetPassword(@RequestHeader("Authorization") String bearerToken,
 										   @RequestBody @Valid MemberResetPasswordDTO resetPasswordDto,
-										                       BindingResult bindingResult) {
+										   BindingResult bindingResult) {
 
 		if(bindingResult.hasErrors()) {
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
@@ -368,10 +369,8 @@ public class MemberController {
 		try {
 			memberService.resetPasswordByEmail(emailClaims, newPassword);
 		} catch (IllegalArgumentException e) {
-			logger.error("resetPasswordByEmail IllegalArgumentException 발생" + e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("기존 비밀번호와 동일합니다. 다른 비밀번호를 입력해주세요.");
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+			logger.error("resetPasswordByEmail IllegalArgumentException : {} " + e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		return ResponseEntity.ok("비밀번호가 성공적으로 재설정되었습니다.");
@@ -417,16 +416,13 @@ public class MemberController {
 		try {
 			//email -> MemberService 던짐 -> MemberInfoDto 반환
 			memberInfoDto = memberService.getMyInfo(trimEmail);
-		} catch (DuplicateKeyException e) {
-	        logger.error("getMyInfo DuplicateKeyException 발생   :    " + e.getMessage(), e);
-	        return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용 중인 이메일입니다.");
-	    } catch (DataIntegrityViolationException e) {
-	        logger.error("getMyInfo DataIntegrityViolationException 발생   :   " + e.getMessage() , e);
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력 데이터가 유효하지 않습니다.");
-	    } catch (Exception e) {
-	        logger.error("getMyInfo RuntimeException 발생   :    " + e.getMessage(), e);
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-	    }
+		} catch (IllegalArgumentException e) {
+			logger.error("MemberController getMyInfo() IllegalArgumentException : {} ",e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		} catch (RuntimeException e) {
+			logger.error("MemberController getMyInfo() IllegalArgumentException : {} ",e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+		}
 		/*
 		DTO로 가공해서 응답
 		MemberInfoDto memberInfoDto = new MemberInfoDto(member.getUsername(), member.getEmail(), member.getPhoneNumber());
@@ -437,11 +433,17 @@ public class MemberController {
 
 	// 회원정보 수정 API엔드포인트 (데이터 일부 수정 : 'Patch')
 	@PatchMapping("/me") 
-	public ResponseEntity<?> updateMyInfo(@RequestBody MemberUpdateRequestDTO memberUpdateRequest,
+	public ResponseEntity<?> updateMyInfo(@RequestBody@Valid MemberUpdateRequestDTO memberUpdateRequest,
+										  BindingResult bindingResult,
 										  @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
 		// 'DTO'는 @RequestBody로 매핑되므로, 요청 body가 없으면 컨트롤러 진입 전 400(Bad Request) 에러 발생
 		// 따라서 DTO 자체에 대한 null 체크는 불필요하며, 각 필드에 대해서만 유효성 검사를 수행하면 됨
+
+		if(bindingResult.hasErrors()) {
+			logger.error("MemberController updateMyInfo() Error : 'MemberUpdateRequestDTO'가 유효하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
 
 		// 토큰 에서 닉네임 가져오기
 		String trimCurrentNickname = customUserDetails.getNickname().trim();
@@ -453,7 +455,7 @@ public class MemberController {
 
 		if(!trimDtoNewNickName.isEmpty()) {
 			// 비정상 닉네임일 경우 BadRequest(400) 반환
-			if(!NickNameValidation.isValidNickname(trimDtoNewNickName)) {
+			if(!WordValidation.isValidNickname(trimDtoNewNickName)) {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("닉네임이 유효하지 않습니다.");
 			}
 			// 중복된 닉네임일 경우 409반환
@@ -479,11 +481,14 @@ public class MemberController {
 		try {
 			memberService.updateMember(trimCurrentNickname, memberUpdateRequest);
 		} catch (DataIntegrityViolationException e) {
-			logger.error("updateMember DataIntegrityViolationException 발생   :" + e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력 데이터가 유효하지 않습니다.");
-		} catch (Exception e) {
-			logger.error("updateMember Exception 발생", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+			logger.error("MemberController updateMember() DataIntegrityViolationException : {}" + e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		} catch (EntityNotFoundException e) {
+			logger.error("MemberController updateMember() EntityNotFoundException : {} ", e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("MemberController updateMember() IllegalArgumentException : {} ", e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		return ResponseEntity.ok("회원정보가 수정되었습니다.");

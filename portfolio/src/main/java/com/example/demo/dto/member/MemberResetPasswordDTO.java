@@ -15,9 +15,9 @@ import lombok.Data;
 @Data
 public class MemberResetPasswordDTO {
 
-	@NotBlank
+	@NotBlank(message = "새로운 비밀번호를 입력해주세요")
 	private String newPassword;
-	@NotBlank
+	@NotBlank(message = "새로운 비밀번호 확인을 입력해주세요.")
 	private String confirmNewPassword;
 
 }

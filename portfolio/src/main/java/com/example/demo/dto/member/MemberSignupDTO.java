@@ -30,25 +30,25 @@ import org.slf4j.LoggerFactory;
 @Data
 @NoArgsConstructor
 public class MemberSignupDTO {
-	private static final Logger logger = LoggerFactory.getLogger(MemberSignupDTO.class);
-	@NotBlank
+
+	@NotBlank(message = "사용자 이름은 필수입니다.")
 	private String username;
 
 	@Email
-	@NotBlank
+	@NotBlank(message = "이메일은 필수 입니다.")
 	private String email;
 
-	@NotBlank
+	@NotBlank(message = "비밀번호는 필수 입니다.")
 	private String password;
 
-	@NotBlank
+	@NotBlank(message = "핸드폰 번호는 필수 입니다.")
 	private String phoneNumber;
 
-	@NotBlank
+	@NotBlank(message = "주민번호는 필수 입니다.")
 	@Pattern(regexp = "^\\d{6}-?\\d{7}$", message = "주민번호 형식이 올바르지 않습니다.")
 	private String residentNumber; 
 
-	@NotBlank
+	@NotBlank(message = "닉네임은 필수 입니다.")
 	@Size(min = 2, max = 20 , message = "닉네임은 2글자 이상 20자 이하로 입력해주세요.")
 	private String nickname;
 

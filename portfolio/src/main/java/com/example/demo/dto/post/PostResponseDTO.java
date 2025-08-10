@@ -1,18 +1,18 @@
 package com.example.demo.dto.post;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.post.postenums.PostStatus;
-import com.example.demo.domain.postImage.PostImage;
+import com.example.demo.domain.post.postimage.PostImage;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /*
 	게시글 응답 DTO
@@ -37,12 +37,12 @@ import lombok.Setter;
 */
 
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PostResponseDTO {
 
+	// 필드 Start
 	// 수정, 삭제, 정렬그리고 댓글,이미지등 자식 엔티티를 위한 고유식별자(ID)  
 	private Long postId;
 
@@ -66,9 +66,9 @@ public class PostResponseDTO {
 
 	private PostStatus status;
 
-	private LocalDateTime createdAt;
+	private String createdAt;
 
-	private LocalDateTime updatedAt;
+	private String updatedAt;
 
 	private List<String> imageUrls;
 
@@ -77,10 +77,17 @@ public class PostResponseDTO {
 	private int reactionCount;
 
 	private String userNickname;
+	// 필드 End
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 
 	// Entity(엔티티) -> DTO 변환 메서드
-	public static PostResponseDTO convertToPostResponseDTO(Post post, int commentCount, String userNickname) {
+	public static PostResponseDTO convertToPostResponseDTO(Post post, 
+														   int commentCount, 
+														   String userNickname,
+														   int likeCount,
+														   int disLikeCount) {
 
 		List<String> images = post.getImages() // List<PostImage>
                 				  .stream() // Stream<PostImage>
@@ -89,7 +96,8 @@ public class PostResponseDTO {
                 				  .map(image -> image.getImageUrl()) 
                 				  .collect(Collectors.toList()); // Stream<String> -> List<String>
 
-
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
+    	String formatUpdatedAt = DATE_TIME_FORMATTER.format(post.getUpdatedAt());
 		
 		return PostResponseDTO.builder()
 				              .postId(post.getPostId())
@@ -99,12 +107,12 @@ public class PostResponseDTO {
 							  .content(post.getContent())
 							  .authorId(post.getAuthorId())
 							  .viewCount(post.getViewCount())
-							  .likeCount(post.getLikeCount())
-							  .dislikeCount(post.getDislikeCount())
+							  .likeCount(likeCount)
+							  .dislikeCount(disLikeCount)
 							  .isNotice(post.isNotice())
 							  .status(post.getStatus())
-							  .createdAt(post.getCreatedAt())
-							  .updatedAt(post.getUpdatedAt())
+							  .createdAt(formatCreatedAt)
+							  .updatedAt(formatUpdatedAt)
 							  .imageUrls(images)
 							  .commentCount(commentCount)
 							  .userNickname(userNickname)

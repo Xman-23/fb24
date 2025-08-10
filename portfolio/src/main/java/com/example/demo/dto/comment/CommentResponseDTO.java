@@ -23,7 +23,6 @@ import lombok.NoArgsConstructor;
  * authorId         - 작성자 ID
  * content          - 댓글 내용
  * createdAt        - 작성 시각
- * updatedAt        - 수정 시각
  * childComments    - 자식 댓글(대댓글) 리스트
  * likeCount        - 좋아요 수
  * dislikeCount		- 싫어요 수
@@ -51,8 +50,6 @@ public class CommentResponseDTO {
 
     private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt;
-
     private List<CommentResponseDTO> childComments; // 대댓글 리스트
 
     private int likeCount;
@@ -65,16 +62,18 @@ public class CommentResponseDTO {
 
     private CommentStatus status;
 
+    // "삭제된 댓글입니다", "신고 받은 댓글입니다" 등
+    private String deletedMessage; 
+
     // Entity -> DTO 변환 메서드
     public static CommentResponseDTO fromEntity(Comment comment, int likeCount, int dislikeCount, boolean isPinned) {
+    	// 여기에 시간 포맷 추가
         CommentResponseDTO dto = CommentResponseDTO.builder()
                                                    .commentId(comment.getCommentId())
                                                    .postId(comment.getPost().getPostId())
                                                    .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null)
                                                    .authorId(comment.getAuthorId())
-                                                   .content(comment.getContent())
                                                    .createdAt(comment.getCreatedAt())
-                                                   .updatedAt(comment.getUpdatedAt())
                                                    .likeCount(likeCount)
                                                    .dislikeCount(dislikeCount)
                                                    .isPinned(isPinned)
@@ -94,11 +93,36 @@ public class CommentResponseDTO {
                 long hours = duration.toHours();
                 dto.setUpdatedAgo(hours + "시간 전 수정됨");
             } else {
+            	// '일' 기준
             	long days = duration.toDays();
-            	dto.setUpdatedAgo(days + "일 전 수정됨");
+
+            	// '10일' 까지만 '일'로 취급하여 변경
+            	if(days < 10) {
+            		dto.setUpdatedAgo(days+ "일 전 수정됨");
+            	}else if(days < 365) {
+            		// '10'일 이후부터는 '주'로 취급하여 변경
+            		long weeks = days / 7; // '주' 계산
+            		dto.setUpdatedAgo(weeks + "주 전 수정됨");
+            	}else {
+            		// '365일' 이후부터는 '년'으로 취급하여 변경
+            		long years = days/365;
+            		dto.setUpdatedAgo(years + "년 전 수정됨");
+            	}
             }
         } else {
+        	// 수정을 안 할 경우 생성시간으로 대체
             dto.setUpdatedAgo(null);
+        }
+
+        if(comment.getStatus() == CommentStatus.DELETED) {
+        	dto.setDeletedMessage("삭제된 댓글입니다.");
+        	dto.setContent(""); // 
+        }else if(comment.getStatus() == CommentStatus.HIDDEN) {
+        	dto.setDeletedMessage("신고받은 댓글입니다.");
+        	dto.setContent("");
+        }else {
+        	dto.setDeletedMessage("");
+        	dto.setContent(comment.getContent());
         }
 
         // 자식 댓글 재귀 변환

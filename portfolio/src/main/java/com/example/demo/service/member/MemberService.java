@@ -11,18 +11,22 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberenums.MemberStatus;
 import com.example.demo.domain.member.memberenums.Role;
+import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
 import com.example.demo.dto.member.MemberInfoDTO;
 import com.example.demo.dto.member.MemberUpdateRequestDTO;
 import com.example.demo.dto.member.MemberVerifyFindEmailRequestDTO;
 import com.example.demo.dto.member.MemberVerifyResetPasswordDTO;
 import com.example.demo.jwt.JwtUtil;
 import com.example.demo.repository.member.MemberRepository;
-import com.example.demo.repository.refreshtoken.RefreshTokenRepository;
+import com.example.demo.repository.member.memberrefreshtoken.MemberRefreshTokenRepository;
 import com.example.demo.security.AES256Util;
 import com.example.demo.validation.string.SafeTrim;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OneToOne;
+
 import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
@@ -34,7 +38,7 @@ public class MemberService {
 	//내부(final), 외부(private) 데이터 변겅 불가
 	private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final MemberRefreshTokenRepository refreshTokenRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private static final Logger logger = LoggerFactory.getLogger(MemberService.class);
 
@@ -44,7 +48,7 @@ public class MemberService {
     public MemberService(MemberRepository memberRepository, 
     					 BCryptPasswordEncoder passwordEncoder, 
     					 JwtUtil jwtUtil,
-    					 RefreshTokenRepository refreshTokenRepository) {
+    					 MemberRefreshTokenRepository refreshTokenRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -110,6 +114,21 @@ public class MemberService {
 		} catch (Exception e) {
 			throw new RuntimeException("주민번호 암호화 실패 ", e);
 		}
+
+         
+        MemberNotificationSetting setting = MemberNotificationSetting.builder()
+        		                                                        .member(member) //관계 설정
+        		                                                        .postNotificationEnabled(true)
+        		                                                        .commentNotificationEnabled(true)
+        		                                                        .build();
+
+        // '@OneToOne'의 'optional = false' 설정에 의해서 먼저 'Member'엔티티에 Setting 후, 
+        member.setNotificationSetting(setting);
+
+        // 회원 상태 'ACTIVE'로 초기화 셋팅
+        member.setStatus(MemberStatus.ACTIVE);
+
+        // 레파지토리(JPA) 'save' -> DB 접근 
         return memberRepository.save(member);
     }
 
@@ -187,6 +206,7 @@ public class MemberService {
     // 패스워드 변경 Service
     @Transactional //(07.19 02:00 @Transactional 추가)
     public void resetPasswordByEmail(String emailClaims, String newPassword) {
+
     	Member member = memberRepository.findByEmail(emailClaims)
     			                        .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 이메일입니다."));
     	String trimNewPassword = newPassword.trim();
@@ -199,6 +219,7 @@ public class MemberService {
     	String encodedPassword = passwordEncoder.encode(trimNewPassword);
     	member.setPassword(encodedPassword);
     	memberRepository.save(member);
+
     }
 
     // 회원정보 조회 Service
@@ -206,7 +227,10 @@ public class MemberService {
     	//이메일이 존재할시 해당 이메일의 모든 Member Entity 반환 (비밀번호, 이름, 주민번호, 전화번호 등등..)
     	String trimEmail = email.trim();
     	Member member = memberRepository.findByEmail(trimEmail)
-    	        .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다."));
+    	                                .orElseThrow(() -> {
+    	                                	logger.error("MemberService getMyInfo() IllegalArgumentException : 회원이 존재하지 않습니다.");
+    	                                	return new IllegalArgumentException("회원이 존재하지 않습니다.");
+    	                                });
     	String decryptedResidentNumber = "";
 
     	//DB
@@ -216,7 +240,7 @@ public class MemberService {
 			decryptedResidentNumber = AES256Util.decrypt(memberResidentNumber);
 		} catch (Exception e) {
 			//해당 회원에게 보여줄 주민번호 복호화 실패 예외 처리.
-			throw new RuntimeException("주민번호 복호화 실패", e);
+			throw e;
 		}
     	//'email'에 해당하는 'MemberEntity'를 -> MemberInfoDto 변환 후 DTO필드에 정보를 담는다.
     	MemberInfoDTO memberInfoDto = new MemberInfoDTO(member.getUsername(),
@@ -232,30 +256,78 @@ public class MemberService {
     @Transactional //(07.19 02:00 @Transactional 추가)
     public void updateMember(String trimUserName, MemberUpdateRequestDTO dto) {
 
+    	// // DB에서 닉네임으로 회원 조회(findByNickname), 조회된 Member 객체는 영속 상태가 됨
     	Member member = memberRepository.findByNickname(trimUserName)
-    			                        .orElseThrow(() -> new EntityNotFoundException("회원을 찾을 수 없습니다."));
+    			                        .orElseThrow(() -> {
+    			                        	
+    			                        	return new EntityNotFoundException("회원을 찾을 수 없습니다.");
+    			                        });
+
+    	// 알림 설정 변경 여부 ('Member'에 명시된 'MemberNotificationSetting'도 자동적으로 영속성상태)
+    	MemberNotificationSetting memberNotificationSetting = member.getNotificationSetting();
+
+    	// DB업데이트 여부 변수
+    	boolean dbSetting = false;
 
     	//DTO
     	String dtoNickName = dto.getNickname();
     	String dtoPhoneNumber = dto.getPhoneNumber();
     	String dtoAddress = dto.getAddress();
+    	Boolean dtoPostNotificationEnable = dto.getPostNotificationEnabled();
+    	Boolean dtoCommentNotificationEnabled = dto.getCommentNotificationEnabled();
 
     	//DB
     	String dbNickName = member.getNickname();
+    	String dbPhoneNumber = member.getPhoneNumber();
+    	String dbAddress = member.getAddress();
+    	boolean dbPostNotificationEnabled = memberNotificationSetting.isPostNotificationEnabled();
+    	boolean dbCommentNotificationEnabled = memberNotificationSetting.isCommentNotificationEnabled();
 
+    	// 닉네임 수정(DTO와 DB가 다를시에만)
     	if(!dtoNickName.isEmpty() && !dtoNickName.equals(dbNickName)) {
     		member.setNickname(dtoNickName);
+    		dbSetting = true;
     	}
 
-    	if(!dtoPhoneNumber.isEmpty()) {
+    	// 핸드폰 번호 수정((DTO와 DB가 다를시에만))
+    	if(!dtoPhoneNumber.isEmpty() && !dtoPhoneNumber.equals(dbPhoneNumber))  {
     		member.setPhoneNumber(dtoPhoneNumber);
+    		dbSetting = true;
     	}
 
-    	if(!dtoAddress.isEmpty()) {
+    	// 주소 수정((DTO와 DB가 다를시에만)
+    	if(!dtoAddress.isEmpty() && !dtoAddress.equals(dbAddress)) {
     		member.setAddress(dtoAddress);
+    		dbSetting = true;
+    	}
+
+    	// 'Request'로 받은 게시글 알림 설정 여부가 'null'이 아니라면,
+    	if(dtoPostNotificationEnable != null) {
+    		// 기존 'Member'에 셋팅된 게시글 설정여부와, 'Request'로 받은 게시글 설정여부가 다를경우에만 셋팅
+    		if(!dtoPostNotificationEnable.equals(dbPostNotificationEnabled)) {
+    			// 'MemberNotificationSetting'가 'Member'에 의해 영속성 상태이므로, 다른 값이 셋팅 될 경우 자동 'UPDATE'
+    			memberNotificationSetting.setPostNotificationEnabled(dtoPostNotificationEnable);
+    			dbSetting = true;
+    		}
+    	}
+
+    	// 'Request'로 받은 게시글 알림 설정 여부가 'null'이 아니라면,
+    	if(dtoCommentNotificationEnabled != null) {
+    		// 기존 'Member'에 셋팅된 댓글 설졍여부와 , 'Request'로 받은 게시글 설정여부가 다를경우에만 셋팅
+    		if(!dtoCommentNotificationEnabled.equals(dbCommentNotificationEnabled)) {
+    			// 'MemberNotificationSetting'가 'Member'에 의해 영속성 상태이므로, 다른 값이 셋팅 될 경우 자동 'UPDATE'
+    			memberNotificationSetting.setCommentNotificationEnabled(dtoCommentNotificationEnabled);
+    			dbSetting = true;
+    		}
+    	}
+
+    	if(dbSetting == false) {
+			logger.error("MemberService updateMember() IllegalArgumentException : 수정이 단 한번도 이뤄지지 않음.");
+			throw new IllegalArgumentException("잘못된 접근 입니다.");
     	}
 
     	try {
+    		// 'Member'가 영속성 상태지만 명시적으로 호출 
 			memberRepository.save(member);
 		} catch (Exception e) {
 			// DB 제약조건 위반

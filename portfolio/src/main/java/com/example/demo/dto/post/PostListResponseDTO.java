@@ -1,6 +1,9 @@
 package com.example.demo.dto.post;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import org.springframework.format.datetime.DateFormatter;
 
 import com.example.demo.domain.post.Post;
 
@@ -8,7 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /*
 	게시글 목록 응답 DTO
@@ -25,12 +27,12 @@ import lombok.Setter;
 */
 
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PostListResponseDTO {
 
+	// 필드 Start
     private Long postId;
 
     private String title;
@@ -41,35 +43,71 @@ public class PostListResponseDTO {
 
     private boolean isNotice;
 
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     private int reactionCount;
 
     private String userNickname;
- 
 
-    public static PostListResponseDTO fromEntity(Post post, int reactionCount) {
+    private int commentCount;
+
+    private String thumbnailImageUrl;
+    // 필드 End
+
+    private static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+ 
+    // 공지용 (댓글 X)
+    public static PostListResponseDTO fromEntity(Post post, int reactionCount, String userNickname) {
+
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
+
         return PostListResponseDTO.builder()
                                   .postId(post.getPostId())
                                   .title(post.getTitle())
                                   .boardName(post.getBoard().getName())
                                   .viewCount(post.getViewCount())
                                   .isNotice(post.isNotice())
-                                  .createdAt(post.getCreatedAt())
+                                  .createdAt(formatCreatedAt)
+                                  .userNickname(userNickname)
                                   .reactionCount(reactionCount)
                                   .build();
     }
 
-    public static PostListResponseDTO fromEntity(Post post, int reactionCount, String userNickname) {
+    // 일반 게시글용(닉네임, 댓글 카운터 O)
+    public static final PostListResponseDTO fromEntity(Post post, int reactionCount, String userNickname, int commentCount) {
+
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
+
         return PostListResponseDTO.builder()
                                   .postId(post.getPostId())
                                   .title(post.getTitle())
                                   .boardName(post.getBoard().getName())
                                   .viewCount(post.getViewCount())
                                   .isNotice(post.isNotice())
-                                  .createdAt(post.getCreatedAt())
+                                  .createdAt(formatCreatedAt)
                                   .reactionCount(reactionCount)
                                   .userNickname(userNickname)
+                                  .commentCount(commentCount)
+                                  .build();
+    }
+
+    // 키워드, 닉네임 사용자 검색 게시글용(닉네임, 댓글 카운터, 대표 이미지 O)
+    public static PostListResponseDTO fromEntity(Post post, int reactionCount, String userNickname, int commentCount, String thumbnailUrl) {
+
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
+
+        return PostListResponseDTO.builder()
+                                  .postId(post.getPostId())
+                                  .title(post.getTitle())
+                                  .boardName(post.getBoard().getName())
+                                  .viewCount(post.getViewCount())
+                                  .isNotice(post.isNotice())
+                                  .createdAt(formatCreatedAt)
+                                  .reactionCount(reactionCount)
+                                  .userNickname(userNickname)
+                                  .commentCount(commentCount)
+                                  .thumbnailImageUrl(thumbnailUrl)
                                   .build();
     }
 
