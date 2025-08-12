@@ -28,6 +28,7 @@ import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
 import com.example.demo.dto.comment.CommentUpdateRequestDTO;
 import com.example.demo.dto.comment.commentreport.CommentReportRequestDTO;
+import com.example.demo.dto.comment.commentreport.CommentReportResponseDTO;
 import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.comment.CommentService;
 import com.example.demo.validation.comment.CommentValidation;
@@ -74,6 +75,9 @@ public class CommentController {
 		}
 
 		Long requestAuthorId = customUserDetails.getMemberId();
+
+		logger.info("CommentController createComment() customUserDetails.getMemberId() : {} " , customUserDetails.getMemberId());
+		logger.info("CommentController createComment() requestAuthorId : {} " , requestAuthorId);
 
 		CommentResponseDTO response = null;
 
@@ -213,7 +217,7 @@ public class CommentController {
 		String reason = commentReportRequestDTO == null ? null : commentReportRequestDTO.getReason();
 		Long requestReporterId = customUserDetails.getMemberId();
 
-		String response = null;
+		CommentReportResponseDTO response = null;
 
 		try {
 			response = commentService.reportComment(commentId, requestReporterId, reason);

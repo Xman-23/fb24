@@ -36,7 +36,8 @@ class NotificationServiceImpl implements NotificationService {
 
 	// 게시글 타입 알림 (좋아요, 싫어요)
 	private static final List<NotificationType> POST_TYPES = List.of(NotificationType.POST_LIKE,
-			                                                         NotificationType.POST_COMMENT);
+			                                                         NotificationType.POST_COMMENT,
+			                                                         NotificationType.POST_WARNED_DELETED);
 
 	// 댓글 타입 알림 (게시글 댓글, 대댓글, 경고로 인한 삭제)
 	private static final List<NotificationType> COMMENT_TYPES = List.of(NotificationType.COMMENT_LIKE,
@@ -58,7 +59,7 @@ class NotificationServiceImpl implements NotificationService {
 		logger.info("NotificationServiceImpl notifyPostLike() Start");
 
 		// 알림을 받는 사람(Receiver)ID
-		Long receiverMemberId = postReaction.getPost().getAuthorId();
+		Long receiverMemberId = postReaction.getPost().getAuthor().getId();
 		// 알림을 받는 사람의 'Member'
 		Member receiverMember = memberRepository.findById(receiverMemberId)
 				                                .orElseThrow(() -> {
@@ -100,7 +101,7 @@ class NotificationServiceImpl implements NotificationService {
 		logger.info("NotificationServiceImpl notifyPostComment() Start");
 
 		// 댓글, 대댓글 모두 포함
-		Long receiverMemberId = comment.getPost().getAuthorId();
+		Long receiverMemberId = comment.getPost().getAuthor().getId();
 		// 알림을 받는 사람의 'Member'
 		Member receiverMember = memberRepository.findById(receiverMemberId)
 				                                .orElseThrow(() -> {
@@ -108,7 +109,7 @@ class NotificationServiceImpl implements NotificationService {
 				                                	return new NoSuchElementException("회원이 존재하지 않습니다.");
 				                                });
 	
-		Long senderMemberId = comment.getAuthorId();
+		Long senderMemberId = comment.getMember().getId();
 		Member senderMember = memberRepository.findById(senderMemberId)
                                               .orElseThrow(() -> {
                                             	  logger.error("NotificationServiceImpl notifyPostComment() NoSuchElementException : 회원이 존재하지 않습니다.");
@@ -137,7 +138,7 @@ class NotificationServiceImpl implements NotificationService {
 		logger.info("NotificationServiceImpl notifyPostWarned() Start");
 
 		// 알림을 받을 게시글 작성자
-		Long receiverId = post.getAuthorId();
+		Long receiverId = post.getAuthor().getId();
 		Member receiverMember = memberRepository.findById(receiverId)
 				                                .orElseThrow(() -> {
 				                                	logger.error("NotificationServiceImpl notifyPostWarned() NoSuchElementException : 회원이 존재하지 않습니다.");
@@ -164,7 +165,7 @@ class NotificationServiceImpl implements NotificationService {
 
 		logger.info("NotificationServiceImpl notifyCommentLike() Start");
 
-		Long receiverMemberId = commentReaction.getComment().getAuthorId();
+		Long receiverMemberId = commentReaction.getComment().getMember().getId();
 		// 알림을 받는 사람의 'Member'
 		Member receiverMember = memberRepository.findById(receiverMemberId)
 				                                .orElseThrow(() -> {
@@ -213,7 +214,7 @@ class NotificationServiceImpl implements NotificationService {
 			return;
 		}
 
-		Long receiverMemberId = childComment.getParentComment().getAuthorId();
+		Long receiverMemberId = childComment.getParentComment().getMember().getId();
 		// '대댓글이 달린 내 댓글(부모댓글)'을 작성한 회원
 		Member receiverMember = memberRepository.findById(receiverMemberId)
 				                                .orElseThrow(() -> {
@@ -221,7 +222,7 @@ class NotificationServiceImpl implements NotificationService {
 				                                	return new NoSuchElementException("회원이 존재하지 않습니다.");
 				                                });
 		// 대댓글(자식댓글)을 작성한 회원ID
-		Long senderMemberId = childComment.getAuthorId();
+		Long senderMemberId = childComment.getMember().getId();
 		Member senderMember = memberRepository.findById(senderMemberId)
                 							  .orElseThrow(() -> {
                 								  logger.error("NotificationServiceImpl notifyChildComment() NoSuchElementException : 회원이 존재하지 않습니다.");
@@ -253,7 +254,7 @@ class NotificationServiceImpl implements NotificationService {
 
 		logger.info("NotificationServiceImpl notifyCommentWarned() Start");
 
-		Long receiverId = comment.getAuthorId();
+		Long receiverId = comment.getMember().getId();
 		Member receiverMember = memberRepository.findById(receiverId)
 				                        .orElseThrow(() -> {
 		                                	logger.error("NotificationServiceImpl notifyCommentWarned() NoSuchElementException : 회원이 존재하지 않습니다.");

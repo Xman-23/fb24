@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.post.Post;
+import com.example.demo.domain.post.postenums.PostStatus;
 import com.example.demo.domain.post.postreaction.PostReaction;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
 import com.example.demo.dto.post.postreaction.PostReactionRequestDTO;
@@ -54,6 +56,18 @@ class PostReactionServiceImpl implements PostReactionService {
 				                	  logger.error("PostReactionServiceImpl reactionToPost() NoSuchElementException : 게시글이 존재하지 않습니다.");
 				                	  return new NoSuchElementException("게시글이 존재하지 않습니다.");
 				                  });
+
+		// 삭제된 댓글 반응 X
+		if(post.getStatus().equals(PostStatus.DELETED)) {
+			logger.error("PostReactionServiceImpl reactionToPost() IllegalStateException : 삭제된 게시글입니다.");
+		    throw new IllegalStateException("삭제된 게시글입니다.");
+		}
+
+		// 신고된 댓글 반응 X
+		if(post.getStatus().equals(CommentStatus.HIDDEN)) {
+			logger.error("PostReactionServiceImpl reactionToPost() IllegalStateException : 신고된 게시글입니다.");
+		    throw new IllegalStateException("신고된 게시글입니다.");
+		}
 
 		// 게시글 기존 반응 조회 
 		// 해당 게시글에 회원의 최초진입이라, 'reaction'이 없을 수 도 있어, 'orElseThrow()'로 예외 발생 X 

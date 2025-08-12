@@ -1,10 +1,12 @@
 package com.example.demo.domain.member;
 
 
+import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.member.memberenums.MemberStatus;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
 import com.example.demo.domain.notification.Notification;
+import com.example.demo.domain.post.Post;
 
 import java.util.*;
 
@@ -109,6 +111,12 @@ public class Member {
 
 	// 알림 양방향 매핑 
 	@OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Notification> notifications; 
+	private List<Notification> notifications = new ArrayList<>(); 
+
+	@OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Post> posts = new ArrayList<>();
+
+	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Comment> comments = new ArrayList<>();
 
 }

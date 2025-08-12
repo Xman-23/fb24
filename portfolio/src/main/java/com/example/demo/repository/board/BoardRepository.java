@@ -31,12 +31,20 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 
 	List<Board> findByParentBoardIsNull();
 
-	// 부모게시판의 ID를 가진 자식게시판들의 ID 조회
+	// '부모게시판의ID'를 가진 '자식게시판들의ID' 조회
 	@Query(
 			"SELECT b.boardId "
 		  + "  FROM Board b "
 		  + " WHERE b.parentBoard.boardId = :parentBoardId "
 		  )
 	List<Long> findChildBoardIds(@Param("parentBoardId")Long parentBoardId);
+
+	// 모드 자식게시판들의ID조회(중복없이)
+	@Query(
+			"SELECT DISTINCT b.boardId "
+		  + "  FROM Board b "
+		  + " WHERE b.parentBoard IS NOT NULL "
+		  )
+	List<Long> findAllChildBoardIds();
 
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.comment.commentreaction.CommentReaction;
 import com.example.demo.domain.comment.commentreport.CommentReport;
+import com.example.demo.domain.member.Member;
 import com.example.demo.domain.post.Post;
 
 import jakarta.persistence.CascadeType;
@@ -101,8 +102,13 @@ public class Comment {
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CommentReport> reports = new ArrayList<>();
 
-    @Column(name = "author_id", nullable = false)
-    private Long authorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private Member member;
+
+    // 추후에 nullable = false로 변경
+    @Column(name = "author_nickname", nullable = true)
+    private String authorNickname;
 
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;

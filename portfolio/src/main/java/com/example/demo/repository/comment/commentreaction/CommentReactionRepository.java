@@ -57,4 +57,12 @@ public interface CommentReactionRepository extends JpaRepository<CommentReaction
     	  )
     void deleteAllByUserIdIn(@Param("userIds")List<Long> userIds);
 
+    // 댓글 삭제시 리액션 모두 삭제
+    @Modifying // 'UPDATE' or 'DELETE'
+    @Query(
+    		"DELETE FROM CommentReaction cr "
+    	  + " WHERE cr.comment = :comment "
+    	  )
+    int deleteByComment(@Param("comment") Comment comment);
+
 }

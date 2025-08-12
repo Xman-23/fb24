@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.comment.Comment;
+import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.comment.commentreaction.CommentReaction;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
 import com.example.demo.dto.comment.commentreaction.CommentReactionRequestDTO;
@@ -44,14 +45,26 @@ class CommentReactionServiceImpl implements CommentReactionService {
 			                                            Long memberId,
 			                                            CommentReactionRequestDTO commentReactionRequestDTO) {
 
-		logger.info("PostReactionServiceImpl reactionToPost() Start");
+		logger.info("CommentReactionServiceImpl reactionToComment() Start");
 
 		// 댓글 조회
 		Comment comment = commentRepository.findById(commentId)
 				                           .orElseThrow(() -> {
-				                        	   logger.error("CommentReactionServiceImpl reactionToComment : 댓글이 존재하지 않습니다.");
+				                        	   logger.error("CommentReactionServiceImpl reactionToComment() NoSuchElementException : 댓글이 존재하지 않습니다.");
 				                        	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
 				                           });
+
+		// 삭제된 댓글 반응 X
+		if(comment.getStatus().equals(CommentStatus.DELETED)) {
+			logger.error("CommentReactionServiceImpl reactionToComment() IllegalStateException : 삭제된 댓글입니다.");
+		    throw new IllegalStateException("삭제된 댓글입니다.");
+		}
+
+		// 신고된 댓글 반응 X
+		if(comment.getStatus().equals(CommentStatus.HIDDEN)) {
+			logger.error("CommentReactionServiceImpl reactionToComment() IllegalStateException : 신고된 댓글입니다.");
+		    throw new IllegalStateException("신고된 댓글입니다.");
+		}
 
 		// 기존 반응 조회 (최초 진입하거나, 반응이 없을 수 있으므로 'orElseThrow'로 예외 처리X
 		Optional<CommentReaction> existingReactionOpt = commentReactionRepository.findByCommentAndUserId(comment,memberId);
@@ -97,7 +110,7 @@ class CommentReactionServiceImpl implements CommentReactionService {
 		PostReactionType userRecentReactionType = commentReactionRepository.findByCommentAndUserId(comment, memberId)
 				                                                           .map(CommentReaction :: getReactionType)
 				                                                           .orElse(null);
-		logger.info("PostReactionServiceImpl reactionToPost() End");
+		logger.info("CommentReactionServiceImpl reactionToComment()");
 
 		return CommentReactionResponseDTO.fromEntityToDto(commentId, likeCount, dislikeCount, userRecentReactionType);
 	}

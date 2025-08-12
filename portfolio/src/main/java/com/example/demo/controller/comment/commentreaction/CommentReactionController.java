@@ -55,8 +55,11 @@ public class CommentReactionController {
 		try {
 			response = commentReactionService.reactionToComment(commentId, memberId, commentReactionRequestDTO);
 		} catch (NoSuchElementException e) {
-			logger.error("CommentReactionController reactionToComment() : {}" ,e.getMessage(),e);
+			logger.error("CommentReactionController reactionToComment() NoSuchElementException : {}" ,e.getMessage(),e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalStateException e) {
+			logger.error("CommentReactionController reactionToComment() IllegalStateException : {}" ,e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		if(response == null) {

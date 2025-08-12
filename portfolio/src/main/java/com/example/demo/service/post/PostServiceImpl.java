@@ -9,11 +9,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -49,6 +53,7 @@ import com.example.demo.repository.board.BoardRepository;
 import com.example.demo.repository.comment.CommentRepository;
 import com.example.demo.repository.member.MemberRepository;
 import com.example.demo.repository.post.PostRepository;
+import com.example.demo.repository.post.PostRepository.PostAggregate;
 import com.example.demo.repository.post.postimage.PostImageRepository;
 import com.example.demo.repository.post.postreaction.PostReactionRepository;
 import com.example.demo.repository.post.postreport.PostReportRepository;
@@ -83,11 +88,14 @@ public class PostServiceImpl implements PostService {
 	// 인기순 으로 정렬
 	private static final String SORT_POPULAR = "popular";
     // 상단 공지글 3개 제한 변수
-    private static final Pageable Limit_Size = PageRequest.of(0,3);
+    private static final Pageable LIMIT_SIZE = PageRequest.of(0,3);
     // 좋아요
     private static final PostReactionType LIKE = PostReactionType.LIKE;
     // 싫어요
     private static final PostReactionType DISLIKE = PostReactionType.DISLIKE;
+
+    // 이미지 없을시 대체할 기본 이미지
+    private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.png";
 
 	// 파일 업로드 경로 ('application.properties'에서 경로처리)
 	@Value("${file.upload.base-path}")
@@ -115,7 +123,7 @@ public class PostServiceImpl implements PostService {
 
     // 게시글 신고 제한
     @Value("${post.report.threshold}")
-    private int reportThreshold;
+    private Long reportThreshold;
 
 
     // 키: "postId:userId" 또는 "postId:ip"
@@ -128,6 +136,8 @@ public class PostServiceImpl implements PostService {
     private final long VIEW_COUNT_EXPIRATION = 10 * 60 * 1000;
 
 	private static final Logger logger = LoggerFactory.getLogger(PostServiceImpl.class);
+
+	//*************************************************** Method START ***************************************************//
 
 	public String extractLocalPathFromUrl(String imageUrl) {
 
@@ -185,6 +195,87 @@ public class PostServiceImpl implements PostService {
 	    }
 	}
 
+	// 좋아요 집계 Map 생성 메서드
+	private Map<Long, Long> getLikeCountMap(List<Long> postIds) {
+
+		// 게시글 아이디가 비어있을경우
+		if(postIds.isEmpty()) {
+			// 빈 맵 반환
+			return Collections.emptyMap();
+		}
+
+		List<PostReactionRepository.PostReactionCount> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds);
+
+		int initialCapacity = (int) (reactionCounts.size()/0.75f) +1;
+		Map<Long, Long> likeCountMap = new HashMap<>(initialCapacity);
+
+		reactionCounts.forEach(rc -> likeCountMap.put(rc.getPostId(), rc.getLikeCount()));
+
+		return likeCountMap;
+	}
+
+	// 댓글 집계 Map 생성 메서드
+	private Map<Long, Long> getCommentCountMap(List<Long> postIds) {
+
+		if(postIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		List<CommentRepository.PostCommentCount> commentCounts = commentRepository.countCommentsByPostIds(postIds);
+
+		int initialCapacity = (int) (commentCounts.size()/0.75f) +1;
+		Map<Long, Long> commentCountMap = new HashMap<>(initialCapacity);
+
+		commentCounts.forEach(cc -> commentCountMap.put(cc.getPostId(), cc.getCommentCount()));
+
+		return commentCountMap;
+	}
+
+	// 작성자 닉네임 Map 생성 메서드
+	private Map<Long, String> getNicknameMap(List<Post> posts) {
+
+		if(posts.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		Set<Long> authorIds = posts.stream()
+				                   .map(post -> post.getAuthor().getId())
+				                   .collect(Collectors.toSet());
+
+		if(authorIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 해당 게시판의 모든 작성자 닉네임 가져오기
+		List<Member> members = memberRepository.findAllById(authorIds);
+
+		int initialCapacity = (int) (members.size()/0.75f) +1;
+		Map<Long, String> nicknameMap = new HashMap<>(initialCapacity);
+
+		members.forEach(m -> nicknameMap.put(m.getId(), m.getNickname()));
+
+		return nicknameMap;
+	}
+
+	// 썸네일 이미지 가져오기
+	private Map<Long, String> getThumbnails(List<Long> postIds) {
+
+		if(postIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		List<PostImageRepository.PostThumbnail> thumbnails = postImageRepository.findThumbnailsByPostIds(postIds);
+
+		int initialCapacity = (int) (thumbnails.size()/0.75f) +1;
+		Map<Long, String> thumbnailMap = new HashMap<>(initialCapacity);
+
+		thumbnails.forEach(th -> thumbnailMap.put(th.getPostId(), th.getImageUrl()));
+
+		return thumbnailMap;
+	}
+
+	//*************************************************** Method End ***************************************************//
+
 	//*************************************************** Service START ***************************************************//	
 
 	// 게시글 생성 Service
@@ -217,20 +308,27 @@ public class PostServiceImpl implements PostService {
 
 		Board board = boardRepository.findById(dtoBoardId)
 				                     .orElseThrow(() -> {
-				                    	 logger.error("PostServiceImpl createPost() NoSuchElementException Error : {}");
+				                    	 logger.error("PostServiceImpl createPost() NoSuchElementException dtoBoardId : {}", dtoBoardId);
 				                    	 return new NoSuchElementException("게시판이 존재하지 않습니다.");
 				                     });
 
+		Member member = memberRepository.findById(dtoAuthorId)
+				                        .orElseThrow(() -> {
+				                        	logger.error("PostServiceImpl createPost() NoSuchElementException dtoAuthorId : {}", dtoAuthorId);
+				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+				                        });
+
 		// '게시글 생성 Setting'
-		Post post = new Post();
-		post.setBoard(board);
-		post.setTitle(dtoTitle);
-		post.setContent(dtoContent);
-		post.setAuthorId(dtoAuthorId);
-		post.setNotice(dtoIsNotice);
-		post.setStatus(postStatus);
-		post.setCreatedAt(createdAt);
-		post.setUpdatedAt(updatedAt);
+		Post post = Post.builder()
+				        .board(board)
+				        .title(dtoTitle)
+				        .content(dtoContent)
+				        .author(member)
+				        .isNotice(dtoIsNotice)
+				        .status(postStatus)
+				        .createdAt(createdAt)
+				        .updatedAt(updatedAt)
+				        .build();
 
 		// 'post' 객체를 DB에 저장하고, 저장된 Post 엔티티를 반환
 		Post response = postRepository.save(post);
@@ -440,7 +538,7 @@ public class PostServiceImpl implements PostService {
 
 
 		// 'DB 게시글 작성자ID'
-		Long postAuthorId =post.getAuthorId();
+		Long postAuthorId =post.getAuthor().getId();
 
 		// '작성자ID' 비교
 		if(!Objects.equals(postAuthorId, authorId)) {
@@ -571,7 +669,7 @@ public class PostServiceImpl implements PostService {
 		}
 
 		// 'DB 게시글 작성자ID'
-		Long postAuthorId = post.getAuthorId();
+		Long postAuthorId = post.getAuthor().getId();
 
 		// '작성자ID' 비교
 		if(!Objects.equals(postAuthorId, authorId)) {
@@ -655,7 +753,7 @@ public class PostServiceImpl implements PostService {
 			throw new IllegalStateException("삭제된 게시글은 신고할 수 없습니다.");
 		}
 
-		if(post.getAuthorId().equals(reporterId)) {
+		if(post.getAuthor().getId().equals(reporterId)) {
 			logger.error("PostServiceImpl reportPost() IllegalStateException : 본인이 본인의 게시글을 신고할 수 없습니다.");
 			throw new IllegalStateException("본인이 본인의 게시글을 신고할 수 없습니다.");
 		}
@@ -683,9 +781,13 @@ public class PostServiceImpl implements PostService {
 		// 신고 갯수 가져오기
 		Long reportCount = post.getReportCount();
 
+		logger.info("PostServiceImpl reportPost() reportCount : {}", reportCount);
+
 		// 신고를 35번 당할시 상태변경 (report_count(DB) == 35)
-		// 그리고(AND(&&)), PostStatus.ACTIVE
-		if(Objects.equals(reportCount, this.reportThreshold) && post.getStatus().equals(PostStatus.ACTIVE)) {
+		// 그리고(AND(&&)), 게시글이 'ACTIVE'이고, 공지글이 아닌 게시글만 'BLOCKED"
+		if(Objects.equals(reportCount, this.reportThreshold) 
+		   && post.getStatus().equals(PostStatus.ACTIVE)
+		   && post.isNotice() == false) {
 			// 'post'가 영속성상태이므로 값이 변경되면 알아서 DB변경 시도
 			post.setStatus(PostStatus.BLOCKED);
 			notificationService.notifyPostWarned(post);
@@ -731,7 +833,7 @@ public class PostServiceImpl implements PostService {
 	                            	return new NoSuchElementException("게시글을 찾을 수 없습니다.");  
 	                              });
 
-	    if (!post.getAuthorId().equals(requestAuthorId)) {
+	    if (!post.getAuthor().getId().equals(requestAuthorId)) {
 	    	logger.error("PostServiceImpl updateImageOrder() SecurityException : 작성자만 이미지 순서를 변경할 수 있습니다.");
 	        throw new SecurityException("작성자만 이미지 순서를 변경할 수 있습니다.");
 	    }
@@ -783,7 +885,7 @@ public class PostServiceImpl implements PostService {
 	                            	 return new NoSuchElementException("게시글을 찾을 수 없습니다.");
 	                              });
 
-	    if (!post.getAuthorId().equals(requestAuthorId)) {
+	    if (!post.getAuthor().getId().equals(requestAuthorId)) {
 	    	logger.error("PostServiceImpl deleteSingleImage() SecurityException : 작성자만 이미지를 삭제할 수 있습니다.");
 	        throw new SecurityException("작성자만 이미지를 삭제할 수 있습니다.");
 	    }
@@ -819,7 +921,7 @@ public class PostServiceImpl implements PostService {
 	    Post post = postRepository.findById(postId)
 	                              .orElseThrow(() -> new NoSuchElementException("게시글이 존재하지 않습니다."));
 
-	    if (!post.getAuthorId().equals(requestAuthorId)) {
+	    if (!post.getAuthor().getId().equals(requestAuthorId)) {
 	    	logger.error("PostServiceImpl deleteAllImages() SecurityException : 작성자만 이미지를 삭제할 수 있습니다.");
 	        throw new SecurityException("작성자만 이미지를 삭제할 수 있습니다.");
 	    }
@@ -892,17 +994,23 @@ public class PostServiceImpl implements PostService {
 		Board board = boardRepository.findById(NOTICE_BOARD_ID)
 		                             .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
 
-		List<Post> posts = postRepository.findTop3ByBoardAndIsPinnedTrueAndIsNoticeTrueAndStatusOrderByCreatedAtDesc(board, PostStatus.ACTIVE);
+		Pageable pageable = LIMIT_SIZE;
+	
+		List<Post> posts = postRepository.findTop3PinnedByBoard(board, pageable);
+
+		List<Long> postIds = posts.stream()
+				                  .map(post -> post.getPostId())
+				                  .collect(Collectors.toList());
+
+		Map<Long, Long> likeCountMap = this.getLikeCountMap(postIds);
+		Map<Long, String> nicknameMap = this.getNicknameMap(posts);
 
 		logger.info("PostServiceImpl getTop3PinnedNoticesByBoard() Success End");
 		return posts.stream()
 				    .map(post -> PostListResponseDTO.fromEntity(post, 
-				    		                                    postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
-				    		                                    memberRepository.findById(post.getAuthorId())
-				    		                                                    .map(Member :: getNickname)
-				    		                                                    .orElse("알 수 없음")
-				    		                                   )
-				    	)
+				    		                                    likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+				    		                                    nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+				    		                                   ))
 				    .collect(Collectors.toList());
 	}
 
@@ -914,31 +1022,42 @@ public class PostServiceImpl implements PostService {
 
 		Post post = postRepository.findById(postId)
 				                  .orElseThrow(() -> {
-			                        	 logger.error("PostServiceImpl getPost() NoSuchElementException Error : {}");
+			                        	 logger.error("PostServiceImpl getPost() NoSuchElementException Error : 게시글이 존재하지 않습니다.");
 			                        	 return new NoSuchElementException("게시글이 존재하지 않습니다."); 
 				                  });
 
-		Member member = memberRepository.findById(post.getAuthorId())
-		                                .orElseThrow(() -> {
-				                        	 logger.error("PostServiceImpl getPost() NoSuchElementException Error : {}");
-				                        	 return new NoSuchElementException("회원이 존재하지 않습니다."); 
-		                                });
+		String userNickname = post.getAuthor().getNickname();
 
-		String userNickname = member.getNickname();
-
-		// 댓글 총 갯수 카운터
-		int commentCount = commentRepository.countByPostPostId(postId);
-
-		//좋아요, 싫어요 갯수
-		int likeCount = postReactionRepository.countByPostPostIdAndReactionType(postId, LIKE);
-		int disLikeCount = postReactionRepository.countByPostPostIdAndReactionType(postId, DISLIKE);
+		// 단건 게시글 댓글, 좋아요, 싫어요 집계 조회
+		PostAggregate postAggregate = postRepository.findPostAggregateByPostId(postId)
+				                                    .orElseGet(() -> { 
+				                                    	logger.error("PostServiceImpl getPost() postId : {} ", postId);
+				                                    	return new PostAggregate() {
+				                                    		@Override
+				                                    		public Long getPostId() {
+				                                    			return postId;
+				                                    		}
+				                                    		@Override
+				                                    		public Long getCommentCount() {
+				                                    			return 0L;
+				                                    		}
+				                                    		@Override
+				                                    		public Long getLikeCount() {
+				                                    			return 0L;
+				                                    		}
+				                                    		@Override
+				                                    		public Long getDislikeCount() {
+				                                    			return 0L;
+				                                    		}
+				                                    	};
+				                                    });
 
 		logger.info("PostServiceImpl getPost() Success End");
 		return PostResponseDTO.convertToPostResponseDTO(post, 
-														commentCount, 
+														postAggregate.getCommentCount().intValue(), 
 														userNickname,
-														likeCount,
-														disLikeCount);
+														postAggregate.getLikeCount().intValue(),
+														postAggregate.getDislikeCount().intValue());
 	}
 
 	// 자식게시판 게시글 목록 조회 (ACTIVE + 공지글 제외)
@@ -949,7 +1068,7 @@ public class PostServiceImpl implements PostService {
 
 		Board board = boardRepository.findById(boardId)
 				                     .orElseThrow(() -> {
-			                        	 logger.error("PostServiceImpl getPostsByBoard() NoSuchElementException Error : {}");
+			                        	 logger.error("PostServiceImpl getPostsByBoard() NoSuchElementException boardId : {} ",boardId);
 			                        	 return new NoSuchElementException("게시판이 존재하지 않습니다."); 
 				                     });
 
@@ -970,18 +1089,24 @@ public class PostServiceImpl implements PostService {
 	    			                                                                    recentThreshold,
 	    			                                                                    popularLimit
 	    			                                                                    );
+
+	    	List<Long> topPostIds = topPopularPosts.stream()
+	    			                               .map(post -> post.getPostId())
+	    			                               .collect(Collectors.toList());
+
+	    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+	    	Map<Long, Long> topLikeCountMap = this.getLikeCountMap(topPostIds);
+	    	Map<Long, Long> topCommentCountMap = this.getCommentCountMap(topPostIds);
+	    	Map<Long, String> topNicknameMap = this.getNicknameMap(topPopularPosts);
+
 	    	topPopularPostsDto = topPopularPosts.stream()
 	    			                            .map(post -> PostListResponseDTO.fromEntity(post, 
-	    			                            		                                    postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE), 
-	    			                            		                                    memberRepository.findById(post.getAuthorId())
-	    			                            		                                                    .map(Member :: getNickname)
-	    			                            		                                                    .orElse("알 수 없음"),
-	    			                            		                                    commentRepository.countByPostPostId(post.getPostId())
-	    			                            		                                    )
-	    			                            	)
+	    			                            		                                    topLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    			                            		                                    topNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    			                            		                                   ))
 	    			                            .collect(Collectors.toList());
 	    }
-
 
 	    /* 
 	     * 일반 게시글 가져오기 
@@ -990,16 +1115,22 @@ public class PostServiceImpl implements PostService {
 		 **/
 	    Page<Post> postPage = postRepository.findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(board, PostStatus.ACTIVE, pageable);
 
+	    List<Long> postIds = postPage.stream()
+	    		                     .map(post -> post.getPostId())
+	    		                     .collect(Collectors.toList());
+
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> normalLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, Long> normalCommentCountMap = this.getCommentCountMap(postIds);
+    	Map<Long, String> normalNicknameMap = this.getNicknameMap(postPage.getContent());
+
 	    // 일반 게시글만 DTO 변환(Page<Post> -> Page<PostListResponseDTO>)
 	    // 'Page'는 'Stream'반환 없이 'map'을 이용해 바로 'Page'반환 가능
 	    Page<PostListResponseDTO> normalPostPage = postPage.map(post -> PostListResponseDTO.fromEntity(post, 
-	    		                                                                                       postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(),LIKE), 
-	    		                                                                                       memberRepository.findById(post.getAuthorId())
-	    		                                                                                                       .map(Member :: getNickname)
-	    		                                                                                                       .orElse("알 수 없음"),
-	    		                                                                                       commentRepository.countByPostPostId(post.getPostId())
-	    		                                                                                       )
-	    		                                               );
+	    		                                                                                       normalLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    		                                                                                       normalNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    		                                                                                       normalCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    		                                                                                      ));
 
 		logger.info("PostServiceImpl getPostsByBoard() Success End");
 
@@ -1016,7 +1147,7 @@ public class PostServiceImpl implements PostService {
 
 	    Board board = boardRepository.findById(boardId)
 	                                 .orElseThrow(() -> {
-	                                	 logger.error("PostServiceImpl getPostsByBoardSorted() NoSuchElementException Error : {}");
+	                                	 logger.error("PostServiceImpl getPostsByBoardSorted() NoSuchElementException boardId : {}",boardId);
 	                                	 return new NoSuchElementException("게시판이 존재하지 않습니다.");
 	                                 });
 
@@ -1031,20 +1162,27 @@ public class PostServiceImpl implements PostService {
 	    if(currentPage == 0) {
 	    	// (좋아요 50 이상, 순좋아요 15 이상, 최근 2일 이내 게시글 4개 추출)
 	    	List<Post> topPopularPosts = postRepository.findTopPostsByBoardWithNetLikes(board.getBoardId(),
-	    			                                                                     popularLikeThreshold,
-	    			                                                                     popularNetLikeThreshold,
-	    			                                                                     recentThreshold,
-	    			                                                                     popularLimit
-	    			                                                                     );
+	    			                                                                    popularLikeThreshold,
+	    			                                                                    popularNetLikeThreshold,
+	    			                                                                    recentThreshold,
+	    			                                                                    popularLimit
+	    			                                                                    );
+
+	    	List<Long> topPostIds = topPopularPosts.stream()
+	    			                               .map(post -> post.getPostId())
+	    			                               .collect(Collectors.toList());
+
+	    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+	    	Map<Long, Long> topLikeCountMap = this.getLikeCountMap(topPostIds);
+	    	Map<Long, Long> topCommentCountMap = this.getCommentCountMap(topPostIds);
+	    	Map<Long, String> topNicknameMap = this.getNicknameMap(topPopularPosts);
+
 	    	topPopularPostsDto = topPopularPosts.stream()
 	    			                            .map(post -> PostListResponseDTO.fromEntity(post, 
-	    			                            		                                    postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE), 
-	    			                            		                                    memberRepository.findById(post.getAuthorId())
-	    			                            		                                                    .map(Member :: getNickname)
-	    			                            		                                                    .orElse("알 수 없음"),
-	    			                            		                                    commentRepository.countByPostPostId(post.getPostId())
-	    			                            		                                    )
-	    			                            	)
+	    			                            		                                    topLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    			                            		                                    topNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    			                            		                                   ))
 	    			                            .collect(Collectors.toList());
 	    }
 
@@ -1058,14 +1196,20 @@ public class PostServiceImpl implements PostService {
 	    	postPage = postRepository.findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(board, PostStatus.ACTIVE, pageable);
 	    }
 
+	    List<Long> postIds = postPage.stream()
+                                     .map(post -> post.getPostId())
+                                     .collect(Collectors.toList());
+
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> normalLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, Long> normalCommentCountMap = this.getCommentCountMap(postIds);
+    	Map<Long, String> normalNicknameMap = this.getNicknameMap(postPage.getContent());
+
 	    Page<PostListResponseDTO> normalPostPage = postPage.map(post -> PostListResponseDTO.fromEntity(post, 
-	    		                                                                                       postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
-	    		                                                                                       memberRepository.findById(post.getAuthorId())
-	    		                                                                                                       .map(Member :: getNickname)
-	    		                                                                                                       .orElse("알 수 없음"),
-	    		                                                                                       commentRepository.countByPostPostId(post.getPostId())
-	    		                                                                                       )
-	    														);
+	    		                                                                                       normalLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    		                                                                                       normalNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    		                                                                                       normalCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    		                                                                                      ));
 
 	    logger.info("PostServiceImpl getPostsByBoardSorted() Success End");
 
@@ -1078,17 +1222,24 @@ public class PostServiceImpl implements PostService {
 
 		logger.info("PostServiceImpl searchPostsByKeyword() Start");
 
-		// 'ACTIVE' 상태의 '게시글'의 '제목 또는 본문내용'을 '대소문자' 상관 없이 '검색' 
+		// 'ACTIVE' 상태의 '게시글(들)'의 '제목 또는 본문내용'을 '대소문자' 상관 없이 '검색' 
 		Page<Post> posts = postRepository.searchByKeyword(keyword, pageable);
 
+		List<Long> postIds = posts.stream()
+				                  .map(post -> post.getPostId())
+				                  .collect(Collectors.toList());
+
+		// 집계 조회 (좋아요, 댓글 수, 닉네임, 대표이미지)
+		Map<Long, Long> likeCountMap = this.getLikeCountMap(postIds);
+		Map<Long, Long> commentCountMap = this.getCommentCountMap(postIds);
+		Map<Long, String> nicknameMap = this.getNicknameMap(posts.getContent());
+		Map<Long, String> thumbnailMap = this.getThumbnails(postIds);
+
 		Page<PostListResponseDTO> dtoPage = posts.map(post -> PostListResponseDTO.fromEntity(post, 
-																							 postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE), 
-		                                                                                     memberRepository.findById(post.getAuthorId())
-                                                                                                             .map(Member :: getNickname)
-                                                                                                             .orElse("알 수 없음"), 
-				                                                                             commentRepository.countByPostPostId(post.getPostId()), 
-				                                                                             postImageRepository.findTopImageUrlByPost(post.getPostId())
-				                                                                                                .orElse(null)
+																							 likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+																							 nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+																							 commentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+																							 thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
 				                                                                            )
 													); 
 
@@ -1107,23 +1258,28 @@ public class PostServiceImpl implements PostService {
 
 		Member member = memberRepository.findByNickname(nickname)
 									    .orElseThrow(() -> {
-									    	logger.error("PostServiceImpl getPostsByAuthorNickname() NoSuchElementException : 작성자를 찾을 수 없습니다.");
+									    	logger.error("PostServiceImpl getPostsByAuthorNickname() NoSuchElementException nickname : {}", nickname);
 									    	return new NoSuchElementException("작성자를 찾을 수 없습니다.");
 									    });
 
-		// Request
-		Long memberId = member.getId();
+		// 작성자가 작성한 게시글들 가져오기
+		Page<Post> posts = postRepository.findByAuthorAndStatus(member,PostStatus.ACTIVE,pageable);
 
-		Page<Post> posts = postRepository.findByAuthorIdAndStatus(memberId,PostStatus.ACTIVE,pageable);
+		List<Long> postIds = posts.stream()
+								  .map(post -> post.getPostId())
+								  .collect(Collectors.toList());
+
+		// 집계 조회(좋아요, 댓글수, 대표이미지)
+		Map<Long, Long> likeCountMap = this.getLikeCountMap(postIds);
+		Map<Long, Long> commentCountMap = this.getCommentCountMap(postIds);
+		Map<Long, String> thumbnailMap = this.getThumbnails(postIds); 
 
 		Page<PostListResponseDTO> dtoPage = posts.map(post -> PostListResponseDTO.fromEntity(post, 
-				                                                                             postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
+				                                                                             likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
 				                                                                             nickname,
-				                                                                             commentRepository.countByPostPostId(post.getPostId()),
-				                                                                             postImageRepository.findTopImageUrlByPost(post.getPostId())
-				                                                                                                .orElse(null)
-				                                                                            )
-													 ); 
+				                                                                             commentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+				                                                                             thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
+				                                                                            )); 
 
 		logger.info("PostServiceImpl getPostsByAuthorNickname() Success End");
 
@@ -1145,36 +1301,47 @@ public class PostServiceImpl implements PostService {
 	    // 첫 페이지만 상단 고정 공지글 3개 보여주기
 	    if(currentPage == 0) {
 		    // 1. 상단 고정 공지글 조회(고정된 공지글 최대 3개 (내림차순))
-	    	List<Post> pinnedNotices = postRepository.findTop3FixedNotices(Limit_Size);
+	    	List<Post> pinnedNotices = postRepository.findTop3FixedNotices(LIMIT_SIZE);
 	
-		   topNotices = pinnedNotices.stream()
-                                     .map(post -> PostListResponseDTO.fromEntity(post, 
-                                    		                                     postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
-                                    		                                     memberRepository.findById(post.getAuthorId())
-                                    		                                                     .map(Member :: getNickname)
-                                    		                                                     .orElse("알 수 없음")
-                                    		                                    )
-                                    	 )
-                                     .collect(Collectors.toList());
+	    	List<Long> pinnedNoticesIds = pinnedNotices.stream()
+	    			                                   .map(post -> post.getPostId())
+	    			                                   .collect(Collectors.toList());
+
+	    	// 집계 조회(좋아요, 닉네임)
+	    	Map<Long ,Long> pinLikeCountMap = this.getLikeCountMap(pinnedNoticesIds);
+	    	Map<Long, String> pinNicknameMap = this.getNicknameMap(pinnedNotices);
+
+	    	topNotices = pinnedNotices.stream()
+                                      .map(post -> PostListResponseDTO.fromEntity(post, 
+                                    		                                      pinLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+                                    		                                      pinNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+                                    		                                     ))
+                                      .collect(Collectors.toList());
 	    }
 
-	    // 2. 전체 게시판 가져오기
+	    // 2. 공지 게시판 가져오기
 	    Page<Post> noticePosts = postRepository.findNoticePosts(pageable);
+
+	    List<Long> noticePostsIds = noticePosts.stream()
+	    		                               .map(post -> post.getPostId())
+	    		                               .collect(Collectors.toList());
+    	// 집계 조회(좋아요, 닉네임)
+    	Map<Long ,Long> normalLikeCountMap = this.getLikeCountMap(noticePostsIds);
+    	Map<Long, String> normalNicknameMap = this.getNicknameMap(noticePosts.getContent());
+  
+    	
 	    // Page<PostListResponseDTO> 변환
 	    Page<PostListResponseDTO> noticePostsDto = noticePosts.map(post -> PostListResponseDTO.fromEntity(post, 
-                																						  postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
-                																						  memberRepository.findById(post.getAuthorId())
-                																						                  .map(Member :: getNickname)
-                																						                  .orElse("알 수 없음")
-                																						 )
-	    														  );
+                																						  normalLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+                																						  normalNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+                																						 ));
 
 		logger.info("PostServiceImpl getAllNotices() Success End");
 
 		return PostNoticeBoardResponseDTO.from(topNotices, noticePostsDto);
 	}
 
-	// 부모게시판(자식게시판 인기글 보여주기(30일기반으로, 가중치계산하여 내림차순)
+	// 부모게시판(자식게시판 인기글 보여주기(60일기반으로, 가중치계산하여 내림차순)
 	@Override
 	public PostParentBoardPostPageResponseDTO getPostsByParentBoard(Long parentBoardId, Pageable pageable) {
 
@@ -1188,16 +1355,21 @@ public class PostServiceImpl implements PostService {
 	
 	    if(currentPage == 0) {
 		    // 1. 상단 고정 공지글 조회(고정된 공지글 최대 3개 (내림차순))
-	    	List<Post> pinnedNotices = postRepository.findTop3FixedNotices(Limit_Size);
+	    	List<Post> pinnedNotices = postRepository.findTop3FixedNotices(LIMIT_SIZE);
 	
-		   topNotices = pinnedNotices.stream()
+	    	// 1-2. 상단 고정글(들)ID 조회
+	    	List<Long> pinnedNoticesIds = pinnedNotices.stream()
+	    			                                   .map(post -> post.getPostId())
+	    			                                   .collect(Collectors.toList());
+
+	    	Map<Long, Long> pinnedLikeCountMap = this.getLikeCountMap(pinnedNoticesIds);
+	    	Map<Long, String> pinnedNicknameMap = this.getNicknameMap(pinnedNotices);
+
+	    	topNotices = pinnedNotices.stream()
                                      .map(post -> PostListResponseDTO.fromEntity(post, 
-                                    		                                     postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE),
-                                    		                                     memberRepository.findById(post.getAuthorId())
-                                    		                                                     .map(Member :: getNickname)
-                                    		                                                     .orElse("알 수 없음")
-                                    		                                    )
-                                    	 )
+                                    		                                     pinnedLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+                                    		                                     pinnedNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+                                    		                                    ))
                                      .collect(Collectors.toList());
 	    }
 
@@ -1211,17 +1383,23 @@ public class PostServiceImpl implements PostService {
 	    		                                                                     parentPopularDayLimit, 
 	    		                                                                     pageable);
 
-	    Page<PostListResponseDTO> popularPostsDto = popularPostsPage.map(post -> PostListResponseDTO.fromEntity(post, 
-	    																										postReactionRepository.countByPostPostIdAndReactionType(post.getPostId(), LIKE), 
-	    																						                memberRepository.findById(post.getAuthorId())
-	    																		                                .map(Member :: getNickname)
-	    																		                                .orElse("알 수 없음"),
-	    																		                                commentRepository.countByPostPostId(post.getPostId()),
-	    																		                                postImageRepository.findTopImageUrlByPost(post.getPostId())
-	    																		                                                   .orElse(null)
-	    																 										)
-	    		                                                        );
+	   // 2-1. 인기글(들)의ID 조회
 
+	    List<Long> popularPostIds = popularPostsPage.stream()
+	    		                                    .map(post -> post.getPostId())
+	    		                                    .collect(Collectors.toList());
+
+	    Map<Long, Long> popularLikeCountMap = getLikeCountMap(popularPostIds);
+	    Map<Long, String> popularNicknameMap = getNicknameMap(popularPostsPage.getContent());
+	    Map<Long, Long> popularCommentCountMap = getCommentCountMap(popularPostIds);
+	    Map<Long, String> thumbnailMap = getThumbnails(popularPostIds);
+
+	    Page<PostListResponseDTO> popularPostsDto = popularPostsPage.map(post -> PostListResponseDTO.fromEntity(post, 
+	    																										popularLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																										popularNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    																		                                popularCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																		                                thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
+	    																 									   ));
 
 	    logger.info("PostServiceImpl getPostsByParentBoard() Success End");
 		return PostParentBoardPostPageResponseDTO.fromDTO(topNotices, popularPostsDto);

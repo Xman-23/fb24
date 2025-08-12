@@ -40,6 +40,8 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final MemberRefreshTokenRepository refreshTokenRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+
+    // 로그
     private static final Logger logger = LoggerFactory.getLogger(MemberService.class);
 
     // 생성자 주입

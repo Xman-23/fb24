@@ -36,7 +36,7 @@ import lombok.Setter;
 public class Notification {
 
 	@Id
-	@Column(name = "nofification_id")
+	@Column(name = "notification_id")
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long notificationId;
 

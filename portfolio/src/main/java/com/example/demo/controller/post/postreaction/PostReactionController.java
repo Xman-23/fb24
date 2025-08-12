@@ -57,8 +57,11 @@ public class PostReactionController {
 		try {
 			response = postReactionService.reactionToPost(postId, memberId, postReactionRequestDTO);
 		} catch (NoSuchElementException e) {
-			logger.error("PostReactionController reactionToPost() : {}" ,e.getMessage(),e);
+			logger.error("PostReactionController reactionToPost() NoSuchElementException : {}" ,e.getMessage(),e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalStateException e) {
+			logger.error("PostReactionController reactionToPost() IllegalStateException : {}" ,e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
 		if(response == null) {

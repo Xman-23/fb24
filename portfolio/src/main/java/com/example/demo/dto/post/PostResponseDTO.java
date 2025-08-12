@@ -105,7 +105,7 @@ public class PostResponseDTO {
 							  .boardName(post.getBoard().getName())
 							  .title(post.getTitle())
 							  .content(post.getContent())
-							  .authorId(post.getAuthorId())
+							  .authorId(post.getAuthor().getId())
 							  .viewCount(post.getViewCount())
 							  .likeCount(likeCount)
 							  .dislikeCount(disLikeCount)

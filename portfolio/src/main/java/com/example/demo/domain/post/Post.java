@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.board.Board;
 import com.example.demo.domain.comment.Comment;
+import com.example.demo.domain.member.Member;
 import com.example.demo.domain.post.postenums.PostStatus;
 import com.example.demo.domain.post.postimage.PostImage;
 import com.example.demo.domain.post.postreaction.PostReaction;
@@ -31,6 +32,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -64,6 +66,7 @@ import lombok.ToString;
 @Table(name = "post")
 @Setter
 @Getter
+@Builder
 @ToString(exclude = {"images", "comments", "reactions"})
 @EqualsAndHashCode(exclude = {"images", "comments", "reactions"})
 @AllArgsConstructor
@@ -89,8 +92,9 @@ public class Post {
 	@Column(name = "content", columnDefinition = "TEXT", nullable = false)
 	private String content;
 
-	@Column(name = "author_id", nullable = false)
-	private Long authorId;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "author_id", nullable = false)
+	private Member author;
 
 	@Column(name = "view_count", nullable = false)
 	private int viewCount = 0;

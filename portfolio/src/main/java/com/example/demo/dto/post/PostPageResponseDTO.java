@@ -55,7 +55,7 @@ public class PostPageResponseDTO {
 				          	      // ex) 현재 10페이지(index=9)이면 ,1페이지 존재(index=0) 'true', 현재 1페이지이면(index=0) 'false'
 				                  .hasFirst(normalPostPage.getNumber() > 0)
 				          	      // 맨 뒤 버튼
-				          	      // ex) 현재 5페이지(index=4)이면, 총 페이지 20페에지(index = totalPages(20)-1) 'true', 현재 20페이지(index=19) 'false'
+				          	      // ex) 현재 5페이지(index=4)이면, 총 페이지 20페이지(index = totalPages(20)-1) 'true', 현재 20페이지(index=19) 'false'
 				                  .hasLast(normalPostPage.getNumber() < normalPostPage.getTotalPages()-1)
 				          	      // 10 페이지 앞으로 버튼
 				          	      // ex) 현재 4페이지(index=3)이면, 10페이지 앞으로 버튼 누를시,

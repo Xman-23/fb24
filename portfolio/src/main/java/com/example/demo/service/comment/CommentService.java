@@ -4,6 +4,7 @@ import com.example.demo.dto.comment.CommentPageResponseDTO;
 
 import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
+import com.example.demo.dto.comment.commentreport.CommentReportResponseDTO;
 
 import org.springframework.data.domain.Pageable;
 
@@ -18,9 +19,8 @@ public interface CommentService {
     // 댓글 삭제
     CommentResponseDTO deleteComment(Long commentId, Long authorId);
 
-
     // 댓글 신고
-    String reportComment(Long commentId, Long reporterId, String reason);
+    CommentReportResponseDTO reportComment(Long commentId, Long reporterId, String reason);
 
     // 트리구조 조회 
     CommentPageResponseDTO getCommentsTreeByPost(Long postId, String sortBy, Pageable pageable);

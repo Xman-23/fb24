@@ -49,7 +49,7 @@ public class AuthController {
         	logger.error("AuthController login() Error : 'AuthLoginDTO'가 유효하지 않습니다.");
             return ResponseEntity.badRequest().body("Invalid input.");
         }
-        
+
         // DTO Trim
         String trimEmail = safeTrim(authLoginDto.getEmail()); //Email(ID)
         String trimPassword = safeTrim(authLoginDto.getPassword()); //Password

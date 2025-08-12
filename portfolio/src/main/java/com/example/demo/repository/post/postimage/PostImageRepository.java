@@ -27,4 +27,25 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 		  nativeQuery = true)
 	Optional<String> findTopImageUrlByPost(@Param("post_id") Long postId);
 
+	// 대표이지미 가져오기(이미지 없는(null) 게시글도 포함)
+	@Query(value = 
+		    "SELECT p.post_id AS postId, pi.image_url AS imageUrl "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ( "
+		  + "             SELECT post_id, MIN(order_num) AS min_order_num "
+		  + "             FROM post_image "
+		  + "             WHERE post_id IN (:postIds) "
+		  + "             GROUP BY post_id "
+		  + "            ) AS min_pi "
+		  + "         ON p.post_id = min_pi.post_id "
+		  + "  LEFT JOIN post_image pi "
+		  + "         ON pi.post_id = min_pi.post_id "
+		  + "        AND pi.order_num = min_pi.min_order_num "
+		  + " WHERE p.post_id IN (:postIds) ", nativeQuery = true)
+	List<PostThumbnail> findThumbnailsByPostIds(@Param("postIds") List<Long> postIds);
+
+	interface PostThumbnail {
+		Long getPostId();
+		String getImageUrl();
+	}
 }
