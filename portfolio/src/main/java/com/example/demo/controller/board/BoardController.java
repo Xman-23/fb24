@@ -3,6 +3,7 @@ package com.example.demo.controller.board;
 import java.util.List;
 
 
+
 import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.board.BoardCreateRequestDTO;
-import com.example.demo.dto.board.BoardHierarchyResponsetDTO;
+import com.example.demo.dto.board.BoardHierarchyResponseDTO;
 import com.example.demo.dto.board.BoardResponseDTO;
 import com.example.demo.dto.board.BoardUpdateRequestDTO;
 import com.example.demo.service.board.BoardService;
@@ -210,7 +211,7 @@ public class BoardController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
     	}
   
-    	BoardHierarchyResponsetDTO response = null;
+    	BoardHierarchyResponseDTO response = null;
 
     	logger.info("BoardController getBoardHierarchyByParent() ==========> boardService.getBoardHierarchyByParent()");
     	try {
@@ -256,7 +257,7 @@ public class BoardController {
     	logger.info("BoardController getBoardFullHierarchy() Start");
 
     	logger.info("BoardController getBoardFullHierarchy() ==========> boardService.getBoardFullHierarchy()");
-    	List<BoardHierarchyResponsetDTO> response  = null;
+    	List<BoardHierarchyResponseDTO> response  = null;
     	try {
 			response = boardService.getBoardFullHierarchy();
 		} catch (NoSuchElementException e) {

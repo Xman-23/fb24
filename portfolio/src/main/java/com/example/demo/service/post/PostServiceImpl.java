@@ -204,7 +204,7 @@ public class PostServiceImpl implements PostService {
 			return Collections.emptyMap();
 		}
 
-		List<PostReactionRepository.PostReactionCount> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds);
+		List<PostReactionRepository.PostLikeReactionCount> reactionCounts = postReactionRepository.countLikeReactionsByPostIds(postIds);
 
 		int initialCapacity = (int) (reactionCounts.size()/0.75f) +1;
 		Map<Long, Long> likeCountMap = new HashMap<>(initialCapacity);
@@ -329,6 +329,11 @@ public class PostServiceImpl implements PostService {
 				        .createdAt(createdAt)
 				        .updatedAt(updatedAt)
 				        .build();
+
+		// 게시글이 'INSERT' 되기전에 등급을 올림
+		// 만약 게시글은 올라갔지만, 이미지가 에서 예외 발생시,
+		// '@Transactional'어노테이션에 의해서 등급 점수가 롤백되므로 안전함. 
+		member.insertPostScore(); // 등급 점수 올리기
 
 		// 'post' 객체를 DB에 저장하고, 저장된 Post 엔티티를 반환
 		Post response = postRepository.save(post);
@@ -679,9 +684,15 @@ public class PostServiceImpl implements PostService {
 
 		LocalDateTime updatedAt = LocalDateTime.now();
 
+		// 게시물 삭제시 등급점수 '-1' 차감
+		member.deletePostScore();
+
 		// 논리적 삭제(O), 물리적 삭제(X) 즉, DB에는 남아있음
 		post.setStatus(PostStatus.DELETED);
 		post.setUpdatedAt(updatedAt);
+
+		// 게시글 리액션 DB 모두 삭제
+		postReactionRepository.deleteByPost(post);
 
 		if(isDeleteImages) {
 			try {
@@ -747,6 +758,12 @@ public class PostServiceImpl implements PostService {
 				                	  return new NoSuchElementException("게시글이 존재하지 않습니다.");
 				                  });
 
+		Member member = memberRepository.findById(post.getAuthor().getId())
+				                        .orElseThrow(() -> {
+				                        	logger.error("PostServiceImpl reportPost() NoSuchElementException postId : {} ", postId);
+				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+				                        });
+
 		// 삭제된 게시글은 신고 X
 		if(post.getStatus() == PostStatus.DELETED) {
 			logger.error("PostServiceImpl reportPost() IllegalStateException : 삭제된 게시글은 신고할 수 없습니다.");
@@ -783,13 +800,18 @@ public class PostServiceImpl implements PostService {
 
 		logger.info("PostServiceImpl reportPost() reportCount : {}", reportCount);
 
-		// 신고를 35번 당할시 상태변경 (report_count(DB) == 35)
+		// 신고를 35번 당할시 상태변경 (report_count(DB) == 40)
 		// 그리고(AND(&&)), 게시글이 'ACTIVE'이고, 공지글이 아닌 게시글만 'BLOCKED"
 		if(Objects.equals(reportCount, this.reportThreshold) 
 		   && post.getStatus().equals(PostStatus.ACTIVE)
 		   && post.isNotice() == false) {
+			// 게시글이 신고로인해 'BLOCKED' 될시 회원점수 20점 차감
+			member.benPostScore();
 			// 'post'가 영속성상태이므로 값이 변경되면 알아서 DB변경 시도
 			post.setStatus(PostStatus.BLOCKED);
+			// 게시글 리액션 DB 모두 삭제
+			postReactionRepository.deleteByPost(post);
+			// 게시글이 'BLOCKED'될시 게시글 작성자에게 알림 보내기
 			notificationService.notifyPostWarned(post);
 		}
 

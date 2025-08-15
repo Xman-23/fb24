@@ -3,6 +3,7 @@ package com.example.demo.service.board;
 
 import java.util.List;
 
+
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
@@ -14,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.board.Board;
 import com.example.demo.dto.board.BoardCreateRequestDTO;
-import com.example.demo.dto.board.BoardHierarchyResponsetDTO;
+import com.example.demo.dto.board.BoardHierarchyResponseDTO;
 import com.example.demo.dto.board.BoardResponseDTO;
 import com.example.demo.dto.board.BoardUpdateRequestDTO;
 import com.example.demo.repository.board.BoardRepository;
@@ -166,15 +167,15 @@ public class BoardServiceImpl implements BoardService {
 		return BoardResponseDTO.convertToResponseDTO(board);
 	}
 
-	// 특정 게시판(boardId) 기준 계층(자식) 구조 조회
-	public BoardHierarchyResponsetDTO getBoardHierarchyByParent(Long boardId) {
+	// 특정 게시판(boardId) 기준 계층(자식) 구조 조회 (hover 구조)
+	public BoardHierarchyResponseDTO getBoardHierarchyByParent(Long boardId) {
 
 		logger.info("BoardServiceImpl  getBoardHierarchyByParent() Start");
 
 		Board board = boardRepository.findById(boardId)
 				                     .orElseThrow(() -> new NoSuchElementException("부모 게시판이 존재하지 않습니다."));
 
-		BoardHierarchyResponsetDTO response = BoardHierarchyResponsetDTO.convertToHierarchy(board);
+		BoardHierarchyResponseDTO response = BoardHierarchyResponseDTO.convertToHierarchy(board);
 
 		logger.info("BoardServiceImpl  getBoardHierarchyByParent() Success End");
 		return response;
@@ -210,7 +211,7 @@ public class BoardServiceImpl implements BoardService {
 
 	// 전체 게시판 조회 Service
 	@Override
-	public List<BoardHierarchyResponsetDTO> getBoardFullHierarchy() {
+	public List<BoardHierarchyResponseDTO> getBoardFullHierarchy() {
 
 		logger.info("BoardServiceImpl  getBoardFullHierarchy() Start");
 
@@ -222,8 +223,8 @@ public class BoardServiceImpl implements BoardService {
 		}
 		logger.info("BoardServiceImpl getBoardFullHierarchy() parents   :"+ parents );
 
-		List<BoardHierarchyResponsetDTO> response = parents.stream()
-				                                           .map(BoardHierarchyResponsetDTO :: convertToHierarchy)
+		List<BoardHierarchyResponseDTO> response = parents.stream()
+				                                           .map(BoardHierarchyResponseDTO :: convertToHierarchy)
 													       .collect(Collectors.toList());
 
 		logger.info("BoardServiceImpl getBoardFullHierarchy() response   :"+ response );

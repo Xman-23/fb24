@@ -41,9 +41,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + " WHERE p.status = 'ACTIVE' " 
 		  + "   AND (" 
 		  + "         LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " 
-		  +           "OR "
-		  +           "LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))" 
-		  +        ")"
+		  + "    OR "
+		  + "         LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))" 
+		  + "       )"
 		  )
 	Page<Post> searchByKeyword(@Param("keyword")String keyword, Pageable pageable);
 

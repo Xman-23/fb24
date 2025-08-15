@@ -17,19 +17,19 @@ import com.example.demo.dto.member.memberauth.AuthLoginDTO;
 import com.example.demo.dto.member.memberauth.AuthRefreshTokenRequestDTO;
 import com.example.demo.dto.member.memberauth.AuthTokenResponseDTO;
 import com.example.demo.jwt.CustomUserDetails;
-import com.example.demo.service.member.memberauth.AuthService;
+import com.example.demo.service.member.memberauth.MemberAuthService;
 
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
-public class AuthController {
+public class MemberAuthController {
 
-    private final AuthService authService;
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private final MemberAuthService authService;
+    private static final Logger logger = LoggerFactory.getLogger(MemberAuthController.class);
 
     @Autowired
-    public AuthController(AuthService authService) {
+    public MemberAuthController(MemberAuthService authService) {
     	this.authService = authService;
     }
 

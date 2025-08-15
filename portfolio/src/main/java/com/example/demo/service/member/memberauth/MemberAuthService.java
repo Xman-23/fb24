@@ -10,37 +10,35 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberauth.MemberLoginHistory;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.domain.member.memberrefreshtoken.MemberRefreshToken;
 import com.example.demo.dto.member.memberauth.AuthTokenResponseDTO;
 import com.example.demo.jwt.JwtUtil;
 import com.example.demo.repository.member.MemberRepository;
+import com.example.demo.repository.member.memberloginhistory.MemberLoginHistoryRepository;
 import com.example.demo.repository.member.memberrefreshtoken.MemberRefreshTokenRepository;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true) //조회 성능 향상 시키기 위해 'readOnly'
-public class AuthService {
+@RequiredArgsConstructor
+public class MemberAuthService {
 
 	private final JwtUtil jwtUtil;
-    private final MemberRepository memberRepository;
-    private final MemberRefreshTokenRepository refreshTokenRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+	private final BCryptPasswordEncoder passwordEncoder;
 
-    // 생성자 주입
-    //'@Autpwired'안에 'Bean'이 포함되어있어 객체 생명주기 관리 
-    @Autowired
-    public AuthService(MemberRepository memberRepository, 
-    					 BCryptPasswordEncoder passwordEncoder, 
-    					 JwtUtil jwtUtil,
-    					 MemberRefreshTokenRepository refreshTokenRepository) {
-        this.memberRepository = memberRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
-        this.refreshTokenRepository = refreshTokenRepository;
-    }
+	// 레파지토리
+    private final MemberRepository memberRepository;
+    private final MemberLoginHistoryRepository memberLoginHistoryRepository;
+    private final MemberRefreshTokenRepository refreshTokenRepository;
+
+    //로그
+    private static final Logger logger = LoggerFactory.getLogger(MemberAuthService.class);
+
 
     // Request 에서 'null'을 가지고 있을 경우 안전하게 trim 처리하는 메서드
     private String safeTrim(String s) {
@@ -78,8 +76,8 @@ public class AuthService {
 
         // 첫번쨰 파라미터 암호화 되지 않은 DTO Password, 두번째 파라미터 암호화된 DB Password
         if (!passwordEncoder.matches(dtoPassword, dbTrimPassword)) {
-            logger.warn("Login failed - incorrect password for email: {}", trimEmail);
-            throw new IllegalArgumentException("Incorrect password.");
+            logger.error("로그인 실패 - 비밀번호가 맞지 않습니다.: {}", dbTrimPassword, dtoPassword);
+            throw new IllegalArgumentException("로그인 정보가 유효하지 않습니다.");
         }
 
         // 'Subject'가 'email'이고, 역할(role) 정보를 포함한 액세스 토큰 생성
@@ -103,10 +101,16 @@ public class AuthService {
         // RefreshToken Entity End
         //===================================================
 
-        // DB Insert
+        // refresh_token DB Insert
         refreshTokenRepository.save(refreshTokenEntity);
 
-        logger.info("Login successful - tokens issued for email:", trimEmail);
+        // 로그인 기록 저장
+        MemberLoginHistory memberLoginHistory  = MemberLoginHistory.builder()
+        		                                                   .member(member)
+        		                                                   .loginTime(LocalDateTime.now())
+        		                                                   .build();
+        memberLoginHistoryRepository.save(memberLoginHistory);
+
         logger.info("AuthService login() Success End");
         return new AuthTokenResponseDTO(accessToken, refreshToken, dbRole);
     }
@@ -118,8 +122,8 @@ public class AuthService {
 
         MemberRefreshToken tokenEntity = refreshTokenRepository.findByToken(trimRefreshToken)
             .orElseThrow(() -> {
-                logger.warn("Refresh failed - token not found: {}", trimRefreshToken);
-                return new IllegalArgumentException("Invalid refresh token.");
+                logger.error("토큰 재발급 실패 - 토큰을 찾을 수가 없습니다. : {}", trimRefreshToken);
+                return new IllegalArgumentException("토큰이 유효하지 않습니다.");
             });
 
         // expirationTime이 지금보다 이전이면 true → 만료된 상태
@@ -132,11 +136,11 @@ public class AuthService {
         String email = jwtUtil.getEmailFromToken(trimRefreshToken);
 
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> 
-                {
-                	logger.warn("AuthService refreshAccessToken()  - 등록된 이메일이 없습니다   :" +  email);
-                	return new IllegalArgumentException("등록된 이메일이 없습니다.");
-                });
+                                        .orElseThrow(() -> 
+                                        	{
+                                        		logger.error("AuthService refreshAccessToken()  - 등록된 이메일이 없습니다 : {} " +  email);
+                                        		return new IllegalArgumentException("등록된 이메일이 없습니다.");
+                                        	});
 
         // DB Role : Admin, User
         Role dbRole = member.getRole();
@@ -144,7 +148,6 @@ public class AuthService {
         // 'email'을 활용하여 다시 '액세서 토큰' 생성
         String newAccessToken = jwtUtil.generateToken(email,dbRole);
 
-        logger.info("Access token successfully reissued for email: {}", email);
         logger.info("AuthService refreshAccessToken() Success End");
         return new AuthTokenResponseDTO(newAccessToken, trimRefreshToken,dbRole);
     }

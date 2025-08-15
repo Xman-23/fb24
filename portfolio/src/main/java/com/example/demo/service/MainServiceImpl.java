@@ -121,7 +121,7 @@ class MainServiceImpl implements MainService {
 		 * 그러므로 '리사이즈'를 방지하기 위해서 HashMap의 초기 크기 (list.size/0.75f)+1를 설정
 		 */
 		// 3. 좋아요 일괄 조회
-		List<PostReactionRepository.PostReactionCount> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds);
+		List<PostReactionRepository.PostLikeReactionCount> reactionCounts = postReactionRepository.countLikeReactionsByPostIds(postIds);
 		int likeInitialCapacity = (int) (reactionCounts.size()/0.75f)+1;
 		Map<Long, Long> likeCountMap = new HashMap<>(likeInitialCapacity);
 		reactionCounts.forEach(rc-> likeCountMap.put(rc.getPostId(), rc.getLikeCount()));

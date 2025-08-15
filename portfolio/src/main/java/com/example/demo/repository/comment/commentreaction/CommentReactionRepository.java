@@ -2,6 +2,7 @@ package com.example.demo.repository.comment.commentreaction;
 
 import java.util.*;
 
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,7 @@ public interface CommentReactionRepository extends JpaRepository<CommentReaction
 	void deleteByCommentAndUserId(Comment comment, Long userId);
 	
 
+	// 댓글 전체 트리 조회
 	/** Query 결과
 	* commentId | reactionType | count
 	* 101       | LIKE         | 2     // 댓글 101에 대한 좋아요 2개
@@ -44,11 +46,32 @@ public interface CommentReactionRepository extends JpaRepository<CommentReaction
 	 	'get()'으로 가져와 매핑, 'get'으로 가져와야하기때문에 '엔티티의 변수명'과 '별칭명'이 동일해야한다
 	 	ex) 'CommentEntity commentId 변수명' == cr.comment.commentId AS 'commentId' 별칭명
 	*/
-	interface ReactionCountProjection  {
+	public interface ReactionCountProjection  {
 	    Long getCommentId();
 	    PostReactionType getReactionType(); //게시글의 리액션 타입(LIKE, DISLIKE)를 그대로 사용
 	    Long getCount();
 	}
+
+    // 댓글에 사용할 좋아요, 싫어요 집계조회
+    @Query(
+    		"SELECT cr.comment.commentId AS commentId, "
+    	  + "       COALESCE(SUM(CASE "
+    	  + "                         WHEN cr.reactionType = 'LIKE' THEN 1 ELSE 0 "
+    	  + "                      END), 0) AS likeCount, "
+    	  + "       COALESCE(SUM(CASE "
+    	  + "                        WHEN cr.reactionType = 'DISLIKE' THEN 1 ELSE 0"
+    	  + "                     END), 0 ) AS dislikeCount "
+    	  + "  FROM CommentReaction cr "
+    	  + " WHERE cr.comment.commentId = :commentId "
+    	  + " GROUP BY cr.comment.commentId "
+    	  ) 
+    CommentReactionCount countReactionsByCommentId(@Param("commentId") Long commentId);
+
+    public interface CommentReactionCount {
+        Long getCommentId();
+        Long getLikeCount();
+        Long getDislikeCount();
+    }
 
     @Modifying // 'UPDATE'or'DELETE'
     @Query(

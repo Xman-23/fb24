@@ -212,6 +212,11 @@ public class CommentServiceImpl implements CommentService {
 				                 .authorNickname(authorNickname)
 				                 .build();
 
+		// 댓글이 'INSERT' 되기전에 등급을 올림
+		// 만약 댓글은 올라갔지만, 중간에 트랜잭션이 종료된다면,
+		// '@Transactional'어노테이션에 의해서 등급 점수가 롤백되므로 안전함. 
+		member.addCommentScore(); // 등급 점수 올리기
+
 		// 'INSERT' 후 'Comment' Entity 반환
 		Comment saved = commentRepository.save(comment);
 
@@ -314,20 +319,30 @@ public class CommentServiceImpl implements CommentService {
 
 		Comment comment = commentRepository.findById(commentId)
 				                           .orElseThrow(() -> {
-				                        	   logger.error("CommentServiceImpl deleteComment() NoSuchElementException Error : {}");
+				                        	   logger.error("CommentServiceImpl deleteComment() NoSuchElementException commentId : {} ", commentId);
 				                        	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
 				                           });
+
+		Member member = memberRepository.findById(comment.getMember().getId())
+				                        .orElseThrow(() -> {
+				                        	logger.error("CommentServiceImpl deleteComment() NoSuchElementException memberId: {} ",comment.getMember().getId());
+				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+				                        });
 
 		if(!comment.getMember().getId().equals(authorId)) {
 			logger.error("CommentServiceImpl deleteComment() SecurityException Error: 본인의 댓글만 삭제할 수 있습니다.");
 			throw new SecurityException("본인의 댓글만 삭제할 수 있습니다.");
 		}
 
+
+		// 해당 댓글 리액션 모두 삭제
+		commentReactionRepository.deleteByComment(comment);
+
 		comment.setStatus(CommentStatus.DELETED);
 		comment.setAuthorNickname("");
 
-		//해당 댓글 리액션 모두 삭제
-		commentReactionRepository.deleteByComment(comment);
+		// 해당 댓글 삭제시 점수 '-1'점 차감
+		member.deleteCommentScore();
 
 		logger.info("CommentServiceImpl deleteComment() End");
 		return CommentResponseDTO.fromEntity(comment, 0, 0, false, "");
@@ -346,6 +361,12 @@ public class CommentServiceImpl implements CommentService {
 				                        	   logger.error("CommentServiceImpl reportComment() NoSuchElementException : 댓글이 존재하지 않습니다.");
 				                        	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
 				                           });
+
+		Member member = memberRepository.findById(comment.getMember().getId())
+                                        .orElseThrow(() -> {
+                                        	logger.error("CommentServiceImpl deleteComment() NoSuchElementException memberId: {} ",comment.getMember().getId());
+                                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+                                        });
 
 		// 삭제된 댓글은 신고 X
 		if(comment.getStatus() == CommentStatus.DELETED) {
@@ -387,6 +408,9 @@ public class CommentServiceImpl implements CommentService {
 		// 신고가 15번 당할시 상태 변경 (report_count(DB) == 15)
 		// 그리고(AND(&&)), CommentStatus.ACTIVE
 		if(Objects.equals(reportCount, this.reportThreshold) && comment.getStatus().equals(CommentStatus.ACTIVE)) {
+			// 댓글 신고시 회원 등급 점수 차감
+			member.benCommentScore();
+			// 댓글 논리적 삭제
 			comment.setStatus(CommentStatus.HIDDEN);
 			// 해당 댓글 리액션 모두 삭제
 			commentReactionRepository.deleteByComment(comment);

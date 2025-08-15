@@ -93,7 +93,10 @@ public class SecurityConfig {
                 "/posts/author/**",
  
                 // 댓글
-                "/comments/post/{postId:[\\d]+}"		 // 댓글 트리구조(정렬) 조회
+                "/comments/post/{postId:[\\d]+}",		  // 댓글 트리구조(정렬) 조회
+
+                // 접속자 수 보기
+                "/statistics/**"						  // 회원 접소자 수 보기
 
             ).permitAll()
 

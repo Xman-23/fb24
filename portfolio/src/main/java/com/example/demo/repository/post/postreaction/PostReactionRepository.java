@@ -37,24 +37,50 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
 	* 105       | 5         | 1     // 댓글 105에 대한 좋아요 5개, 싫어요 1개
 	*/
  
-    // 메인화면에 사용할 좋아요, 싫어요 집계조회
+    // 메인화면에 사용할 좋아요 집계조회
     @Query(
     		"SELECT pr.post.postId AS postId, "
     	  + "       SUM(CASE "
     	  + "               WHEN pr.reactionType = 'LIKE' THEN 1 ELSE 0 "
     	  + "            END) AS likeCount "
-    	  //+ "       SUM(CASE "
-    	  //+ "               WHEN pr.reactionType = 'DISLIKE' THEN 1 ELSE 0"
-    	  //+ "            END) AS dislikeCount "
     	  + "  FROM PostReaction pr "
     	  + " WHERE pr.post.postId IN (:postIds) "
     	  + " GROUP BY pr.post.postId "
     	  ) 
-    List<PostReactionCount> countReactionsByPostIds(@Param("postIds") List<Long> postIds);
+    List<PostLikeReactionCount> countLikeReactionsByPostIds(@Param("postIds") List<Long> postIds);
 
-    interface PostReactionCount {
+    interface PostLikeReactionCount {
         Long getPostId();
         Long getLikeCount();
-        //Long getDislikeCount();
     }
+
+    // 게시글에 사용할 좋아요, 싫어요 집계조회
+    @Query(
+    		"SELECT pr.post.postId AS postId, "
+    	  + "       COALESCE(SUM(CASE "
+    	  + "                        WHEN pr.reactionType = 'LIKE' THEN 1 ELSE 0 "
+    	  + "                     END), 0) AS likeCount, "
+    	  + "       COALESCE(SUM(CASE "
+    	  + "                        WHEN pr.reactionType = 'DISLIKE' THEN 1 ELSE 0"
+    	  + "                     END), 0) AS dislikeCount "
+    	  + "  FROM PostReaction pr "
+    	  + " WHERE pr.post.postId = :postId "
+    	  + " GROUP BY pr.post.postId "
+    	  ) 
+    PostReactionCount countReactionsByPostId(@Param("postId") Long postId);
+
+    public interface PostReactionCount {
+        Long getPostId();
+        Long getLikeCount();
+        Long getDislikeCount();
+    }
+
+    // 게시글 삭제시 리액션 모두 삭제
+    @Modifying // 'UPDATE' or 'DELETE'
+    @Query(
+    		"DELETE FROM PostReaction pr "
+    	  + " WHERE pr.post = :post "
+    	  )
+    int deleteByPost(@Param("post")Post post);
+
 }
