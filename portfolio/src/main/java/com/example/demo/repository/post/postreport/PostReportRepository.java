@@ -1,10 +1,10 @@
 package com.example.demo.repository.post.postreport;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.post.postreport.PostReport;
 

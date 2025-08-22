@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인</title>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- JS -->
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/member/get_member.js"></script>
+<!-- CSS -->
+<link rel="stylesheet" href="css/common/common_header.css">
+<link rel="stylesheet" href="css/member/member_login_body/member_login_body.css">
+<link rel="stylesheet" href="css/member/member_footer.css">
+</head>
+<body>
+	<!-- 헤더 영역 -->
+	<header id="header">
+		<div class="header-top">
+			<div id="logo">
+    			<a href="/">Log</a>
+			</div>
+		</div>
+
+		<nav id="board-tabs">
+			<ul id="parent-boards"></ul>
+		</nav>
+	</header>
+
+	<!-- 메인 바디 영역 -->
+	<main>
+    	<h2>로그인 / 회원가입</h2>
+    	<form id="auth-form">
+    	    <!-- 이메일 -->
+			<div class="email-wrapper">
+			    <input type="text" name="email-id" id="email1" placeholder="이메일 아이디" required>
+			    <span class="at-symbol">@</span>
+			    <input type="text" name="email-domain" id="email2" placeholder="도메인" required>
+			    <select id="email-select">
+			        <option value="">선택</option>
+                    <option value="naver.com">naver.com</option>
+                    <option value="daum.net">daum.net</option>
+                    <option value="gmail.com">gmail.com</option>
+                    <option value="hanmail.net">hanmail.net</option>
+                    <option value="nate.com">nate.com</option>
+                    <option value="kakao.com">kakao.com</option>
+                    <option value="hotmail.com">hotmail.com</option>
+			    </select>
+			</div>
+        	<!-- 비밀번호 -->
+        	<input type="password" name="password" id= "password"placeholder="비밀번호" required>
+
+        	<!-- 버튼 -->
+			<button type="submit">로그인</button>
+			<button type="button" id="signup">회원가입</button>
+
+			<!-- 아이디 | 비밀번호 찾기 -->
+			<div class="auth-links">
+			    <button type="button" id="find_id">아이디 찾기</button>
+			    <span>|</span>
+			    <button type="button" id="find_password">비밀번호 찾기</button>
+			</div>
+    	</form>
+	</main>
+
+	<!-- 푸터 영역 -->
+	<footer id="main-footer">
+	    <div class="footer-stats">
+	        <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	        <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	    </div>
+	    <div class="footer-spacer"></div>
+	</footer>
+</body>
+
+<script>
+	//*************************************************** 페이지 초기화  Start ***************************************************//
+
+	form_email_chang();
+	form_signup();
+	form_find_id();
+	form_find_password();
+
+	memberLoginApi();
+
+	//*************************************************** 페이지 초기화  End ***************************************************//
+
+	//*************************************************** Function START ***************************************************//
+
+	// 이메일 셀렉트 박스 클릭 
+	function form_email_chang() {
+		// select 박스 변경 시 
+		$("#email-select").on("change", function() {
+			// 해당 태그의 value가져오기
+		    var domain = $(this).val();
+			// 'email-domain2' input value에 domain 값 덮어쓰기 
+		    $("#email2").val(domain);
+		});
+	}
+
+	// 회원가입 버튼 클릭 시
+	function form_signup() {
+		$("#signup").on("click", function() {
+			window.location.href = "/signup_consent";
+		});
+	}
+
+	// 아이디 찾기 버튼 클릭 시
+	function form_find_id() {
+		$("#find_id").on("click", function() {
+			window.location.href = "/find_id_one";
+		});
+	}
+
+	// 비밀번호 찾기 버튼 클릭 시
+	function form_find_password() {
+		$("#find_password").on("click", function() {
+			window.location.href = "/reset_password_one";
+		});
+	}
+	//*************************************************** Function End ***************************************************//
+
+	//*************************************************** API START ***************************************************//
+
+	// 로그인 API
+	function memberLoginApi() {
+		$('#auth-form').on('submit', function(e) {
+		    e.preventDefault();
+	
+		    // 이메일 합치기
+		    var email = getEmail();
+		    var password = passwordTrim();
+	
+		    if(!email || !password){
+		        alert("이메일과 비밀번호를 모두 입력해주세요.");
+		        return;
+		    }
+	
+		    var loginData = { email: email, password: password };
+	
+		    $.ajax({
+		        url: '/auth/login',
+		        type: 'POST',
+		        contentType: 'application/json',
+		        data: JSON.stringify(loginData),
+		        success: function(res) {
+		            localStorage.setItem('accessToken', res.accessToken);
+		            alert('로그인 성공!');
+		            window.location.href = '/';
+		        },
+		        error: function(xhr) {
+		            alert(xhr.responseText);
+		        }
+		    });
+		});
+	}
+	//*************************************************** API End ***************************************************//
+</script>
+</html>

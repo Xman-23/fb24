@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -18,11 +19,47 @@ public class WebConfig implements WebMvcConfigurer {
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 
+		// file:// 프로토콜 /C:/upload/images/ 로컬경로
 		String resourceLocation = "file:///" + basePath + "/";
 
 		registry.addResourceHandler("/images/**") // 요청 경로
 		        .addResourceLocations(resourceLocation); // 셀제 로컬 경로
 		// URL 요청: /images/abc.jpg → 실제 로컬 경로: C:/upload/image/abc.jpg
+	}
+
+	@Override
+	public void addViewControllers(ViewControllerRegistry viewControllerRegistry) {
+		// "/(루트)"접속시 index.html로 Forward
+		viewControllerRegistry.addViewController("/").setViewName("forward:/index.html");
+
+		// "signin"접속시 member_signin.html로 Forward
+		viewControllerRegistry.addViewController("/signin").setViewName("forward:/member/member_signin.html");
+
+		// "signup_consent"접속시 member_signup_consent.html로 Forward
+		viewControllerRegistry.addViewController("/signup_consent").setViewName("forward:/member/member_signup_consent.html");
+
+		// "signup"접속시 member_signup.html로 Forward
+		viewControllerRegistry.addViewController("/signup").setViewName("forward:/member/member_signup.html");
+
+		// "find_id"접속시  member_find_id_one.html로 Forward
+		viewControllerRegistry.addViewController("/find_id_one").setViewName("forward:/member/member_find_id_one.html");
+
+		// "find_find_id_two"접속시  member_find_id_two.html로 Forward
+		viewControllerRegistry.addViewController("/find_id_two").setViewName("forward:/member/member_find_id_two.html");
+	
+		// "reset_password_one"접속시  member_reset_password_one.html로 Forward
+		viewControllerRegistry.addViewController("/reset_password_one").setViewName("forward:/member/member_reset_password_one.html");
+
+		// "reset_password_two"접속시 member_reset_password_two.html로 Forward
+		viewControllerRegistry.addViewController("/reset_password_two").setViewName("forward:/member/member_reset_password_two.html");
+
+		// "member_me"접속시 member_me.html로 Forward
+		viewControllerRegistry.addViewController("/member_me").setViewName("forward:/member/member_me.html");
+
+		// "member_me_update'접속시 member_me_update.html로 Forward
+		viewControllerRegistry.addViewController("/member_me_update").setViewName("forward:/member/member_me_update.html");
+		
+
 	}
 
 }

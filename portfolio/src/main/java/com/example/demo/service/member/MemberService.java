@@ -1,8 +1,10 @@
 package com.example.demo.service.member;
 
 
-import java.util.*;
+import java.time.LocalDateTime;
 
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -11,6 +13,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.MemberConsent;
+import com.example.demo.domain.member.memberenums.MemberConsentType;
+import com.example.demo.domain.member.memberenums.MemberGradeLevel;
 import com.example.demo.domain.member.memberenums.MemberStatus;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
@@ -20,12 +25,11 @@ import com.example.demo.dto.member.MemberVerifyFindEmailRequestDTO;
 import com.example.demo.dto.member.MemberVerifyResetPasswordDTO;
 import com.example.demo.jwt.JwtUtil;
 import com.example.demo.repository.member.MemberRepository;
-import com.example.demo.repository.member.memberrefreshtoken.MemberRefreshTokenRepository;
+import com.example.demo.repository.member.membernotificationsettings.Membernotificationsettings;
 import com.example.demo.security.AES256Util;
-import com.example.demo.validation.string.SafeTrim;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.OneToOne;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,29 +37,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MemberService {
 	//내부(final), 외부(private) 데이터 변겅 불가
 	private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
-    private final MemberRefreshTokenRepository refreshTokenRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+
+    private final Membernotificationsettings membernotificationsettings;
 
     // 로그
     private static final Logger logger = LoggerFactory.getLogger(MemberService.class);
-
-    // 생성자 주입
-    //'@Autpwired'안에 'Bean'이 포함되어있어 객체 생명주기 관리 
-    @Autowired
-    public MemberService(MemberRepository memberRepository, 
-    					 BCryptPasswordEncoder passwordEncoder, 
-    					 JwtUtil jwtUtil,
-    					 MemberRefreshTokenRepository refreshTokenRepository) {
-        this.memberRepository = memberRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
-        this.refreshTokenRepository = refreshTokenRepository;
-    }
 
     //*************************************************** Service START ***************************************************//
 
@@ -82,7 +75,7 @@ public class MemberService {
 
     // 회원가입 Service
     @Transactional //(07.19 02:00 @Transactional 추가)
-    public Member signup(Member member) {
+    public Member signup(Member member, List<MemberConsentType> consentTypes, String ipAddress) {
 
     	// Controller의 toEntity()에서 이미 Role이 설정되어 있으므로 불필요
     	// Role role = member.getRole();
@@ -106,6 +99,8 @@ public class MemberService {
         String encodedPassword = passwordEncoder.encode(trimPassword);
         // 암호화된 비밀번호를 MemberEntity의 'password'에 setting
         member.setPassword(encodedPassword);
+        member.setGradeScore(0);
+        member.setMemberGradeLevel(MemberGradeLevel.유생);
 
         // 주민번호 암호화 (AES256Util)
         try {
@@ -119,16 +114,32 @@ public class MemberService {
 
          
         MemberNotificationSetting setting = MemberNotificationSetting.builder()
-        		                                                        .member(member) //관계 설정
-        		                                                        .postNotificationEnabled(true)
-        		                                                        .commentNotificationEnabled(true)
-        		                                                        .build();
+        		                                                     .member(member) //관계 설정
+        		                                                     .postNotificationEnabled(true)
+        		                                                     .commentNotificationEnabled(true)
+        		                                                     .build();
 
         // '@OneToOne'의 'optional = false' 설정에 의해서 먼저 'Member'엔티티에 Setting 후, 
         member.setNotificationSetting(setting);
 
         // 회원 상태 'ACTIVE'로 초기화 셋팅
         member.setStatus(MemberStatus.ACTIVE);
+
+        List<MemberConsent> consents = new ArrayList<>();
+
+        if(consentTypes != null) {
+        	consents = consentTypes.stream()
+        			               .map(type -> MemberConsent.builder()
+        			            		                     .member(member)
+        			            		                     .consentType(type)
+        			            		                     .consentStatus(true)
+        			            		                     .consentDate(LocalDateTime.now())
+        			            		                     .ipAddress(ipAddress)
+        			            		                     .build())
+        			               .collect(Collectors.toList());
+        }
+
+        member.setConsents(consents);
 
         // 레파지토리(JPA) 'save' -> DB 접근 
         return memberRepository.save(member);
@@ -163,7 +174,7 @@ public class MemberService {
     				return jwtUtil.createTempToken(trimDtoUserName, trimDtoResidentNumber);
     			}
     		}catch(Exception e){
-    			throw new RuntimeException("주민번호 복호화 실패 ", e);
+    			throw e;
     		}
     	}
 
@@ -198,11 +209,10 @@ public class MemberService {
 				}
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("주민번호 복호화 실패", e);
+			throw e;
 		}
 
     	 throw new IllegalArgumentException("일치하는 회원이 없습니다.");
-
     }
 
     // 패스워드 변경 Service
@@ -216,6 +226,7 @@ public class MemberService {
     	String memberCurrnetPassword = member.getPassword().trim();
     	// 첫번째 파라미터 : 암호화 되지 않은 새로운 패스워드, 두번째 파라미터 : DB에 저장된 현재 암호화된 패스워드
     	if(passwordEncoder.matches(trimNewPassword, memberCurrnetPassword)) {
+    		logger.error("MemberService resetPasswordByEmail() IllegalArgumentException : 기존 비밀번호와 동일합니다.");
     		throw new IllegalArgumentException("기존 비밀번호와 동일합니다.");
     	}
     	String encodedPassword = passwordEncoder.encode(trimNewPassword);
@@ -226,6 +237,8 @@ public class MemberService {
 
     // 회원정보 조회 Service
     public MemberInfoDTO getMyInfo(String email){
+
+    	logger.info("MemberService getMyInfo() Start");
     	//이메일이 존재할시 해당 이메일의 모든 Member Entity 반환 (비밀번호, 이름, 주민번호, 전화번호 등등..)
     	String trimEmail = email.trim();
     	Member member = memberRepository.findByEmail(trimEmail)
@@ -233,30 +246,33 @@ public class MemberService {
     	                                	logger.error("MemberService getMyInfo() IllegalArgumentException : 회원이 존재하지 않습니다.");
     	                                	return new IllegalArgumentException("회원이 존재하지 않습니다.");
     	                                });
-    	String decryptedResidentNumber = "";
 
-    	//DB
-    	String memberResidentNumber = member.getResidentNumber().trim();
-
-    	try {
-			decryptedResidentNumber = AES256Util.decrypt(memberResidentNumber);
-		} catch (Exception e) {
-			//해당 회원에게 보여줄 주민번호 복호화 실패 예외 처리.
-			throw e;
-		}
+    	// MemberNotificationSetting 조회 (없으면 기본 'true;'로 처리 가능)
+    	MemberNotificationSetting memberNotificationSetting = membernotificationsettings.findById(member.getId())
+    			           									                            .orElseGet(() -> MemberNotificationSetting.builder()
+    			           									                            		                                  .member(member)
+    			           									                            		                                  .postNotificationEnabled(true)
+    			           									                            		                                  .commentNotificationEnabled(true)
+    			           									                            		                                  .build());
     	//'email'에 해당하는 'MemberEntity'를 -> MemberInfoDto 변환 후 DTO필드에 정보를 담는다.
-    	MemberInfoDTO memberInfoDto = new MemberInfoDTO(member.getUsername(),
-    													member.getEmail(),
-    													member.getPhoneNumber(),
-    													decryptedResidentNumber,
-    													member.getNickname(),
-    													member.getAddress());
-    	return memberInfoDto;
+    	MemberInfoDTO response = MemberInfoDTO.builder()
+    			                              .username(member.getUsername())
+    			                              .phoneNumber(member.getPhoneNumber())
+    			                              .nickname(member.getNickname())
+    			                              .address(member.getAddress())
+    			                              .memberGradeLevel(member.getMemberGradeLevel())
+    			                              .postNotificationEnabled(memberNotificationSetting.isPostNotificationEnabled())
+    			                              .commentNotificationEnabled(memberNotificationSetting.isCommentNotificationEnabled())
+    			                              .build();
+    	logger.info("MemberService getMyInfo() End");
+    	return response;
     }
 
     // 회원 정보 변경 Service
     @Transactional //(07.19 02:00 @Transactional 추가)
     public void updateMember(String trimUserName, MemberUpdateRequestDTO dto) {
+
+    	logger.info("MemberService updateMember() Start");
 
     	// // DB에서 닉네임으로 회원 조회(findByNickname), 조회된 Member 객체는 영속 상태가 됨
     	Member member = memberRepository.findByNickname(trimUserName)
@@ -336,15 +352,28 @@ public class MemberService {
 			logger.error("회원 정보 변경 DB제약조건 위반으로 인해 save 실패");
 			throw new DataIntegrityViolationException("회원 정보 변경 DB제약조건 위반으로 인해 save 실패", e);
 		}
+    	logger.info("MemberService updateMember() End");
     }
 
     // 회원 탈퇴 Service
-    @Transactional //(07.19 02:00 @Transactional 추가)
+    @Transactional
     public void deleteMemberByEmail(String trimEmail) {
+
+    	logger.info("MemberService deleteMemberByEmail() Start");
 
     	Member member = memberRepository.findByEmail(trimEmail)
     	                                .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 이메일입니다."));
-    	memberRepository.delete(member);
+        member.setStatus(MemberStatus.WITHDRAWN);
+        member.setNickname("탈퇴회원" + member.getId()); // 닉네임 중복 방지
+        member.setEmail("withdrawn_" + member.getId() + "@example.com"); // 이메일 중복 방지
+        member.setPassword(""); // 패스워드 제거
+        member.setAddress("");
+        member.setUsername("");
+        member.setPhoneNumber("");
+        member.setResidentNumber("");
+        member.setGradeScore(0);
+
+    	logger.info("MemberService deleteMemberByEmail() End");
     }
 
     //*************************************************** Service END ***************************************************//

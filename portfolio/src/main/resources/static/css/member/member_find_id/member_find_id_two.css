@@ -1,0 +1,35 @@
+@charset "UTF-8";
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+}
+.result-box {
+    padding: 30px 40px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
+.result-box h2 {
+    margin-bottom: 20px;
+}
+.result-box p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+#go-login {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: #fff;
+    cursor: pointer;
+}
+#go-login:hover {
+    background-color: #0056b3;
+}

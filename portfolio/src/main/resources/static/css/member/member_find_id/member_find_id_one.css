@@ -1,0 +1,142 @@
+@charset "UTF-8";
+/* ============================== 바디 ============================== */
+body {
+    background-color: #f5f5f5;
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================== 메인 영역 ============================== */
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: left; /* 전체 왼쪽 정렬 */
+}
+
+/* ============================== 폼 박스 ============================== */
+#find-email-form {
+    width: 100%;
+    max-width: 450px;
+    padding: 30px 40px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ============================== 폼 내부 제목(h2) ============================== */
+#find-email-form h2 {
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
+    text-align: left; /* 좌측 정렬 */
+}
+
+/* ============================== 폼 아이템 ============================== */
+.form-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;           
+    margin-bottom: 15px;
+}
+
+.form-item input {
+    width: 100%;  
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    box-sizing: border-box;  /* 중요: 패딩 포함 너비 계산 */
+}
+
+/* ============================== 주민번호 입력 그룹 (가로 정렬) ============================== */
+.flex-group {
+    display: flex !important;
+    flex-direction: row !important; /* PC에서는 항상 가로 정렬 */
+    align-items: center;
+    gap: 10px;
+}
+
+.flex-group input {
+    width: 100%;
+    max-width: calc((100% - 10px) / 2);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    text-align: center;
+    box-sizing: border-box;  /* 패딩 포함 너비 */
+}
+
+.flex-group span {
+    display: inline-block; /* 기본값 */
+}
+/* ============================== 버튼 ============================== */
+#nextBtn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #007bff; /* 파란색 */
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#nextBtn:disabled {
+    background-color: #a0cfff;
+    cursor: not-allowed;
+}
+
+#nextBtn:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+/* ============================== 에러 메시지 ============================== */
+#error-message {
+    font-size: 14px;
+    color: red;
+    text-align: left;
+}
+
+
+/* ============================== 모바일 반응형 ============================== */
+@media (max-width: 500px) {
+    #find-email-form {
+        padding: 20px;  /* 폼 내부 여백 축소 */
+    }
+
+    .form-item input {
+        font-size: 14px; /* 폰트 조금 작게 */
+    }
+}
+
+@media (max-width: 500px) {
+    .flex-group {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .flex-group input {
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+    }
+    .flex-group span {
+        display: none; 
+    }
+}
+
+    #nextBtn {
+        font-size: 14px;
+        padding: 10px;
+    }

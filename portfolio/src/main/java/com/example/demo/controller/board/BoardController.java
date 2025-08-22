@@ -89,11 +89,11 @@ public class BoardController {
 		try {
 			response = boardService.createBoard(boardCreateRequestDTO);
 		} catch (IllegalArgumentException e) {
-			logger.error("BoardController createBoard() IllegalArgumentException Error : " + e.getMessage());
+			logger.error("BoardController createBoard() IllegalArgumentException : " + e.getMessage());
 			// 중복(409)
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 존재하는 게시판 입니다.");
 		} catch (NoSuchElementException e) {
-			logger.error("BoardController createBoard() NoSuchElementException Error : " + e.getMessage());
+			logger.error("BoardController createBoard() NoSuchElementException : " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
 		}
 		logger.info("BoardController createBoard() <========== boardService.createBoard()");
@@ -250,8 +250,7 @@ public class BoardController {
     }
 
     // 전체 게시판 목록 조회 (부모 게시판 + 자식 게시판 계층 구조 'O')
-    @GetMapping("/admin/hierarchy")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @GetMapping("/hierarchy")
     public ResponseEntity<?> getBoardFullHierarchy() {
 
     	logger.info("BoardController getBoardFullHierarchy() Start");

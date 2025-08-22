@@ -1,0 +1,86 @@
+@charset "UTF-8";
+
+/****************************************** Footer CSS(회원 가입, 로그인 페이지 제외) Start ********************************************/
+/* 푸터 전체 */
+#main-footer {
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #555;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.05);
+}
+
+/* 3열 그리드: 좌(통계) / 중앙(검색) / 우(스페이서) */
+.footer-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 왼쪽 통계 */
+.footer-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-self: start;
+  white-space: nowrap; /* 줄바꿈 방지 */
+}
+.footer-stats strong { color: #007BFF; font-weight: 700; }
+
+/* 중앙 검색창 */
+.footer-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 입력/버튼 높이 맞춤 */
+.footer-search input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+}
+.footer-search .search-btn {
+    background-color: #ffffff; /* 하얀색 배경 */
+    color: #555;               /* 돋보기 아이콘 색상 */
+    border: 1px solid #ccc;    /* 테두리 */
+    border-radius: 6px;        /* 둥근 모서리 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 살짝 그림자 */
+    font-size: 16px;
+    padding: 0 12px;
+    height: 34px;
+    cursor: pointer;
+    transition: all 0.2s ease; /* 마우스 올릴 때 부드러운 효과 */
+}
+
+.footer-search .search-btn:hover {
+    background-color: #0056b3;  /* hover 시 진한 파랑 */
+    transform: scale(1.1);       /* 살짝 확대 */
+}
+
+.footer-search select {
+    height: 34px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0 6px;
+}
+
+/* 오른쪽 스페이서(비움) */
+.footer-spacer { justify-self: end; }
+
+/* 모바일: 위/아래로 쌓기 */
+@media (max-width: 600px) {
+  .footer-container {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+  .footer-stats, .footer-search, .footer-spacer {
+    justify-self: center;
+  }
+  .footer-spacer { display: none; }
+}
+/****************************************** Footer CSS(회원 가입, 로그인 페이지 제외) Start ********************************************/

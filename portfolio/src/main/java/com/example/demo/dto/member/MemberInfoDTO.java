@@ -1,6 +1,9 @@
 package com.example.demo.dto.member;
 
+import com.example.demo.domain.member.memberenums.MemberGradeLevel;
+
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,20 +18,24 @@ import lombok.NoArgsConstructor;
 */
 
 @Getter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class MemberInfoDTO {
 
 	private String username;
 
-	private String email;
-
 	private String phoneNumber;
-
-	private String residentNumber;
 
 	private String nickname;
 
 	private String address;
+
+	private MemberGradeLevel memberGradeLevel;
+	
+    // 새로 추가
+    private boolean postNotificationEnabled;
+    private boolean commentNotificationEnabled;
+
 
 }

@@ -1,0 +1,178 @@
+@charset "UTF-8";
+
+/****************************************** Header CSS Start ********************************************/
+/* 헤더 전체 */
+#header {
+    background-color: #ffffff; /* 밝은 흰색 배경 */
+    padding: 0 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* 살짝 그림자 */
+    border-bottom: 1px solid #e0e0e0; /* 연한 회색 테두리 */
+    position: relative;
+    z-index: 100;
+}
+
+/* 첫 번째 줄 */
+.header-top {
+    padding: 12px 25px;
+    border-bottom: none; /* 기존 테두리 제거 */
+    box-shadow: none; /* 그림자 제거 */
+    background-color: transparent; /* 배경 없앰 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 로고 강조 */
+#logo {
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #ffffff, #007BFF); /* 흰색 → 파란색 */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 로그인/회원가입 버튼 */
+#user-actions button {
+    margin-left: 10px;
+    padding: 6px 12px;
+    border: 1px solid #ffffff; /* 테두리 흰색 */
+    border-radius: 5px;
+    background-color: #ffffff; /* 흰색 버튼 */
+    color: #007BFF;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* 로그인 상태 텍스트 */
+#user-actions span {
+    margin-right: 12px;
+    font-size: 14px;
+    color: #333;
+}
+
+/* 닉네임 강조 */
+#user-actions span strong {
+    color: #007BFF;
+    font-weight: 700;
+}
+
+/* 내 정보 버튼 */
+#user-actions #member-info-btn {
+    padding: 6px 12px;
+    border: 1px solid #007BFF; /* 테두리 파란색 */
+    border-radius: 5px;
+    background-color: #ffffff; /* 흰색 배경 */
+    color: #007BFF; /* 글자 파랑 */
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#user-actions #member-info-btn:hover {
+    background-color: #007BFF; /* hover 시 파랑 배경 */
+    color: #ffffff; /* 글자 흰색으로 반전 */
+}
+
+/* 로그아웃 버튼 */
+#user-actions #logout-btn {
+    padding: 6px 12px;
+    border: 1px solid #007BFF;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#user-actions #logout-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 부모 게시판 목록만 가로 배치 */
+#board-tabs > ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center; /* 중앙 정렬 추가 */
+}
+
+.parent-board {
+    position: relative; /* 자식 메뉴 위치 조정 위해 */
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+/* 자식 게시판 숨기기 */
+.child-boards {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    list-style: none;
+    padding: 5px;
+    margin: 0;
+    flex-direction: column; /* 세로로 배치 */
+    min-width: 150px; /* 보기 좋게 넓이 확보 */
+    z-index: 1000; /* 다른 요소 위에 표시 */
+}
+
+/* 자식 게시판 숨기기 */
+.child-boards {
+    display: none; /* 기본 숨김 */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    list-style: none;
+    padding: 5px;
+    margin: 0;
+    min-width: 150px;
+    z-index: 1000;
+}
+
+/* 마우스 올렸을 때 자식 게시판 보이기 */
+.parent-board:hover .child-boards {
+    display: block; /* block 대신 flex로 세로 정렬 */
+}
+
+/* 부모 메뉴 스타일 */
+.parent-board > a {
+    display: block;
+    padding: 10px 15px;
+    font-weight: 600;
+    text-decoration: none;
+    color: black;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 부모 hover 시 색상 변화 */
+.parent-board > a:hover {
+    background-color: #007BFF;
+    color: white;
+    border-radius: 5px;
+}
+
+/* 자식 메뉴 스타일 */
+.child-boards li a {
+    display: block;
+    padding: 8px 12px;
+    color: black;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 자식 hover 시 색상 변화 */
+.child-boards li a:hover {
+    background-color: #f0f0f0;
+    color: #007BFF;
+}
+
+/****************************************** Header CSS Start ********************************************/
+

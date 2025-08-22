@@ -4,12 +4,12 @@ import java.io.File;
 
 
 
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -42,6 +42,7 @@ import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionT
 import com.example.demo.domain.post.postreport.PostReport;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 import com.example.demo.dto.post.PostListResponseDTO;
 import com.example.demo.dto.post.PostPageResponseDTO;
@@ -95,7 +96,7 @@ public class PostServiceImpl implements PostService {
     private static final PostReactionType DISLIKE = PostReactionType.DISLIKE;
 
     // 이미지 없을시 대체할 기본 이미지
-    private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.png";
+    private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.jpg";
 
 	// 파일 업로드 경로 ('application.properties'에서 경로처리)
 	@Value("${file.upload.base-path}")
@@ -269,7 +270,11 @@ public class PostServiceImpl implements PostService {
 		int initialCapacity = (int) (thumbnails.size()/0.75f) +1;
 		Map<Long, String> thumbnailMap = new HashMap<>(initialCapacity);
 
-		thumbnails.forEach(th -> thumbnailMap.put(th.getPostId(), th.getImageUrl()));
+	    // DB에서 가져온 값 매핑,
+		// 만약 해당 게시글ID에 대표이미지가 없어 'null'로 키값을 셋팅될경우,
+		// 삼항연산자로 대표이미지 세팅
+	    thumbnails.forEach(th -> thumbnailMap.put(th.getPostId(), th.getImageUrl() != null ? th.getImageUrl() : DEFAULT_THUMBNAIL_URL));
+
 
 		return thumbnailMap;
 	}
@@ -1240,7 +1245,7 @@ public class PostServiceImpl implements PostService {
 
 	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE상태) Service
 	@Override
-	public PostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable) {
+	public MainPostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable) {
 
 		logger.info("PostServiceImpl searchPostsByKeyword() Start");
 
@@ -1262,19 +1267,18 @@ public class PostServiceImpl implements PostService {
 																							 nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
 																							 commentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
 																							 thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
-				                                                                            )
-													); 
+				                                                                            )); 
 
 		logger.info("PostServiceImpl searchPostsByKeyword() End");
 
 		       //Stream<T>와 달리, Page<T>는 데이터를 'map'을 이용히여,
 		       //'가공(원하는 자료형으로 변환)' 할 수 있다. 
-		return PostPageResponseDTO.fromPage(null, dtoPage);
+		return MainPostPageResponseDTO.fromPage(dtoPage);
 	}
 
 	// 작성자별 게시글 조회 Service
 	@Override
-	public PostPageResponseDTO getPostsByAuthorNickname(String nickname, Pageable pageable) {
+	public MainPostPageResponseDTO getPostsByAuthorNickname(String nickname, Pageable pageable) {
 
 		logger.info("PostServiceImpl getPostsByAuthorNickname() Start");
 
@@ -1305,7 +1309,7 @@ public class PostServiceImpl implements PostService {
 
 		logger.info("PostServiceImpl getPostsByAuthorNickname() Success End");
 
-		return PostPageResponseDTO.fromPage(null, dtoPage);
+		return MainPostPageResponseDTO.fromPage(dtoPage);
 	}
 
 	// 공지 게시판 공지글 조회 Service

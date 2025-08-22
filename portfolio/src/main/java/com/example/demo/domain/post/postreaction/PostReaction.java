@@ -2,11 +2,11 @@ package com.example.demo.domain.post.postreaction;
 
 import java.time.LocalDateTime;
 
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.post.Post;
-import com.example.demo.domain.post.postimage.PostImage;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
 
 import jakarta.persistence.Column;
@@ -25,9 +25,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /*
 	Entity : post_reaction

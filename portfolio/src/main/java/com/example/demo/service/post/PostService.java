@@ -4,6 +4,7 @@ package com.example.demo.service.post;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 
 import com.example.demo.dto.post.PostListResponseDTO;
@@ -52,10 +53,10 @@ public interface PostService {
 	PostPageResponseDTO getPostsByBoardSorted(Long boardId, String sortBy, Pageable pageable);
 
 	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
-	PostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable);
+	MainPostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable);
 
 	// 작성자별 게시글 조회
-	PostPageResponseDTO getPostsByAuthorNickname(String nickname,Pageable pageable);
+	MainPostPageResponseDTO getPostsByAuthorNickname(String nickname,Pageable pageable);
 
 	// 조회수 중복 방지
 	void increaseViewCount(Long postId, String userIdentifier);

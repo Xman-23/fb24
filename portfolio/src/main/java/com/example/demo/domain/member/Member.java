@@ -2,14 +2,16 @@ package com.example.demo.domain.member;
 
 
 import com.example.demo.domain.comment.Comment;
+
 import com.example.demo.domain.member.memberenums.MemberStatus;
-import com.example.demo.domain.member.memberauth.MemberLoginHistory;
 import com.example.demo.domain.member.memberenums.MemberGradeLevel;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
 import com.example.demo.domain.notification.Notification;
 import com.example.demo.domain.post.Post;
+import com.example.demo.domain.visitor.VisitorHistory;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import jakarta.persistence.CascadeType;
@@ -26,7 +28,6 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -109,7 +110,7 @@ public class Member {
 
     // 회원 등급 점수, 추후에 nullable = false;로 바꿔야됨
     @Column(name = "grade_score", nullable = true)
-    private int gradeScore = 0;
+    private Integer gradeScore = 0;
 
 	/* 알림 설정과 1:1 양방향 매핑
 	   mappedBy = "member"는 MemberNotificationSetting 엔티티의 'member' 필드와 연결됨을 의미
@@ -134,7 +135,11 @@ public class Member {
 
 	// 로그인 기록 양방향 매핑 ('NullException' 방지를 위한 ArrayList 객체 생성)
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<MemberLoginHistory> loginHistories = new ArrayList<>();
+	private List<VisitorHistory> visitorHistories = new ArrayList<>();
+	
+	// 이용역관 동의 양방향 매핑 ('NullException' 방지를 위한 ArrayList 객체 생성)
+	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<MemberConsent> consents = new ArrayList<>();
 
 //********************************************* 회원 등급 Start **********************************************************************
 	private void updateGradeLevel() {

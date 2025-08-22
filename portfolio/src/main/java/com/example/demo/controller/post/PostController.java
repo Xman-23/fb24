@@ -34,6 +34,7 @@ import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
 import com.example.demo.dto.post.PostPinUpdateRequestDTO;
+import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.comment.commentreport.CommentReportRequestDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 import com.example.demo.dto.post.PostDeleteRequestDTO;
@@ -653,7 +654,7 @@ public class PostController {
 			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
 		}
 
-		PostPageResponseDTO response = postService.searchPostsByKeyword(keywordUTF8, pageable);
+		MainPostPageResponseDTO response = postService.searchPostsByKeyword(keywordUTF8, pageable);
 
 		if(response == null) {
 			logger.error("PostController getAllNotices() INTERNAL_SERVER_ERROR : 서버에러");
@@ -680,12 +681,12 @@ public class PostController {
 			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
 		}
 
-		PostPageResponseDTO response = null;
+		MainPostPageResponseDTO response = null;
 
 		try {
 			response = postService.getPostsByAuthorNickname(nicknameUTF8, pageable);
 		} catch (NoSuchElementException e) {
-			logger.error("PostController getPostsByAuthor() NoSuchElementException Error : {}", e.getMessage(), e);
+			logger.error("PostController getPostsByAuthor() NoSuchElementException  : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
 		} catch (Exception e) {
 			logger.error("PostController getPostsByAuthor() Exception Error : {}","서버 에러",e);

@@ -3,6 +3,7 @@ package com.example.demo.service.post.postreaction;
 import java.util.List;
 
 
+
 import java.util.NoSuchElementException;
 
 import java.util.Optional;
@@ -12,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.member.Member;
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.post.postenums.PostStatus;

@@ -1,6 +1,7 @@
 package com.example.demo.jwt;
 
 import io.jsonwebtoken.*;
+
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +19,8 @@ public class JwtUtil {
 	 // JWT 서명에 사용되는 비밀 키 (길이는 256비트 이상이어야 함)
 	 private final String secret = "mySecretKeymySecretKeymySecretKeymySecretKey"; 
 
-	 // 액세스 토큰 만료 시간: 3시간 (1000ms * 60s * 60m * 3h)
-	 private final long accessExpirationMs = 1000 * 60 * 60 * 3;
+	 // 액세스 토큰 만료 시간: 30분 (1000ms * 60s * 30)
+	 private final long accessExpirationMs = 1000 * 60 * 30;
 
 	 // 리프레시 토큰 만료 시간: 7일
 	 private final long refreshExpirationMs = 1000 * 60 * 60 * 24 * 7;
@@ -128,7 +129,7 @@ public class JwtUtil {
 	 // ======= 임시 토큰 생성 (이메일 찾기용 - 30분) =======
 	 public String createTempToken(String username, String residentNumber) {
 	     Date now = new Date();
-	     Date expiryDate = new Date(now.getTime() + 1000 * 60 * 30); // 30분 유효
+	     Date expiryDate = new Date(now.getTime() + 1000 * 60 * 10); // 10분 유효
 	
 	
 	     // subject를 TEMP로 설정하고, username과 주민번호를 클레임으로 추가
@@ -147,7 +148,7 @@ public class JwtUtil {
 	 // ======= 임시 토큰 생성 (비밀번호 재설정용 - 30분) =======
 	 public String createResetPasswordToken(String email, String username, String residentNumber) {
 	     Date now = new Date();
-	     Date expiryDate = new Date(now.getTime() + 1000 * 60 * 30); // 30분 유효
+	     Date expiryDate = new Date(now.getTime() + 1000 * 60 * 10); // 10분 유효
 	
 	
 	     // subject를 RESET으로 설정하고, email, username, 주민번호를 클레임으로 추가

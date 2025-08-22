@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -18,8 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.domain.member.Member;
 import com.example.demo.domain.post.Post;
-import com.example.demo.dto.MainPopularPostDTO;
-import com.example.demo.dto.MainPopularPostPageResponseDTO;
+import com.example.demo.dto.MainPostPageResponseDTO;
+import com.example.demo.dto.post.PostListResponseDTO;
 import com.example.demo.repository.MainPostRepository;
 import com.example.demo.repository.board.BoardRepository;
 import com.example.demo.repository.comment.CommentRepository;
@@ -41,7 +42,7 @@ class MainServiceImpl implements MainService {
 	private final PostImageRepository postImageRepository;
 	private final MemberRepository memberRepository;
 
-	private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.png";
+	private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.jpg";
 
 	// 메인 인기글 좋아요 기준
     @Value("${main.popular.likeThreshold}")
@@ -58,9 +59,11 @@ class MainServiceImpl implements MainService {
 	//로그
 	private static final Logger logger = LoggerFactory.getLogger(MainServiceImpl.class);
 
+	//*************************************************** Service Start ***************************************************//	
+
 	// 모든 자식게시판 인기글 조회 
 	@Override
-	public MainPopularPostPageResponseDTO getMainPopularPosts(Pageable pageable) {
+	public MainPostPageResponseDTO getMainPopularPosts(Pageable pageable) {
 
 		logger.info("MainServiceImpl getMainPopularPosts() Start");
 
@@ -70,19 +73,19 @@ class MainServiceImpl implements MainService {
 		// 게시판이 존재 하지 않을경우
 		if(allChildBoardIds.isEmpty()) {
 			// 빈 페이지 반환
-			return MainPopularPostPageResponseDTO.builder()
-					                             .posts(Collections.emptyList())
-					                             .pageNumber(pageable.getPageNumber())
-					                             .pageSize(pageable.getPageSize())
-					                             .totalElements(0)
-					                             .totalPages(0)
-					                             .hasPrevious(false)
-					                             .hasNext(false)
-					                             .hasFirst(false)
-					                             .hasLast(false)
-					                             .jumpBackwardPage(0)
-					                             .jumpForwardPage(0)
-					                             .build();
+			return MainPostPageResponseDTO.builder()
+					                         .posts(Collections.emptyList())
+					                         .pageNumber(pageable.getPageNumber())
+					                         .pageSize(pageable.getPageSize())
+					                         .totalElements(0)
+					                         .totalPages(0)
+					                         .hasPrevious(false)
+					                         .hasNext(false)
+					                         .hasFirst(false)
+					                         .hasLast(false)
+					                         .jumpBackwardPage(0)
+					                         .jumpForwardPage(0)
+					                         .build();
 		}
 
 		// 2. 인기글 조회(페이징 포함)
@@ -99,19 +102,19 @@ class MainServiceImpl implements MainService {
 
 		// 인기글 ID가 없다면 빈페이지 반환
 		if (postIds.isEmpty()) {
-			return MainPopularPostPageResponseDTO.builder()
-                                                 .posts(Collections.emptyList())
-                                                 .pageNumber(pageable.getPageNumber())
-                                                 .pageSize(pageable.getPageSize())
-                                                 .totalElements(0)
-                                                 .totalPages(0)
-                                                 .hasPrevious(false)
-                                                 .hasNext(false)
-                                                 .hasFirst(false)
-                                                 .hasLast(false)
-                                                 .jumpBackwardPage(0)
-                                                 .jumpForwardPage(0)
-                                                 .build();
+			return MainPostPageResponseDTO.builder()
+                                             .posts(Collections.emptyList())
+                                             .pageNumber(pageable.getPageNumber())
+                                             .pageSize(pageable.getPageSize())
+                                             .totalElements(0)
+                                             .totalPages(0)
+                                             .hasPrevious(false)
+                                             .hasNext(false)
+                                             .hasFirst(false)
+                                             .hasLast(false)
+                                             .jumpBackwardPage(0)
+                                             .jumpForwardPage(0)
+                                             .build();
 		}
 
 		/**
@@ -136,7 +139,10 @@ class MainServiceImpl implements MainService {
 	    List<PostImageRepository.PostThumbnail> thumbnails = postImageRepository.findThumbnailsByPostIds(postIds);
 	    int thumbnailInitialCapacity = (int) (thumbnails.size() / 0.75f) + 1;
 	    Map<Long, String> thumbnailMap = new HashMap<>(thumbnailInitialCapacity);
-	    thumbnails.forEach(th -> thumbnailMap.put(th.getPostId(), th.getImageUrl()));
+	    // DB에서 가져온 값 매핑,
+		// 만약 해당 게시글ID에 대표이미지가 없어 'null'로 키값을 셋팅될경우,
+		// 삼항연산자로 대표이미지 세팅
+	    thumbnails.forEach(th -> thumbnailMap.put(th.getPostId(), th.getImageUrl() != null ? th.getImageUrl() : DEFAULT_THUMBNAIL_URL));
 
 	    // 6. 작성자 닉네임 일괄 조회 + 초기 용량 설정
 	    Set<Long> authorIds = mainPopularPost.stream()
@@ -148,28 +154,21 @@ class MainServiceImpl implements MainService {
 	    Map<Long, String> nicknameMap = new HashMap<>(nicknameInitialCapacity);
 	    members.forEach(m -> nicknameMap.put(m.getId(), m.getNickname()));
 
-		// 7. DTO변환
-		List<MainPopularPostDTO> dtoList = mainPopularPost.stream()
-				                                          .map(post -> MainPopularPostDTO.builder()
-				                                                    		             .postId(post.getPostId())
-				                                                    		             .title(post.getTitle())
-				                                                    		             .authorNickname(nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"))
-				                                                    		             .likeCount(likeCountMap.getOrDefault(post.getPostId(), 0L).intValue())
-				                                                    		             .commentCount(commentCountMap.getOrDefault(post.getPostId(), 0L).intValue())
-				                                                    		             .thumbnailUrl(thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL))
-				                                                    		             .createdAt(post.getCreatedAt())
-				                                                    		             .build())
-				                                          .collect(Collectors.toList());
+    	List<PostListResponseDTO> dtoList = mainPopularPost.stream()
+    	                                                   .map(post -> PostListResponseDTO.fromEntity(post,
+    	                                                                                               likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    	                                                                                               nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+    	                                                                                               commentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    	                                                                                               thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
+    	                                                                                               ))
+    	                                                   .collect(Collectors.toList());
 
-		// 8. PageImpl 생성 (페이지당 뿌려줄 데이터, 페이지 size, 총 데이터 개수
-		Page<MainPopularPostDTO> dtoPage = new PageImpl<>(dtoList, mainPopularPost.getPageable(), mainPopularPost.getTotalElements());
+    	Page<PostListResponseDTO> dtoPage = new PageImpl<>(dtoList, mainPopularPost.getPageable(), mainPopularPost.getTotalElements());
 
-		// 9. response
-		MainPopularPostPageResponseDTO response = MainPopularPostPageResponseDTO.fromPage(dtoPage);
-
-
-		logger.info("MainServiceImpl getMainPopularPosts() End");
-        return response;
+    	logger.info("MainServiceImpl getMainPopularPosts() End");
+    	return MainPostPageResponseDTO.fromPage(dtoPage);
 	}
+
+	//*************************************************** Service End ***************************************************//	
 
 }

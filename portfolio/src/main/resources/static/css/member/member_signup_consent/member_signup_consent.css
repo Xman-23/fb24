@@ -1,0 +1,78 @@
+@charset "UTF-8";
+
+    body {
+        font-family: 'Noto Sans KR', Arial, sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+    }
+
+    main {
+        max-width: 500px;
+        margin: 40px auto;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        background-color: #fff;
+    }
+
+    main h2 {
+        text-align: center;
+        font-size: 20px;
+        color: #2c3e50;
+        margin-bottom: 20px;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .consent-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 12px;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        background-color: #fafafa;
+    }
+
+    .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .consent-item label {
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .consent-item p {
+        margin: 4px 0 0 28px; /* 체크박스 위치에 맞춰 들여쓰기 */
+        font-size: 13px;
+        color: #555;
+        line-height: 1.5;
+    }
+
+    button#next-btn {
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        background-color: #007BFF;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    button#next-btn:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+    }
+
+    button#next-btn:hover:enabled {
+        background-color: #0056b3;
+    }

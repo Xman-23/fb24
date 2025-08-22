@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import org.slf4j.Logger;
 
+
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -68,6 +69,37 @@ public class SecurityConfig {
             .requestMatchers("/boards/admin/**").hasRole("ADMIN")
             .requestMatchers("/posts/{postId:[\\d]+}/pin").hasRole("ADMIN")
 
+            // 정적리소스 + HTML 접근 허용
+            .requestMatchers(
+            	// 메인.html
+            	"/index.html",
+
+            	// 로그인.html
+            	"/member/member_signin.html",
+            	// 회원가입.html
+            	"/member/member_signup.html",
+            	// 회원가입 정보제공.html
+            	"/member/member_signup_consent.html",
+            	// 아이디 찾기.html
+            	"/member/member_find_id_one.html",
+            	"/member/member_find_id_two.html",
+            	// 비밀번호 찾기.html
+            	"/member/member_reset_password_one.html",
+            	"/member/member_reset_password_two.html",
+            	// 회원정보 조회
+            	"/member/member_me.html",
+            	// 회원정보 변경
+            	"/member/member_me_update.html",
+            	
+
+            	"/favicon.ico",
+
+            	"/css/**",
+            	"/js/**",
+            	"/images/**"
+
+            ).permitAll()
+
             // 비로그인도 접근 가능
             .requestMatchers(
                 "/auth/login",
@@ -78,8 +110,8 @@ public class SecurityConfig {
                 "/members/reset-password",
                 "/members/find-email",
                 "/members/show-email",
-
-                "/boards/**",
+                //게시판
+                "/boards/hierarchy",
 
                 // 게시글 관련 - 비로그인 허용 목록 ([\\d]+ : 숫자 하나 이상(즉, 문자열X))
                 "/posts/{postId:[\\d]+}",                 // 게시글 단건 조회, 댓글 트리조회
@@ -96,7 +128,32 @@ public class SecurityConfig {
                 "/comments/post/{postId:[\\d]+}",		  // 댓글 트리구조(정렬) 조회
 
                 // 접속자 수 보기
-                "/statistics/**"						  // 회원 접소자 수 보기
+                "/visitors/**",						      // 회원 접속자 수 보기
+
+                // 메인
+                "/",
+
+                // 로그인
+                "/signin",
+                // 회원가입 약관동의
+                "/signup_consent",
+                // 회원가입
+                "/signup",
+                // 아이디 찾기
+                "/find_id_one",
+                "/find_id_two",
+                // 비밀번호 찾기
+                "/reset_password_one",
+                "/reset_password_two",
+                // 회원정보 조회
+                "/member_me",
+                // 회원정보 변경
+                "/member_me_update",
+                
+                // 메인 인기글
+                "/main/**",								  // 메인 인기글
+
+                "/images/**"
 
             ).permitAll()
 
@@ -113,6 +170,8 @@ public class SecurityConfig {
 
                 // 회원
                 "/members/me",
+                // 회원탈퇴
+                "/members/me/withdraw",
                 "/auth/refresh",
                 "/auth/logout",
 

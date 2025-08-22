@@ -2,9 +2,6 @@ package com.example.demo.validation.board;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
 import com.example.demo.dto.board.BoardResponseDTO;
 
 public class BoardValidation {

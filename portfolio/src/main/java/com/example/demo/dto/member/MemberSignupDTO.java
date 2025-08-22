@@ -1,7 +1,8 @@
 package com.example.demo.dto.member;
 
-import com.example.demo.controller.member.MemberController;
+
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberenums.MemberConsentType;
 import com.example.demo.domain.member.memberenums.Role;
 
 import jakarta.validation.constraints.Email;
@@ -11,8 +12,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+
 
 /*
 	회원가입 DTO
@@ -53,6 +54,9 @@ public class MemberSignupDTO {
 	private String nickname;
 
 	private String address;
+
+    // 동의 체크 리스트 (동의한 항목만 서버로 전송)
+    private List<MemberConsentType> consents;
 
     public Member toEntity() {
     	//replaceAll : 정규식 전용 , replace : 문자열 전용

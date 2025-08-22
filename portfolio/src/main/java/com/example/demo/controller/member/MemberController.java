@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,11 +30,13 @@ import com.example.demo.validation.member.phone.PhoneValidation;
 import com.example.demo.validation.member.residentnumber.ResidentNumberValidation;
 import com.example.demo.validation.string.WordValidation;
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.memberenums.MemberConsentType;
 import com.example.demo.dto.member.MemberInfoDTO;
 import com.example.demo.dto.member.MemberResetPasswordDTO;
 import com.example.demo.dto.member.MemberSignupDTO;
 import com.example.demo.dto.member.MemberUpdateRequestDTO;
 import com.example.demo.dto.member.MemberVerifyFindEmailRequestDTO;
+import com.example.demo.dto.member.MemberVerifyFindEmailResponseDTO;
 import com.example.demo.dto.member.MemberVerifyResetPasswordDTO;
 import com.example.demo.dto.member.memberauth.AuthLoginDTO;
 import com.example.demo.jwt.CustomUserDetails;
@@ -42,8 +45,10 @@ import com.example.demo.repository.member.MemberRepository;
 
 import io.jsonwebtoken.Claims;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+import org.apache.catalina.connector.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +131,8 @@ public class MemberController {
 	// Json -> @RequestBody -> @Valid
 	@PostMapping("/signup")
 	public ResponseEntity<String> registerMember(@RequestBody@Valid MemberSignupDTO memberSignupDto,
-			                                                        BindingResult bindingResult) {
+			                                     BindingResult bindingResult,
+			                                     HttpServletRequest request) {
 
 		logger.info("MemberController registerMember() Start");
 
@@ -190,18 +196,21 @@ public class MemberController {
 
 		memberSignupDto.setNickname(trimNickName);
 
+        // 동의 체크 항목
+        List<MemberConsentType> consentTypes = memberSignupDto.getConsents();
+
+        // 요청 IP
+        String ipAddress = request.getRemoteAddr();
+
 		
 		try {
 			//DTO(toEntity()) -> Entity 변경후 -> Service 호출 
-			memberService.signup(memberSignupDto.toEntity());
+			memberService.signup(memberSignupDto.toEntity(),consentTypes,ipAddress);
 		} catch (DuplicateKeyException e) {
 			//이메일(Unique)제약이 걸려있으므로, 이메일 중복일시 발생하는 예외
 			logger.error("MemberService DuplicateKeyException 발생   :     "+ e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용 중인 이메일입니다.");
-		} catch (DataIntegrityViolationException e) {
-			//DB 저장 시 제약조건 위반 발생 시 (예: 중복, 필수값 누락 등)
-			 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력 데이터가 유효하지 않습니다." );
-		} catch (Exception e) {
+		}  catch (Exception e) {
 			//서버 에러 500번대 : INTERNAL_SERVER_ERROR
 			logger.error("MemberService RuntimeException 발생   :     " + e.getMessage() , e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러가 발생했습니다.");
@@ -217,9 +226,12 @@ public class MemberController {
 	// @RequestBody(JsonBody)로 받으므로, PostMapping
 	@PostMapping("/find-email")
 	public ResponseEntity<?> findEmail(@RequestBody @Valid MemberVerifyFindEmailRequestDTO verifyFindEmailRequestDto,
-									   					   BindingResult bindingResult) {
+									  BindingResult bindingResult) {
+
+		logger.info("MemberController findEmail() Start");
 
 		if(bindingResult.hasErrors()) {
+			logger.error("MemberController findEmail() BAD_REQUEST : 입력값이 유효하지 않습니다");
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
 		}
 
@@ -237,13 +249,16 @@ public class MemberController {
 				token = memberService.findEmail(verifyFindEmailRequestDto.toDto());
 		} catch (IllegalArgumentException e) {
 			// Service 에서 던진 'IllegalArgumentException' catch  
+			logger.info("MemberController findEmail() IllegalArgumentException : {}", e.getMessage(),e);
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-		} catch (Exception e) {
+		} catch (RuntimeException e) {
 			// Service 에서 던진 'RuntimeException' catch
 			// 'Runtime'은 서버 실행 문제이므로 '서버 오류 처리 (INTERNAL_SERVER_ERROR(500번대))
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+			logger.info("MemberController findEmail() RuntimeException : {}", e.getMessage(),e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
 
+		logger.info("MemberController findEmail() End");
 		// 예외가 발생하지 않으면 임시 토큰을 Map(Key, Value)으로 응답(Response)
 		return ResponseEntity.ok(Collections.singletonMap("token", token));
 	}
@@ -252,10 +267,13 @@ public class MemberController {
 	@GetMapping("/show-email")
 	public ResponseEntity<?> showEmail(@RequestHeader("Authorization") String bearerToken) {
 
+		logger.info("MemberController showEmail() Start");
+
 		// Authorization Header(헤더)의 Bearer 토큰명 ->(replace) 토큰명 변환
 		String token = bearerToken.replace("Bearer ", "");
 		if(!jwtUtil.validateToken(token)) {
 			//인증 관련 실패이므로, UNAUTHORIZED(401) 메세지 리턴
+			logger.error("MemberController showEmail() UNAUTHORIZED : 유효하지 않은 토큰입니다.");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
 		}
 
@@ -264,6 +282,7 @@ public class MemberController {
 
 		// 이메일 임시토큰에 주체 비교
 	    if (!"TEMP".equals(claims.getSubject())) {
+	    	logger.error("MemberController showEmail() BAD_REQUEST : 이메일 임시 토큰이 아닙니다.");
 	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("이메일 임시 토큰이 아닙니다.");
 	    }
 
@@ -272,37 +291,40 @@ public class MemberController {
 	    // 임시토큰에 저장된 '주민버노' 추출
 	    String residentNumberClaims = claims.get("residentNumber", String.class);
 
-	    // 다시 한번 DB 조회
-	    List<Member> allMembers = memberRepository.findAll();
-	    for (Member member : allMembers) {
-	    	
-	    	/*
-	    	// 'true' : 복호화 주민번호 'false' : 암호화 주민번호 
-	    	if(!isHexBinary(member.getResidentNumber())) {
-	    		// 복호화 된 주민번호를 갖은 회원일시 다음 회원 으로 'continue'
-	    		continue;
-	    	}
-	    	*/
-	        try {
-	        	// 주민번호 복호화
-	            String decryptedRRN = AES256Util.decrypt(member.getResidentNumber());
-	            if (member.getUsername().equals(usernameClaims ) && decryptedRRN.equals(residentNumberClaims)) {
-	            	//200(OK)
-	                return ResponseEntity.ok(Collections.singletonMap("email", member.getEmail()));
-	            }
-	        } catch (RuntimeException e) {
-	        	//500(Server Error)
-	        	logger.error("MemberController RuntimeException 발생   :   " + e.getMessage() , e);
-	        	return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-	        }
-	    }
-	    //400(Client Error)
-	    return ResponseEntity.status(HttpStatus.NOT_FOUND).body("회원 정보가 일치하지 않습니다.");
+        List<Member> members = memberRepository.findByUsername(usernameClaims);
+
+        Member targetMember = null;
+
+        for (Member member : members) {
+        	try {
+                if (AES256Util.decrypt(member.getResidentNumber()).equals(residentNumberClaims)) {
+                    targetMember = member;
+                    break;
+                }
+        	}catch (RuntimeException e) {
+        		logger.error("MemberController showEmail() RuntimeException : {} ",e.getMessage(),e);
+        		// 예외 발생시 다음 회원으로 넘어가 주민번호 비교
+        		continue;
+			}
+        }
+
+        if (targetMember == null) {
+        	logger.error("MemberController showEmail() NotFound : 일치하는 회원이 없습니다.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                 .body(Collections.singletonMap("error", "일치하는 회원이 없습니다."));
+        }
+
+        MemberVerifyFindEmailResponseDTO response= MemberVerifyFindEmailResponseDTO.builder()
+                                                                                   .email(targetMember.getEmail())
+                                                                                   .build();
+        return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/reset-password-token")
 	public ResponseEntity<?> findPassword(@RequestBody @Valid MemberVerifyResetPasswordDTO verifyResetPasswordDto,
 															  BindingResult bindingResult) {
+
+		logger.info("MemberController findPassword() Start");
 
 		if(bindingResult.hasErrors()) {
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
@@ -321,9 +343,9 @@ public class MemberController {
 			// Service 에서 던진 'RuntimeException' catch
 			// 'Runtime'은 서버 실행 문제이므로 '서버 오류 처리 (INTERNAL_SERVER_ERROR(500번대))
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
+
+		logger.info("MemberController findPassword() End");
 		return ResponseEntity.ok(Collections.singletonMap("token", token));
 	}
 
@@ -331,6 +353,8 @@ public class MemberController {
 	public ResponseEntity<?> resetPassword(@RequestHeader("Authorization") String bearerToken,
 										   @RequestBody @Valid MemberResetPasswordDTO resetPasswordDto,
 										   BindingResult bindingResult) {
+
+		logger.info("MemberController resetPassword() Start");
 
 		if(bindingResult.hasErrors()) {
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
@@ -373,27 +397,16 @@ public class MemberController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
+		logger.info("MemberController resetPassword() End");
 		return ResponseEntity.ok("비밀번호가 성공적으로 재설정되었습니다.");
 	}
-
-	/*
-	// 토큰 테스트 API엔드포인트
-	// URL,HEADER(Token)을(를) 받기위해 '@GetMapping'
-	@GetMapping("/test")
-	public ResponseEntity<String> testJwtToken(Authentication authentication) {
-		// JwtAuthenticationFilter에서 인증 성공 시, email을 principal로 설정함
-		// authentication.getPrincipal(); -> email을 가져올 수 있음
-		String email = (String) authentication.getPrincipal();
-		//testuser@example.com
-		return ResponseEntity.ok("인증 성공! 현재 로그인된 사용자 이메일: " + email);
-	}
-	*/
 
 	// 회원정보 API엔드포인트
 	// URL,HEADER(Token)을(를) 조화하기위해 '@GetMapping'
 	@GetMapping("/me")
 	public ResponseEntity<?> getMyInfo(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
+		logger.info("MemberController getMyInfo() Start");
 		/*
 		 JwtAuthenticationFilter에서 인증 성공 시, email을 principal로 설정함
 		 authentication.getPrincipal(); -> email을 가져올 수 있음
@@ -423,10 +436,8 @@ public class MemberController {
 			logger.error("MemberController getMyInfo() IllegalArgumentException : {} ",e.getMessage(),e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
-		/*
-		DTO로 가공해서 응답
-		MemberInfoDto memberInfoDto = new MemberInfoDto(member.getUsername(), member.getEmail(), member.getPhoneNumber());
-		*/
+
+		logger.info("MemberController getMyInfo() Start");
 		// Controller -> View
 		return ResponseEntity.ok(memberInfoDto);
 	}
@@ -436,6 +447,8 @@ public class MemberController {
 	public ResponseEntity<?> updateMyInfo(@RequestBody@Valid MemberUpdateRequestDTO memberUpdateRequest,
 										  BindingResult bindingResult,
 										  @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+		logger.info("MemberController updateMyInfo() Start");
 
 		// 'DTO'는 @RequestBody로 매핑되므로, 요청 body가 없으면 컨트롤러 진입 전 400(Bad Request) 에러 발생
 		// 따라서 DTO 자체에 대한 null 체크는 불필요하며, 각 필드에 대해서만 유효성 검사를 수행하면 됨
@@ -457,11 +470,6 @@ public class MemberController {
 			// 비정상 닉네임일 경우 BadRequest(400) 반환
 			if(!WordValidation.isValidNickname(trimDtoNewNickName)) {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("닉네임이 유효하지 않습니다.");
-			}
-			// 중복된 닉네임일 경우 409반환
-			if(!memberService.serviceCheckNickname(trimDtoNewNickName)) {
-				//Client Error 409 CONFLICT(충돌,중복)
-				return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용 중인 닉네임입니다.");
 			}
 		}
 		if(!trimDtoNewPhoneNumber.isEmpty()) {
@@ -491,12 +499,15 @@ public class MemberController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		}
 
+		logger.info("MemberController updateMyInfo() End");
 		return ResponseEntity.ok("회원정보가 수정되었습니다.");
 	}
 	
 	// 회원 탈퇴 API엔드포인트
-	@DeleteMapping("/me")
+	@PatchMapping("/me/withdraw")
 	public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+		logger.info("MemberController deleteMyAccount() Start");
 
 		String trimEmail = safeTrim(customUserDetails.getEmail());
 		try {
@@ -506,6 +517,7 @@ public class MemberController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
+		logger.info("MemberController deleteMyAccount() End");
 		return ResponseEntity.ok("회원 탈퇴가 정상 처리되었습니다.");
 	}
 

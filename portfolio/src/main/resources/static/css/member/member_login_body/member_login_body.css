@@ -1,0 +1,220 @@
+@charset "UTF-8";
+
+/* ==============================
+   메인 콘텐츠 영역
+============================== */
+main {
+    max-width: 400px;
+    margin: 60px auto;
+    padding: 40px 30px;
+    border-radius: 0;          /* 둥근 모서리 제거 */
+    box-shadow: none;           /* 그림자 제거 */
+    background: none;           /* 배경 제거, 부모 배경 그대로 사용 */
+    font-family: 'Noto Sans KR', sans-serif;
+    text-align: center;
+}
+
+/* 제목 스타일 */
+main h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #333;
+    letter-spacing: 1px;
+}
+
+/* ==============================
+   이메일 입력 영역
+============================== */
+.email-wrapper {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    overflow: hidden; /* select 튀어나오는거 방지 */
+}
+
+/* 모든 input, select 공통 */
+.email-wrapper input,
+.email-wrapper select {
+    box-sizing: border-box; /* padding 포함 크기 계산 */
+    flex: 1 1 0; /* grow:1, shrink:1, basis:0 */
+    min-width: 0; /* overflow 방지 */
+}
+
+/* 이메일 아이디 input */
+.email-wrapper input#email1 {
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px 0 0 6px;
+    outline: none;
+}
+
+/* @ 심볼 */
+.email-wrapper .at-symbol {
+    display: flex;
+    align-items: center;       /* 세로 가운데 정렬 */
+    justify-content: center;   /* 가로 가운데 정렬 */
+    padding: 8px 8px;         /* input과 동일한 상하 padding */
+    font-size: 14px;           /* input font-size와 동일하게 */
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+}
+
+/* 이메일 도메인 input */
+.email-wrapper input#email2 {
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-left: none;
+    outline: none;
+}
+
+/* 도메인 선택 select */
+.email-wrapper select#email-select {
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    outline: none;
+    cursor: pointer;
+    background-color: #fff;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    /* 커스텀 화살표 */
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg width='10' height='5' viewBox='0 0 10 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 5 5-5H0z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px 5px;
+    padding-right: 30px; /* 화살표 공간 확보 */
+}
+
+/* 포커스 효과 */
+.email-wrapper input:focus,
+.email-wrapper select:focus {
+    border-color: #5a9cf8;
+    box-shadow: 0 0 6px rgba(90,156,248,0.2);
+}
+
+/* ==============================
+   비밀번호 입력
+============================== */
+main input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+main input[type="password"]:focus {
+    border-color: #5a9cf8;
+    box-shadow: 0 0 8px rgba(90,156,248,0.2);
+}
+
+/* ==============================
+   버튼 스타일
+============================== */
+main button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* 로그인 버튼 */
+main button[type="submit"] {
+    background: #5a9cf8;
+    color: #fff;
+}
+
+main button[type="submit"]:hover {
+    background: #4a8ae0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(90,156,248,0.3);
+}
+
+/* 회원가입 버튼 */
+main button#signup {
+    background: #fff;
+    color: #5a9cf8;
+    border: 2px solid #5a9cf8;
+}
+
+main button#signup:hover {
+    background: #5a9cf8;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(90,156,248,0.2);
+}
+
+/* placeholder 스타일 */
+main input::placeholder {
+    color: #aaa;
+}
+
+/* ==============================
+   아이디 / 비밀번호 찾기
+============================== */
+/* ==============================
+   아이디 / 비밀번호 찾기
+============================== */
+.auth-links {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center; /* 가운데 정렬 */
+    align-items: center;
+    gap: 5px; /* 버튼 사이 간격 */
+    font-size: 14px;
+}
+
+.auth-links button {
+    background: none;
+    border: none;
+    color: #000;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+}
+
+.auth-links button:hover {
+    text-decoration: underline;
+}
+
+.auth-links span {
+    color: #aaa;
+}
+
+/* ==============================
+   반응형 처리
+============================== */
+@media (max-width: 450px) {
+    main {
+        padding: 30px 20px;
+    }
+    .email-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .email-wrapper input,
+    .email-wrapper select,
+    .email-wrapper .at-symbol {
+        border-radius: 6px !important;
+        width: 100%;
+    }
+    .email-wrapper .at-symbol {
+        display: none;
+    }
+}

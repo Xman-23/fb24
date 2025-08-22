@@ -2,10 +2,10 @@ package com.example.demo.service;
 
 import org.springframework.data.domain.Pageable;
 
-import com.example.demo.dto.MainPopularPostPageResponseDTO;
+import com.example.demo.dto.MainPostPageResponseDTO;
 
 public interface MainService {
 
-	MainPopularPostPageResponseDTO getMainPopularPosts(Pageable pageable);
+	MainPostPageResponseDTO getMainPopularPosts(Pageable pageable);
 
 }

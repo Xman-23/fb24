@@ -1,9 +1,11 @@
 package com.example.demo.dto.post;
 
-import java.time.LocalDateTime;
+
+
 import java.time.format.DateTimeFormatter;
 
-import org.springframework.format.datetime.DateFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example.demo.domain.post.Post;
 
@@ -32,6 +34,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PostListResponseDTO {
 
+	
+	private static final Logger logger = LoggerFactory.getLogger(PostListResponseDTO.class);
 	// 필드 Start
     private Long postId;
 

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>회원가입</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- JS -->
+<script src="/js/common/member/member_signin_signup_button.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/member/member_validation.js"></script>
+<script src="/js/member/get_member.js"></script>
+<!-- CSS -->
+<link rel="stylesheet" href="css/common/common_header.css">
+<link rel="stylesheet" href="css/member/member_signup/member_signup.css">
+<link rel="stylesheet" href="css/member/member_footer.css">
+</head>
+<body>
+    <!-- 헤더 -->
+    <header id="header">
+        <div class="header-top">
+            <div id="logo">
+                <a href="/">Log</a>
+            </div>
+            <div id="user-actions">
+                <button id="login-btn">로그인</button>
+                <button id="register-btn">회원가입</button>
+            </div>
+        </div>
+        <nav id="board-tabs">
+            <ul id="parent-boards"></ul>
+        </nav>
+    </header>
+
+    <!-- 메인 바디 -->
+	<main>
+	    <h2>회원가입</h2>
+	    <form id="signup-form">
+	        <!-- 사용자 이름 -->
+	        <div class="form-item">
+	            <h2>사용자 이름</h2>
+	        </div>
+	        <div class="form-item">
+	            <input type="text" id="username" placeholder="예: 홍길동" required>
+	        </div>
+	
+	        <!-- 이메일 -->
+	        <div class="form-item">
+	            <h2>이메일</h2>
+	            <div class="form-item flex-group">
+	                <input type="text" id="email1" placeholder="이메일 아이디" required> @
+	                <input type="text" id="email2" placeholder="도메인" required>
+	                <select id="email-domain-select">
+	                    <option value="">선택</option>
+	                    <option value="naver.com">naver.com</option>
+	                    <option value="daum.net">daum.net</option>
+	                    <option value="gmail.com">gmail.com</option>
+	                    <option value="hanmail.net">hanmail.net</option>
+	                    <option value="nate.com">nate.com</option>
+	                    <option value="kakao.com">kakao.com</option>
+	                    <option value="hotmail.com">hotmail.com</option>
+	                </select>
+	                <button type="button" id="check-email-btn">중복 확인</button>
+	                <span id="email-feedback"></span>
+	            </div>
+	        </div>
+	
+	        <!-- 닉네임 -->
+	        <div class="form-item">
+	            <h2>닉네임</h2>
+	        </div>
+	        <div class="form-item flex-group">
+	            <input type="text" id="nickname" placeholder="예: 홍길동123" required>
+	            <button type="button" id="check-nickname-btn">중복 확인</button>
+	            <span id="nickname-feedback"></span>
+	        </div>
+	
+	        <!-- 비밀번호 -->
+	        <div class="form-item">
+	            <h2>비밀번호</h2>
+	        </div>
+	        <div class="form-item">
+	            <input type="password" id="password" placeholder="영문+숫자+특수문자 8자 이상" required>
+	            <span id="password-valid-feedback"></span>
+	        </div>
+	
+	        <!-- 비밀번호 확인 -->
+	        <div class="form-item">
+	            <h2>비밀번호 확인</h2>
+	        </div>
+	        <div class="form-item">
+	            <input type="password" id="confirmPassword" placeholder="비밀번호를 다시 입력" required>
+	            <span id="password-match-feedback"></span>
+	        </div>
+	
+	        <!-- 주민번호 -->
+	        <div class="form-item">
+	            <h2>주민번호</h2>
+	            <div class="form-item flex-group">
+	                <input type="text" id="residentNumber1" maxlength="6" placeholder="앞 6자리" required>
+	                <span>-</span>
+	                <input type="text" id="residentNumber2" maxlength="7" placeholder="뒤 7자리" required>
+	            </div>
+	        </div>
+	
+	        <!-- 핸드폰 번호 -->
+	        <div class="form-item">
+	            <h2>핸드폰 번호</h2>
+	            <div class="form-item flex-group">
+	                <input type="text" id="phoneNumber1" maxlength="3" placeholder="010" required> -
+	                <input type="text" id="phoneNumber2" maxlength="4" placeholder="1234" required> -
+	                <input type="text" id="phoneNumber3" maxlength="4" placeholder="5678" required>
+	            </div>
+	        </div>
+	
+	        <!-- 주소 -->
+	        <div class="form-item">
+	            <h2>주소</h2>
+	            <div class="form-item">
+	                <input type="text" id="address" placeholder="선택 사항">
+	            </div>
+	        </div>
+	
+	        <!-- 회원가입 버튼 -->
+	        <button type="button" id="signup-btn" disabled>회원가입 완료</button>
+	    </form>
+	</main>
+
+
+    <!-- 푸터 -->
+    <footer id="main-footer">
+        <div class="footer-stats">
+            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+        </div>
+        <div class="footer-spacer"></div>
+    </footer>
+</body>
+
+<script>
+
+	//*************************************************** 변수 START ***************************************************//
+
+	var signupBtn = $("#signup-btn");
+	// sessionStorge에서 key(consents)로 체크 박스 value 꺼내기 
+	// JSON.stringify(문자열) -> JSON.parse(자바스크립트객체(배열))
+	var consents = JSON.parse(sessionStorage.getItem("consents") || "[]");
+
+	//*************************************************** 변수 End ***************************************************//
+
+	//*************************************************** 페이지 초기화  Start ***************************************************//
+
+    form_email_chang();
+    checkNextButton();
+    checkNumber();
+    check_email();
+    check_nickname();
+
+    emailApi();
+    nicknameApi();
+    signupApi();
+    
+
+	//*************************************************** 페이지 초기화  End ***************************************************//
+
+	//*************************************************** Function Start ***************************************************//
+
+	function checkNextButton() {
+	    $("#username,#email1,#email2,#nickname,#password, #confirmPassword, #residentNumber1, #residentNumber2, #phoneNumber1, #phoneNumber2, #phoneNumber3")
+	    .on("input", function() {
+	        checkPasswordValidity(); // 패스워드 유효성 검사
+	        checkPasswordMatch();  // 패스워드, 패스워드 확인 유효성 검사
+	        toggleSignupButton(); // 종합 유효성 검증
+	    });
+	}
+
+    // 이메일 도메인(셀렉트 박스) 선택
+    function form_email_chang() {
+	    $("#email-domain-select").on("change", function() {
+	    	// 도메인 변경시 feedback 초기화
+		    $("#email-feedback").text("");
+		    $("#email-feedback").css("color", "");
+	        var domain = $(this).val();
+	        $("#email2").val(domain);
+	        toggleSignupButton();
+	    });
+	}
+
+	function check_email() {
+		$("#email1, #email2").on("input", function() {
+		    $("#email-feedback").text("");
+		    $("#email-feedback").css("color", "");
+		    toggleSignupButton(); // 버튼 상태 갱신
+		});
+
+	}
+
+	function check_nickname() {
+		$("#nickname").on("input", function() {
+		    $("#nickname-feedback").text("");
+		    $("#nickname-feedback").css("color", "");
+		    toggleSignupButton(); // 버튼 상태 갱신
+		});
+
+	}
+
+	function checkNumber() {
+		// 주민번호 숫자만 입력
+		checkResidentNumberDigit();
+		// 핸드폰번호 숫자만 입력
+		checkPhoneNumberDigit();
+	}
+
+    //회원가입 버튼 활성/비활성
+    function toggleSignupButton() {
+    	var nameValid = checkUserName();
+        var emailValid = checkEmailValid();
+        var nicknameValid = checkNickNameValid();
+        var passwordValid = checkPasswordValidity() && checkPasswordMatch();
+        var residentValid = checkResidentNumber();
+        var phoneValid = checkPhoneNumber();
+        // 'consents' 에 ["TERMS_OF_SERVICE", "PRIVACY_POLICY"] 포함(includes)되어있으면 'true'
+        var consentsAgreed = consents.includes("TERMS_OF_SERVICE") && consents.includes("PRIVACY_POLICY");
+
+        // 회원가입 버튼 활성화/비활성화(disabled) 여부
+        signupBtn.prop("disabled", !(nameValid&&emailValid && nicknameValid && passwordValid && residentValid && phoneValid && consentsAgreed));
+    }
+
+	//*************************************************** Function End ***************************************************//
+
+	//*************************************************** API START ***************************************************//
+ 
+    // 이메일 중복 확인 API
+    function emailApi() {
+        $("#check-email-btn").on("click", function() {
+            var email1 = $("#email1").val().trim();
+            var email2 = $("#email2").val().trim();
+            if (!email1 || !email2) return alert("이메일을 모두 입력해주세요.");
+
+            var email = email1 + "@" + email2;
+
+            $.ajax({
+                url: "/members/check-email",
+                type: "GET",
+                data: { email: email },
+                success: function(res) {
+                    $("#email-feedback").text(res).css("color", "green").attr("data-valid", "true");
+                    toggleSignupButton();
+                },
+                error: function(xhr) {
+                    $("#email-feedback").text(xhr.responseText).css("color", "red").attr("data-valid", "false");
+                    toggleSignupButton();
+                }
+            });
+        });
+ 	}
+
+    // 닉네임 중복 확인 API
+    function nicknameApi() {
+        $("#check-nickname-btn").on("click", function() {
+            var nickname = $("#nickname").val().trim();
+            if (!nickname) return alert("닉네임을 입력해주세요.");
+
+            $.ajax({
+                url: "/members/check-nickname",
+                type: "GET",
+                data: { nickname: nickname },
+                success: function(res) {
+                    $("#nickname-feedback").text(res).css("color", "green").attr("data-valid", "true");
+                    toggleSignupButton();
+                },
+                error: function(xhr) {
+                    $("#nickname-feedback").text(xhr.responseText).css("color", "red").attr("data-valid", "false");
+                    toggleSignupButton();
+                }
+            });
+        });
+    }
+
+	// 회원가입 API
+	function signupApi() {
+	    signupBtn.on("click", function() {
+	        // 주민번호 합치기
+	        var residentNumber = getResidentNumber();
+
+	        // 핸드폰 번호 합치기
+	        var phoneNumber = getPhoneNumber();
+
+	        // 이메일 합치기
+	        var email = getEmail();
+
+	        // JSON 객체 '{key : vlaue}'
+	        var memberData = {
+	            username: getUserNameValue(),
+	            email: email,
+	            nickname: $("#nickname").val().trim(),
+	            password: passwordTrim(),
+	            phoneNumber: phoneNumber,
+	            residentNumber: residentNumber,
+	            address: $("#address").val().trim(),
+	            consents: consents
+	        };
+
+	        $.ajax({
+	            url: "/members/signup",
+	            type: "POST",
+	            contentType: "application/json",
+	            data: JSON.stringify(memberData),
+	            success: function(res) {
+	                alert(res);
+	                window.location.href = "/signin";
+	            },
+	            error: function(xhr) {
+	                alert(xhr.responseText);
+	            }
+	        });
+	    });
+	}
+
+	//*************************************************** API End ***************************************************//
+
+</script>
+</html>

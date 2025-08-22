@@ -1,0 +1,158 @@
+/* ==============================
+   회원가입 페이지 전체 스타일
+============================== */
+
+/* 바디 전체 */
+body {
+    background-color: #f5f5f5;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* ==============================
+   메인 영역
+============================== */
+main {
+    max-width: 450px;
+    margin: 80px auto 60px auto;
+    padding: 40px 30px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+main h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 26px;
+    font-weight: 600;
+    color: #222;
+}
+
+/* ==============================
+   폼 아이템
+============================== */
+.form-item {
+    margin-bottom: 20px;
+}
+
+.form-item label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-item input[type="text"],
+.form-item input[type="password"],
+.form-item select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: 0.2s all;
+}
+
+.form-item input:focus,
+.form-item select:focus {
+    border-color: #4a90e2;
+    outline: none;
+}
+
+/* 이메일 & 닉네임 중복 체크 버튼 */
+.form-item button {
+    margin-top: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    background-color: #4a90e2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s all;
+}
+
+.form-item button:hover {
+    background-color: #357ab8;
+}
+
+/* 피드백 메시지 */
+#email-feedback,
+#nickname-feedback,
+#password-feedback {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+/* ==============================
+   주민번호 & 핸드폰 번호
+============================== */
+.form-item input[type="text"][maxlength] {
+    width: calc(100% / 3 - 8px);
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.form-item input[type="text"][maxlength]:last-child {
+    margin-right: 0;
+}
+
+/* ==============================
+   회원가입 버튼
+============================== */
+#signup-btn {
+    width: 100%;
+    padding: 12px 0;
+    margin-top: 10px;
+    background-color: #28a745;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s all;
+}
+
+#signup-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#signup-btn:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+/* ==============================
+   이메일, 주민번호, 핸드폰 번호
+============================== */
+.form-item.flex-group {
+    display: flex;
+    align-iatems: center;
+    gap: 8px; /* 입력칸 사이 간격 */
+}
+.flex-group span {
+    display: inline-block; /* 기본값 */
+}
+
+.form-item.flex-group input[type="text"],
+.form-item.flex-group select {
+    flex: 1; /* 입력칸 자동으로 같은 비율 */
+}
+
+.form-item.flex-group button {
+    flex-shrink: 0; /* 버튼은 크기 줄어들지 않게 */
+}
+.form-item h2 {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+    color: #333;
+    text-align: left; /* 좌측 정렬 */
+}
+
+
+

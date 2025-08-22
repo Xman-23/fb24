@@ -1,9 +1,8 @@
 package com.example.demo.validation.member.email;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.example.demo.controller.member.MemberController;
+import org.slf4j.LoggerFactory;
 
 public class EmailValidation {
 

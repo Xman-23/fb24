@@ -1,14 +1,12 @@
 package com.example.demo.domain.post.postimage;
 
 import java.time.LocalDateTime;
-import java.util.List;
+
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.example.demo.domain.board.Board;
 import com.example.demo.domain.post.Post;
-import com.example.demo.domain.post.postenums.PostStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,10 +21,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
 
 /*
 	Entity : post_image
