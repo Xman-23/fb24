@@ -365,7 +365,7 @@ public class MemberService {
     	                                .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 이메일입니다."));
         member.setStatus(MemberStatus.WITHDRAWN);
         member.setNickname("탈퇴회원" + member.getId()); // 닉네임 중복 방지
-        member.setEmail("withdrawn_" + member.getId() + "@example.com"); // 이메일 중복 방지
+        member.setEmail("withdrawn_" + member.getId() + "@examddple.com"); // 이메일 중복 방지
         member.setPassword(""); // 패스워드 제거
         member.setAddress("");
         member.setUsername("");
