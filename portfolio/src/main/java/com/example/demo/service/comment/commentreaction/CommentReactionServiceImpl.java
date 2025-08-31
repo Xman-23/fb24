@@ -48,113 +48,88 @@ class CommentReactionServiceImpl implements CommentReactionService {
 			                                            Long memberId,
 			                                            CommentReactionRequestDTO commentReactionRequestDTO) {
 
-		logger.info("CommentReactionServiceImpl reactionToComment() Start");
+	    logger.info("CommentReactionServiceImpl reactionToComment() Start");
 
-		// 댓글 조회
-		Comment comment = commentRepository.findById(commentId)
-				                           .orElseThrow(() -> {
-				                        	   logger.error("CommentReactionServiceImpl reactionToComment() NoSuchElementException commentId : {} ", commentId);
-				                        	   return new NoSuchElementException("댓글이 존재하지 않습니다.");
-				                           });
+	    // 댓글 조회
+	    Comment comment = commentRepository.findById(commentId)
+	                                       .orElseThrow(() -> new NoSuchElementException("댓글이 존재하지 않습니다."));
 
-		Member member = memberRepository.findById(comment.getMember().getId())
-				                        .orElseThrow(() -> {
-				                        	logger.error("CommentReactionServiceImpl reactionToComment() NoSuchElementException memberId : {} ", memberId);
-				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
-				                        });
+	    // 반응 누른 사용자
+	    Member reactingMember = memberRepository.findById(memberId)
+	                                           .orElseThrow(() -> new NoSuchElementException("회원이 존재하지 않습니다."));
 
-		// 삭제된 댓글 반응 X
-		if(comment.getStatus().equals(CommentStatus.DELETED)) {
-			logger.error("CommentReactionServiceImpl reactionToComment() IllegalStateException : 삭제된 댓글입니다.");
-		    throw new IllegalStateException("삭제된 댓글입니다.");
-		}
+	    // 댓글 작성자
+	    Member commentAuthor = comment.getMember();
 
-		// 신고된 댓글 반응 X
-		if(comment.getStatus().equals(CommentStatus.HIDDEN)) {
-			logger.error("CommentReactionServiceImpl reactionToComment() IllegalStateException : 신고된 댓글입니다.");
-		    throw new IllegalStateException("신고된 댓글입니다.");
-		}
+	    // 삭제/신고된 댓글은 반응 불가
+	    if(comment.getStatus() == CommentStatus.DELETED) {
+	        throw new IllegalStateException("삭제된 댓글입니다.");
+	    }
+	    if(comment.getStatus() == CommentStatus.HIDDEN) {
+	        throw new IllegalStateException("신고된 댓글입니다.");
+	    }
 
-		// 기존 반응 조회 (최초 진입하거나, 반응이 없을 수 있으므로 'orElseThrow'로 예외 처리X
-		Optional<CommentReaction> existingReactionOpt = commentReactionRepository.findByCommentAndUserId(comment,memberId);
-		// 새로운 반응 DTO 에서 가져오기
-		PostReactionType dtoNewReactionType= commentReactionRequestDTO.getCommentReactionType();
-		// 업데이트된 새로운 반응 조회없이 가져오기 위한 변수
-		PostReactionType newReactionType = null;
+	    // 기존 반응 조회
+	    Optional<CommentReaction> existingReactionOpt = commentReactionRepository.findByCommentAndUserId(comment, memberId);
+	    PostReactionType dtoNewReactionType = commentReactionRequestDTO.getCommentReactionType();
+	    PostReactionType newReactionType = null;
 
-		// 기존 반응이 존재 한다면은 반응 수정 or 삭제
-		if(existingReactionOpt.isPresent()) {
-			CommentReaction existingCommentReaction= existingReactionOpt.get();
-			// DB에서 기존의 리액션 가져오기
-			PostReactionType existingCommentReactionType = existingCommentReaction.getReactionType();
-			// 기존 반응과 요청 반응이 같다면은 기존 반응삭제
-			if(existingCommentReactionType == dtoNewReactionType) {
-				// 만약 기존 반응이 '좋아요(+5)'라면은 댓글 삭제시 원상복귀 
-				if(existingCommentReactionType.equals(COMMENT_LIKE)) {
-					member.cancelCommentLikeScore();
-				}else if(existingCommentReactionType.equals(COMMENT_DISLIKE)) {
-					member.cancelCommentDislikeScore();
-				}
-				commentReactionRepository.delete(existingCommentReaction);
-				// 반응 삭제시 'null'로 반응 업데이트
-				newReactionType = null;
-			}else {
-				// 기존 반응과 요청반응이 다르다면 요청 반응 셋팅 JPA 영속성 상태라 'save()' 불필요
-				existingCommentReaction.setReactionType(dtoNewReactionType);
-				// 기존 반응이 '싫어요' -> '좋아요'로 변경시
-				if(existingCommentReaction.getReactionType().equals(COMMENT_LIKE)) {
-					// 싫어요 점수 복구
-					member.cancelCommentDislikeScore();
-					// 좋아요 점수 추가
-					member.addCommentLikeScore();
-					// 새로운 반응으로 업데이트
-					newReactionType = COMMENT_LIKE;
-				}else if(existingCommentReaction.getReactionType().equals(COMMENT_DISLIKE)) {
-					// 기존 반응이 '좋아요' -> '싫어요'로 변경시
-					// 좋아요 점수 복구
-					member.cancelCommentLikeScore();
-					// 싫어요 점수 추가
-					member.addCommentDislikeScore();
-					// 새로운 반응으로 업데이트
-					newReactionType = COMMENT_DISLIKE;
-				}
-				commentReactionRepository.save(existingCommentReaction);
-			}
-		}else {
-			// 기존 반응이 존재하지 않는다면 반응 생성
-			CommentReaction commentNewReaction = CommentReaction.builder()
-					                                         .comment(comment)
-					                                         .userId(memberId)
-					                                         .reactionType(dtoNewReactionType)
-					                                         .build();
+	    // 기존 반응 존재
+	    if(existingReactionOpt.isPresent()) {
+	        CommentReaction existingReaction = existingReactionOpt.get();
+	        PostReactionType existingType = existingReaction.getReactionType();
 
-			commentReactionRepository.save(commentNewReaction);
+	        if(existingType == dtoNewReactionType) {
+	            // 같은 반응 클릭 → 삭제
+	            if(!commentAuthor.getId().equals(memberId)) { // 자기 자신 제외
+	                if(existingType == COMMENT_LIKE) commentAuthor.cancelCommentLikeScore();
+	                if(existingType == COMMENT_DISLIKE) commentAuthor.cancelCommentDislikeScore();
+	            }
+	            commentReactionRepository.delete(existingReaction);
+	            newReactionType = null;
+	        } else {
+	            // 다른 반응으로 변경
+	            if(!commentAuthor.getId().equals(memberId)) {
+	                if(existingType == COMMENT_LIKE) commentAuthor.cancelCommentLikeScore();
+	                if(existingType == COMMENT_DISLIKE) commentAuthor.cancelCommentDislikeScore();
 
-			// 만약 새로운 반응이 '좋아요'일 경우 
-			if(commentNewReaction.getReactionType().equals(COMMENT_LIKE)) {
-				// 좋아요 점수 추가
-				member.addCommentLikeScore();
-				// 새로운 반응으로 업데이트
-				newReactionType = COMMENT_LIKE;
-			}else if(commentNewReaction.getReactionType().equals(COMMENT_DISLIKE)) {
-				// 싫어요 점수 추가
-				member.addCommentDislikeScore();
-				// 새로운 반응으로 업데이트
-				newReactionType = COMMENT_DISLIKE;
-			}
+	                if(dtoNewReactionType == COMMENT_LIKE) commentAuthor.addCommentLikeScore();
+	                if(dtoNewReactionType == COMMENT_DISLIKE) commentAuthor.addCommentDislikeScore();
+	            }
+	            existingReaction.setReactionType(dtoNewReactionType);
+	            commentReactionRepository.save(existingReaction);
+	            newReactionType = dtoNewReactionType;
+	        }
 
-			// 좋아요일 경우 알림 발송
-			if(dtoNewReactionType == COMMENT_LIKE) {
-				notificationService.notifyCommentLike(commentNewReaction);
-			}
-		}
+	    } else {
+	        // 새로운 반응 생성
+	        CommentReaction newReaction = CommentReaction.builder()
+	                                                     .comment(comment)
+	                                                     .userId(memberId)
+	                                                     .reactionType(dtoNewReactionType)
+	                                                     .build();
+	        commentReactionRepository.save(newReaction);
 
-		// 최신 카운트 집계
-		CommentReactionCount commentReactionCount = commentReactionRepository.countReactionsByCommentId(commentId);
-		int likeCount = commentReactionCount.getLikeCount().intValue();
-		int dislikeCount = commentReactionCount.getDislikeCount().intValue();
+	        // 점수 추가 (자기 자신 제외)
+	        if(!commentAuthor.getId().equals(memberId)) {
+	            if(dtoNewReactionType == COMMENT_LIKE) commentAuthor.addCommentLikeScore();
+	            if(dtoNewReactionType == COMMENT_DISLIKE) commentAuthor.addCommentDislikeScore();
+	        }
 
-		logger.info("CommentReactionServiceImpl reactionToComment()");
+	        // 알림 발송 (자기 자신 제외)
+	        if(dtoNewReactionType == COMMENT_LIKE && !commentAuthor.getId().equals(memberId)) {
+	            notificationService.notifyCommentLike(newReaction);
+	        }
+
+	        newReactionType = dtoNewReactionType;
+	    }
+
+	    // 최신 카운트 집계
+	    CommentReactionCount count = commentReactionRepository.countReactionsByCommentId(commentId);
+	    int likeCount = count.getLikeCount().intValue();
+	    int dislikeCount = count.getDislikeCount().intValue();
+
+	    logger.info("CommentReactionServiceImpl reactionToComment() End");
 
 		return CommentReactionResponseDTO.fromEntityToDto(commentId, likeCount, dislikeCount, newReactionType);
 	}

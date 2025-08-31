@@ -52,7 +52,7 @@ public class VisitorHistoryController {
             	memberId = jwtService.getMemberIdFromToken(token);				
 			} catch (NoSuchElementException e) {
 				logger.error("VisitorHistoryController () NoSuchElementException : {}",e.getMessage(),e);
-				ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 			}
             
         }

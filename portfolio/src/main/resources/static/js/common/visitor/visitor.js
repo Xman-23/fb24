@@ -62,5 +62,6 @@ function formatNumber(number) {
 
 // ===================== 페이지 로드 시 자동 시작 =====================
 $(document).ready(function() {
+	getCookie();
 	getVisitor();
 });

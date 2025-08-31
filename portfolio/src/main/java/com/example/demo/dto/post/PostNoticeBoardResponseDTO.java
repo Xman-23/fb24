@@ -42,18 +42,18 @@ public class PostNoticeBoardResponseDTO {
     public static PostNoticeBoardResponseDTO from(List<PostListResponseDTO> topPinnedNotices,
     										  Page<PostListResponseDTO> noticePage) {
         return PostNoticeBoardResponseDTO.builder()
-                .topPinnedNotices(topPinnedNotices == null ? Collections.emptyList() : topPinnedNotices)
-                .notices(noticePage.getContent())
-                .pageNumber(noticePage.getNumber())
-                .pageSize(noticePage.getSize())
-                .totalElements(noticePage.getTotalElements())
-                .totalPages(noticePage.getTotalPages())
-                .hasPrevious(noticePage.getNumber() > 0)
-                .hasNext(noticePage.getNumber() < noticePage.getTotalPages() - 1)
-                .hasFirst(noticePage.getNumber() > 0)
-                .hasLast(noticePage.getNumber() < noticePage.getTotalPages() - 1)
-                .jumpBackwardPage(Math.max(noticePage.getNumber() - 10, 0))
-                .jumpForwardPage(noticePage.getTotalPages() == 0 ? 0 : Math.min(noticePage.getTotalPages() - 1, noticePage.getNumber() + 10))
-                .build();
+                                         .topPinnedNotices(topPinnedNotices == null ? Collections.emptyList() : topPinnedNotices)
+                                         .notices(noticePage.getContent())
+                                         .pageNumber(noticePage.getNumber())
+                                         .pageSize(noticePage.getSize())
+                                         .totalElements(noticePage.getTotalElements())
+                                         .totalPages(noticePage.getTotalPages())
+                                         .hasPrevious(noticePage.getNumber() > 0)
+                                         .hasNext(noticePage.getNumber() < noticePage.getTotalPages() - 1)
+                                         .hasFirst(noticePage.getNumber() > 0)
+                                         .hasLast(noticePage.getNumber() < noticePage.getTotalPages() - 1)
+                                         .jumpBackwardPage(Math.max(noticePage.getNumber() - 10, 0))
+                                         .jumpForwardPage(noticePage.getTotalPages() == 0 ? 0 : Math.min(noticePage.getTotalPages() - 1, noticePage.getNumber() + 10))
+                                         .build();
     }
 }

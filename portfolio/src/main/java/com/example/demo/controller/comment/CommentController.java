@@ -236,7 +236,7 @@ public class CommentController {
 	// 5. 댓글 트리구조 조회 API엔드포인트
 	@GetMapping("/post/{postId}")
 	public ResponseEntity<?> getCommentsTreeByPost (@PathVariable(name = "postId") Long postId,
-			                                        @RequestParam(value = "sortBy", defaultValue = "recent") String sortBy,
+			                                        @RequestParam(value = "sortBy", defaultValue = "normal") String sortBy,
 			                                        @PageableDefault(size = 10) Pageable pageable) {
 
 		logger.info("CommentController getCommentsTreeByPost() Start");

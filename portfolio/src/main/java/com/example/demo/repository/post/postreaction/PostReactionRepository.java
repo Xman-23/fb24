@@ -18,9 +18,10 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
 	// 특정 게시글과 사용자 ID로 반응 조회 (좋아요/싫어요 중복 방지용)
 	Optional<PostReaction> findByPostAndUserId(Post post, Long memberId);
 
-    // 각 '좋아요', '싫어요' 갯수 조회
+    // 게시글 수정에 사용하는 각 '좋아요', '싫어요' 갯수 조회
     int countByPostPostIdAndReactionType(Long postId, PostReactionType reactionType);
 
+    // 배치에 사용될 삭제 쿼리
     @Modifying // 'UPDATE'or'DELETE'
     @Query(
     		"DELETE FROM PostReaction pr "
@@ -54,18 +55,15 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
         Long getLikeCount();
     }
 
-    // 게시글에 사용할 좋아요, 싫어요 집계조회
+    // 상세 게시글에 사용할 좋아요, 싫어요 집계조회
     @Query(
-    		"SELECT pr.post.postId AS postId, "
-    	  + "       COALESCE(SUM(CASE "
-    	  + "                        WHEN pr.reactionType = 'LIKE' THEN 1 ELSE 0 "
-    	  + "                     END), 0) AS likeCount, "
-    	  + "       COALESCE(SUM(CASE "
-    	  + "                        WHEN pr.reactionType = 'DISLIKE' THEN 1 ELSE 0"
-    	  + "                     END), 0) AS dislikeCount "
-    	  + "  FROM PostReaction pr "
-    	  + " WHERE pr.post.postId = :postId "
-    	  + " GROUP BY pr.post.postId "
+    	    "SELECT p.postId AS postId, "
+		  + "       COALESCE(SUM(CASE WHEN pr.reactionType = 'LIKE' THEN 1 ELSE 0 END), 0) AS likeCount, "
+		  + "       COALESCE(SUM(CASE WHEN pr.reactionType = 'DISLIKE' THEN 1 ELSE 0 END), 0) AS dislikeCount "
+		  + "  FROM Post p "
+		  + "  LEFT JOIN p.reactions pr "
+		  + " WHERE p.postId = :postId "
+		  + " GROUP BY p.postId"
     	  ) 
     PostReactionCount countReactionsByPostId(@Param("postId") Long postId);
 

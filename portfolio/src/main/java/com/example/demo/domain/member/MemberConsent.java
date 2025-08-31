@@ -2,6 +2,7 @@ package com.example.demo.domain.member;
 
 import java.time.LocalDateTime;
 
+import com.example.demo.domain.comment.commentreport.CommentReport;
 import com.example.demo.domain.member.memberenums.MemberConsentType;
 
 import jakarta.persistence.Column;
@@ -17,9 +18,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Table(name = "member_consent")
@@ -28,11 +31,14 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class MemberConsent {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
+    @EqualsAndHashCode.Include
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // 어떤 회원의 동의인지

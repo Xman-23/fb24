@@ -14,14 +14,12 @@ import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionT
 
 public interface CommentReactionRepository extends JpaRepository<CommentReaction, Long> {
 
+	// reactionToComment() 사용
 	Optional<CommentReaction> findByCommentAndUserId(Comment comment, Long userId);
 
 	int countByCommentAndReactionType(Comment comment, PostReactionType reactionType);
 
-	void deleteByCommentAndUserId(Comment comment, Long userId);
-	
-
-	// 댓글 전체 트리 조회
+	// 댓글 전체 트리 조회 reactionToComment() 사용
 	/** Query 결과
 	* commentId | reactionType | count
 	* 101       | LIKE         | 2     // 댓글 101에 대한 좋아요 2개
@@ -52,19 +50,16 @@ public interface CommentReactionRepository extends JpaRepository<CommentReaction
 	    Long getCount();
 	}
 
-    // 댓글에 사용할 좋아요, 싫어요 집계조회
-    @Query(
-    		"SELECT cr.comment.commentId AS commentId, "
-    	  + "       COALESCE(SUM(CASE "
-    	  + "                         WHEN cr.reactionType = 'LIKE' THEN 1 ELSE 0 "
-    	  + "                      END), 0) AS likeCount, "
-    	  + "       COALESCE(SUM(CASE "
-    	  + "                        WHEN cr.reactionType = 'DISLIKE' THEN 1 ELSE 0"
-    	  + "                     END), 0 ) AS dislikeCount "
-    	  + "  FROM CommentReaction cr "
-    	  + " WHERE cr.comment.commentId = :commentId "
-    	  + " GROUP BY cr.comment.commentId "
-    	  ) 
+    // 댓글에 사용할 좋아요, 싫어요 집계조회 (getCommentsTreeByPost() 사용)
+	@Query(
+		    "SELECT cr.comment.commentId AS commentId, "
+		  + "       COALESCE(SUM(CASE WHEN cr.reactionType = 'LIKE' THEN 1 ELSE 0 END), 0) AS likeCount, "
+		  + "       COALESCE(SUM(CASE WHEN cr.reactionType = 'DISLIKE' THEN 1 ELSE 0 END), 0) AS dislikeCount "
+		  + "  FROM Comment c "
+		  + "  LEFT JOIN CommentReaction cr ON cr.comment.commentId = c.commentId "
+		  + " WHERE c.commentId = :commentId "
+		  + " GROUP BY c.commentId"
+		)
     CommentReactionCount countReactionsByCommentId(@Param("commentId") Long commentId);
 
     public interface CommentReactionCount {

@@ -33,7 +33,6 @@ import lombok.NoArgsConstructor;
 	updatedAt		(게시글 수정일자)
 	imageUrls		(이미지 URL)
 	commentCount	(댓글 총갯수)
-	reactionCount	(좋아요/싫어요 총 갯수)
 */
 
 @Getter
@@ -72,10 +71,6 @@ public class PostResponseDTO {
 
 	private List<String> imageUrls;
 
-	private int commentCount;
-
-	private int reactionCount;
-
 	private String userNickname;
 	// 필드 End
 
@@ -84,7 +79,6 @@ public class PostResponseDTO {
 
 	// Entity(엔티티) -> DTO 변환 메서드
 	public static PostResponseDTO convertToPostResponseDTO(Post post, 
-														   int commentCount, 
 														   String userNickname,
 														   int likeCount,
 														   int disLikeCount) {
@@ -114,7 +108,6 @@ public class PostResponseDTO {
 							  .createdAt(formatCreatedAt)
 							  .updatedAt(formatUpdatedAt)
 							  .imageUrls(images)
-							  .commentCount(commentCount)
 							  .userNickname(userNickname)
 							  .build();
 	}

@@ -8,12 +8,17 @@ import java.util.*;
 
 import org.springframework.data.domain.Pageable;
 
+import com.example.demo.dto.post.PostListResponseDTO;
+
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CommentPageResponseDTO {
 
+	// 인기글 리스트
+	private List<CommentResponseDTO> popularComments;
+	
     private List<CommentResponseDTO> comments;
 
     private int pageNumber;
@@ -23,6 +28,8 @@ public class CommentPageResponseDTO {
     private long totalElements;
 
     private int totalPages;
+
+    private long activeTotalElements;
 
     // 버튼 설정 Start
     private boolean hasPrevious;
@@ -35,8 +42,18 @@ public class CommentPageResponseDTO {
     // 버튼 설정 End
 
     // 전체 댓글 리스트와 Pageable 받아서 DTO 생성
-    public static CommentPageResponseDTO fromEntityToPage(List<CommentResponseDTO> sortedRoot, 
-    		                                              Pageable pageable) {
+    public static CommentPageResponseDTO fromEntityToPage(List<CommentResponseDTO> topPinned,
+    													  List<CommentResponseDTO> sortedRoot, 
+    		                                              Pageable pageable,
+    		                                              long activeTotalElements ) {
+    	
+        // NullPointException 방지
+        if (topPinned == null) {
+        	topPinned = Collections.emptyList();
+        }
+        if (sortedRoot == null) {
+        	sortedRoot = Collections.emptyList();
+        }
 
     	// 페이징 수동 처리 (부모 댓글 기준)
     	int totalParentCommentElements  = sortedRoot.size();
@@ -90,6 +107,7 @@ public class CommentPageResponseDTO {
         int jumpForwardPage = totalPages == 0 ? 0 : Math.min(currentPage + 10, totalPages - 1);
 
         return CommentPageResponseDTO.builder()
+        							 .popularComments(topPinned)
                                      .comments(pagedComments)
                                      .pageNumber(currentPage)
                                      .pageSize(pageSize)
@@ -101,6 +119,7 @@ public class CommentPageResponseDTO {
                                      .hasLast(hasLast)
                                      .jumpBackwardPage(jumpBackwardPage)
                                      .jumpForwardPage(jumpForwardPage)
+                                     .activeTotalElements(activeTotalElements)
                                      .build();
     }
 }

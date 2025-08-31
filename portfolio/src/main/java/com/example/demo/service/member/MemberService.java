@@ -64,6 +64,11 @@ public class MemberService {
     // 닉네임 중복 검사 Service
     public boolean serviceCheckNickname(String trimNickname) {
 
+    	// '관리자'라는 닉네임은 사이트 관리자만 가능
+    	if(trimNickname.equals("관리자")) {
+    		return false;
+    	}
+
     	// 중복되는 닉네임이 있으면은 'false'
     	if(memberRepository.existsByNickname(trimNickname)) {
     		return false;

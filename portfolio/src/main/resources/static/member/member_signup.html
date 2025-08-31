@@ -13,9 +13,9 @@
 <script src="/js/member/member_validation.js"></script>
 <script src="/js/member/get_member.js"></script>
 <!-- CSS -->
-<link rel="stylesheet" href="css/common/common_header.css">
-<link rel="stylesheet" href="css/member/member_signup/member_signup.css">
-<link rel="stylesheet" href="css/member/member_footer.css">
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/member/member_signup/member_signup.css">
+<link rel="stylesheet" href="/css/member/member_footer.css">
 </head>
 <body>
     <!-- 헤더 -->
@@ -61,6 +61,7 @@
 	                    <option value="nate.com">nate.com</option>
 	                    <option value="kakao.com">kakao.com</option>
 	                    <option value="hotmail.com">hotmail.com</option>
+	                    <option value="direct">직접 입력</option>
 	                </select>
 	                <button type="button" id="check-email-btn">중복 확인</button>
 	                <span id="email-feedback"></span>
@@ -152,6 +153,7 @@
 
 	//*************************************************** 페이지 초기화  Start ***************************************************//
 
+
     form_email_chang();
     checkNextButton();
     checkNumber();
@@ -178,12 +180,19 @@
 
     // 이메일 도메인(셀렉트 박스) 선택
     function form_email_chang() {
+    	$("#email2").val("").prop("disabled", true);
 	    $("#email-domain-select").on("change", function() {
 	    	// 도메인 변경시 feedback 초기화
 		    $("#email-feedback").text("");
 		    $("#email-feedback").css("color", "");
 	        var domain = $(this).val();
-	        $("#email2").val(domain);
+			if(domain ==="direct") {
+				$("#email2").val("").prop("disabled", false).focus();
+			} else {
+				// 다른 옵션 선택 시
+				// 'email-domain2' input value에 domain 값 덮어쓰기 
+			    $("#email2").val(domain).prop("disabled", true);
+			}
 	        toggleSignupButton();
 	    });
 	}

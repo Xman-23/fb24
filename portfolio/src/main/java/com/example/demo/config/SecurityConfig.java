@@ -3,12 +3,13 @@ package com.example.demo.config;
 import org.slf4j.Logger;
 
 
+
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -23,7 +24,7 @@ import com.example.demo.security.CustomAuthenticationEntryPoint;
 @Configuration
 // '@PreAuthorize("hasRole('ADMIN')")' 활성화 시키기 위한,
 // '@EnableGlobalMethodSecurity' 어노테이션
-@EnableGlobalMethodSecurity(prePostEnabled =  true)
+@EnableMethodSecurity(prePostEnabled =  true)
 public class SecurityConfig {
 
 	private final JwtUtil jwtUtil;
@@ -52,7 +53,6 @@ public class SecurityConfig {
 	//토큰 권한 설정
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    	logger.info("SecurityFilterChain filterChain Start");
         http
             .csrf().disable() // REST API는 보통 CSRF 비활성화
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // JWT는 세션 사용 안함
@@ -71,8 +71,10 @@ public class SecurityConfig {
 
             // 정적리소스 + HTML 접근 허용
             .requestMatchers(
-            	// 메인.html
-            	"/index.html",
+            	// 메인
+            	"/main.html",
+            	// 메인 게시글
+            	"/main_post.html",
 
             	// 로그인.html
             	"/member/member_signin.html",
@@ -90,7 +92,22 @@ public class SecurityConfig {
             	"/member/member_me.html",
             	// 회원정보 변경
             	"/member/member_me_update.html",
-            	
+
+            	// 게시판
+            	// 공지 게시판
+            	"/board/board_notice.html",
+            	// 부모 게시판
+            	"/board/board_parent.html",
+            	// 자식 게시판
+            	"/board/board_child.html",
+            	// 부모 게시판 생성
+            	"/board/board_parent_create.html",
+            	// 부모 게시판 수정
+            	"/board/board_parent_update.html",
+            	// 자식 게시판 생성
+            	"/board/board_child_create.html",
+            	// 자식 게시판 수정
+            	"/board/board_child_update.html",
 
             	"/favicon.ico",
 
@@ -110,28 +127,55 @@ public class SecurityConfig {
                 "/members/reset-password",
                 "/members/find-email",
                 "/members/show-email",
-                //게시판
+
+                // 전체 게시판 계층구조
                 "/boards/hierarchy",
+                // 공지 게시판
+                "/board_notice/**",
+                "/board_popular/**",
+                "/board_normal/**",
+                "/board_parent_create",
+                // 부모게시판 수정
+                "/board_parent_update/**",
+                // 자식게시판 생성
+                "/board_child_create/**",
+                "/board_child_update/**",
+                "/boards/{boardId:[\\d]+}", // 게시판 단건 조회
+                "/boards/{boardId:[\\d]+}/hierarchy", // 자식 게시판 계층구조
 
                 // 게시글 관련 - 비로그인 허용 목록 ([\\d]+ : 숫자 하나 이상(즉, 문자열X))
                 "/posts/{postId:[\\d]+}",                 // 게시글 단건 조회, 댓글 트리조회
                 "/posts/board/**",                        // 게시판별 목록 조회, 자식 게시판 정렬 조회
                 "/posts/boards/**",						  // 자식게시판 정렬, 부모게시판 보기
-                "/posts/search",                          // 키워드 검색
                 "/posts/notices",                         // 전체 공지 조회
-                "/posts/notices/pinned",                  // 상단 고정 공지
                 "/posts/{postId:[\\d]+}/images",          // 게시글 이미지 조회
                 "/posts/parent-boards/**",			      // 부모 게시판 정렬
-                "/posts/author/**",
+                "/posts/search",                          // 통합 키워드 검색
+                "/posts/author/**",						  // 통합 작성자 검색
+                "/posts/autocomplete",					 // 통합 키워드검색 자동완성
+                "/posts/autocomplete/search/**",
+                "/posts/{postId:[\\d]+}/view",
+                
+                "/posts/boards/child/**",
+                "/posts/boards/notice/**",
+                //"/posts/boards/child/{boardId:[\\d]+}/search",
+                //"/posts/boards/child/{boardId:[\\d]+}/autocomplete",
+                //"/posts/boards/child/{boardId:[\\d]+}/search/author/**",
+                "/posts/boards/{parentBoardId:[\\d]+}/search",  				// 부모 게시판 키워드 검색
+                "/posts/boards/{parentBoardId:[\\d]+}/autocomplete",         // 부모 게시판 키워드 자동완성
+                "/posts/boards/{parentBoardId:[\\d]+}/autocomplete/search/**",         // 부모 게시판 키워드 자동완성
+                "/posts/boards/{parentBoardId:[\\d]+}/search/author/**",    // 부모 게시판 작성자 검색
  
                 // 댓글
-                "/comments/post/{postId:[\\d]+}",		  // 댓글 트리구조(정렬) 조회
+                "/comments/**",		  // 댓글 트리구조(정렬) 조회
 
                 // 접속자 수 보기
                 "/visitors/**",						      // 회원 접속자 수 보기
 
                 // 메인
                 "/",
+                // 메인 게시글
+                "/main_post/**",
 
                 // 로그인
                 "/signin",
@@ -184,7 +228,7 @@ public class SecurityConfig {
                 "/notifications/**",					// 알림
 
                 // 게시글 리액션(좋아요, 싫어요)
-                "/postreactions/**",					// 게시글 리액션
+                "/postreactions/{postId:[\\d]+}/reaction",					// 게시글 리액션
 
                 // 댓글 리액션(좋아요, 싫어요)
                 "/commentreactions/**"					// 댓글 리액션

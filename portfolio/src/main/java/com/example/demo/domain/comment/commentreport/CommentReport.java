@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 
 import com.example.demo.domain.comment.Comment;
+import com.example.demo.domain.comment.commentreaction.CommentReaction;
 import com.example.demo.domain.comment.commentreport.commentreportenums.CommentReportStatus;
 
 import jakarta.persistence.Column;
@@ -21,9 +22,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Table(name = "comment_reports")
@@ -32,10 +35,13 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class CommentReport {
 
     @Id
     @Column(name = "report_id")
+	@EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long reportId;
 

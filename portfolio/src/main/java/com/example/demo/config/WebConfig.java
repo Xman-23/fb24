@@ -29,8 +29,13 @@ public class WebConfig implements WebMvcConfigurer {
 
 	@Override
 	public void addViewControllers(ViewControllerRegistry viewControllerRegistry) {
+		
+		//********************************************************Main Start*****************************************************
 		// "/(루트)"접속시 index.html로 Forward
-		viewControllerRegistry.addViewController("/").setViewName("forward:/index.html");
+		viewControllerRegistry.addViewController("/").setViewName("forward:/main.html");
+		//********************************************************Main End*****************************************************
+
+		//********************************************************Member Start*****************************************************
 
 		// "signin"접속시 member_signin.html로 Forward
 		viewControllerRegistry.addViewController("/signin").setViewName("forward:/member/member_signin.html");
@@ -58,8 +63,37 @@ public class WebConfig implements WebMvcConfigurer {
 
 		// "member_me_update'접속시 member_me_update.html로 Forward
 		viewControllerRegistry.addViewController("/member_me_update").setViewName("forward:/member/member_me_update.html");
+
+		//********************************************************Member End*****************************************************
+
+		//********************************************************Board Start*****************************************************
+
+		// 공지게시판
+		viewControllerRegistry.addViewController("/board_notice/**").setViewName("forward:/board/board_notice.html");
 		
+		// 부모게시판
+		viewControllerRegistry.addViewController("/board_popular/**").setViewName("forward:/board/board_parent.html");
 
+		// 자식게시판 
+		viewControllerRegistry.addViewController("/board_normal/**").setViewName("forward:/board/board_child.html");
+
+		// 부모게시판 생성
+		viewControllerRegistry.addViewController("/board_parent_create").setViewName("forward:/board/board_parent_create.html");
+
+		// 부모게시판 수정
+		viewControllerRegistry.addViewController("/board_parent_update/**").setViewName("forward:/board/board_parent_update.html");
+
+		// 자식게시판 생성
+		viewControllerRegistry.addViewController("/board_child_create/**").setViewName("forward:/board/board_child_create.html");
+
+		// 자식게시판 수정
+		viewControllerRegistry.addViewController("/board_child_update/**").setViewName("forward:/board/board_child_update.html");
+
+		//********************************************************Board End*****************************************************
+
+		//********************************************************Post Start*****************************************************
+		viewControllerRegistry.addViewController("/main_post/**").setViewName("forward:/main_post.html");
+		//********************************************************Post End*****************************************************
+		
 	}
-
 }

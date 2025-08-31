@@ -28,9 +28,11 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 /*
 	member: Entity
@@ -56,10 +58,13 @@ import lombok.Setter;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Member {
 
 	@Id // 'PK' 어노테이션
 	@Column(name = "id")
+	@EqualsAndHashCode.Include
 	@GeneratedValue(strategy = GenerationType.IDENTITY) //'PK 자동 증가' 어노테이션
 	private Long id;
 

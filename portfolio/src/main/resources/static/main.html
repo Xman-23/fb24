@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log | 메인 페이지</title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- js Setting -->
+<!-- Common -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/member/member_signin_signup_button.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/common/board/search.js"></script>
+<script src="/js/main_board.js"></script>
+<script src="/js/board/board_page/board_page.js"></script>
+<!-- Common -->
+<!-- CSS Setting Start -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/main/main_board.css">
+<link rel="stylesheet" href="/css/main/main_page_button.css">
+<link rel="stylesheet" href="/css/common/common_footer.css">
+<!-- CSS Setting End-->
+</head>
+<body>
+	
+	<!-- 헤더 영역 -->
+	<header id="header">
+		<!-- 첫 번째 줄 -->
+		<div class="header-top">
+			<div id="logo">
+    			<a href="/">Log</a>
+			</div>
+			<!-- 오른쪽 사용자 메뉴 -->
+			<div id="user-actions">
+				<button id="login-btn">로그인</button>
+				<button id="register-btn">회원가입</button>
+			</div>
+		</div>
+
+		<nav id="board-tabs">
+			<ul id="parent-boards">
+			<!-- 게시판 영역  -->
+			</ul>
+		</nav>
+	</header>
+	<!-- 메인 바디 영역(메인 인기 게시글) -->
+	<main>
+		<section id="popular-posts">
+			<h2>[🔥HOT🔥]메인 인기 게시글</h2>
+			<ul id = "popular-posts-container">
+				  <!-- jQuery로 게시글 추가 -->
+			</ul>
+			<!-- 페이징 버튼 영역 -->
+    		<div id="pagination-container">
+        		<button id="first-page">처음</button>
+        		<button id="jump-backward">&lt;&lt;</button>
+        		<button id="prev-page">이전</button>
+        		<span id="page-buttons"><!-- 페이지 번호 버튼 생성 --></span>
+        		<button id="next-page">다음</button>
+        		<button id="jump-forward">&gt;&gt;</button>
+        		<button id="last-page">마지막</button>
+    		</div>
+		</section>
+	</main>
+	<!-- 푸터 영역 -->
+	<footer id="main-footer">
+		<div class="footer-container">
+			<!-- 접속자 영역 -->
+			<div class="footer-stats">
+				<span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+				<span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+			</div>
+        	<!-- 중앙: 검색창 -->
+        	<div class="footer-search">
+        		<select id="searchType">
+        			<option value="keyword">제목/본문</option>
+        			<option value="author">작성자</option>
+        			<option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+        		</select>
+		    <div class="autocomplete-wrapper">
+		        <input type="text" id="searchInput" placeholder="검색어 입력..." />
+		        <ul id="autocomplete-list" class="autocomplete-items"></ul>
+		    </div>
+            	<button class="search-btn">🔍</button>
+        	</div>
+        	    <!-- 오른쪽: 균형용 스페이서 -->
+    		<div class="footer-spacer"></div>
+    	</div>
+	</footer>
+</body>
+
+<script>
+
+	//*************************************************** 변수 START ***************************************************//
+	
+	const popular_posts_container = $("#popular-posts-container");
+	
+	var currentKeyword = '';   // 검색어 저장
+	var currentSearchType = 'keyword'; // 검색 타입
+
+	//*************************************************** 변수 End ***************************************************//
+
+	//*************************************************** 페이지 초기화  Start ***************************************************//
+	/* main API 호출 */
+	getMain(0);
+
+	RealTimeSearch();
+	//*************************************************** 페이지 초기화  Start ***************************************************//
+
+	//*************************************************** 랜더링 START ***************************************************//
+
+	function renderPosts(posts) {
+
+	    if(check_posts(posts)) {
+			popular_posts_container.append(no_posts_tag(no_main_popularList));
+     		return;
+	    }
+
+	    posts.forEach(function(post) {
+	        var thumbnailHtml = '';
+	        if (post.thumbnailImageUrl && post.thumbnailImageUrl.trim() !== '') {
+	            thumbnailHtml = `<img src="${post.thumbnailImageUrl}" alt="썸네일" class="post-thumbnail">`;
+	        }
+
+	        var postCard =`
+	        				<li class = "post-card">
+	        					<a href="/main_post/${post.postId}" class ="post-link">
+	        						${thumbnailHtml}
+	        						<div class="post-info">
+	        							<h3 class ="post-title">[🔥HOT🔥] ${post.title}</h3>
+	        							<p class = "post-meta">
+	        								작성자: ${post.userNickname} | 좋아요: ${post.reactionCount} | 댓글: ${post.commentCount} <br>
+	        								게시판: ${post.boardName} | 조회수: ${post.viewCount} | 작성일자: ${post.createdAt}
+	        							</p>
+	        						</div>
+	        					</a>
+	        				</li>
+				          `;
+
+	        popular_posts_container.append(postCard);
+	    });
+	}
+
+	//*************************************************** 랜더링 End ***************************************************//
+
+	//*************************************************** API START ***************************************************//
+
+	// 메인 인기글 API(페이지 넘길때 마다 호출)
+	function getMain(page = 0) {
+	
+		popular_posts_container.empty();
+	
+		currentMode = 'post';
+	
+		$.ajax({
+			url : `/main/popular-posts?page=${page}`, // 메인 컨트롤러 API
+			method : 'GET',				// 메인 컨트롤러 HTTP 프로토콜
+			success : function (data) {
+	
+				var mainDataLength = data.posts.length;
+	
+				if(mainDataLength === 0) {
+					renderPosts(data.po)
+				} else {
+					renderPosts(data.posts || []);
+				}
+				renderPagination(data);
+			},
+			error: function(xhr) {
+			        popular_posts_container.append(no_posts_tag(no_main_popularList));
+			        renderPagination(errorPage);
+			    alert(xhr.responseText || "");
+			}
+		});
+	}
+
+	// 나중에 API 갈아야함 인기게시글용 (작성자,닉네임, 실시간 검색으로)
+	// 검색 API
+	function executeSearch(page = 0) {
+
+		currentKeyword  = $("#searchInput").val().trim(); //제목+본문 or 작성자
+		currentSearchType = $("#searchType").val();
+
+
+		// 검색어를 명시하지 않을시
+		if(!currentKeyword) {
+			alert("검색어를 입력하세요.");
+			return;
+		}
+
+	    if (currentKeyword.length < 2) {
+	        alert("검색어는 최소 2글자 이상 입력해주세요.");
+	        return;
+	    }
+
+	    currentMode = 'search';
+
+		var url = "";
+
+	    if (currentSearchType === "keyword") {
+	        // 키워드 검색 (쿼리스트링(/search?))
+	    	url = `/main/popular_posts/keyword/search?keyword=${encodeURIComponent(currentKeyword)}&page=${page}`;
+	    } else if (currentSearchType === "author") {
+	        // 작성자 검색 (PathVariable)
+	    	url = `/main/popular_posts/author/search/${encodeURIComponent(currentKeyword)}?page=${page}`;
+	    } else if(currentSearchType === "autocomplete") {
+	    	// 자동완성 검색 
+	    	url = `/main/popular_posts/autocomplete/title/search?title=${encodeURIComponent(currentKeyword)}`;
+	    }
+		
+		/* 전체 통합 검색에 사용
+	    if (currentSearchType === "keyword") {
+	        // 키워드 검색 (쿼리스트링(/search?))
+	    	url = `/posts/search?keyword=${encodeURIComponent(currentKeyword)}&page=${page}`;
+	    } else if (currentSearchType === "author") {
+	        // 작성자 검색 (PathVariable)
+	    	url = `/posts/author/${encodeURIComponent(currentKeyword)}?page=${page}`;
+	    } else if(currentSearchType === "autocomplete") {
+	    	// 자동완성 검색 
+	    	url = `/posts/autocomplete/search?keyword=${encodeURIComponent(currentKeyword)}`
+	    }
+		*/
+
+		popular_posts_container.empty();
+
+		$.ajax({
+			url : url,
+			method : "GET",
+			success: function(data) {
+
+	            // 제목 변경: 검색 결과일 경우
+	            $("#popular-posts h2").text(`검색 결과: "${currentKeyword}"`);
+
+				if(data.posts && data.posts.length > 0) {
+					renderPosts(data.posts || []);
+					renderPagination(data);
+				}else {
+					popular_posts_container.append(no_posts_tag(no_searchList));
+					renderPagination(data);
+				}
+				
+			},
+			error: function(xhr) {
+				popular_posts_container.append(no_posts_tag(no_searchList));
+				renderPagination(errorPage);
+			    alert(xhr.responseText || "");
+			}
+		})
+	}
+
+	// 실시간 검색 API 
+	function RealTimeSearch() {
+
+		if(currentSearchType !== 'keyword'){
+			return; // 작성자 검색 시 자동완성 비활성화
+		}
+
+		// 자동완성 리스트 태그 
+		const list = $("#autocomplete-list");
+
+	    $("#searchInput").on("input", function() {
+	        clearTimeout(debounceTimer);
+	        // 제목+본문 input 태그 value 가져온 후 앞뒤 공백제거
+	        const keyword = $(this).val().trim();
+
+	        // 키워드가 존재 하지 않거나 2글자 미만일경우 자동완성 리스트 호출 X
+	        if(!keyword || keyword.length < 2) {
+	        	list.empty().hide();
+	            return;
+	        }
+			
+	        // window.setTimeout() 메서드 호출 API 실행후 (0.5초) 후 재실행
+	        debounceTimer = window.setTimeout(() => {
+	            $.ajax({
+	                url: `/main/popular_posts/autocomplete/search?keyword=${encodeURIComponent(keyword)}`,
+	                method: "GET",
+	                success: function(data) {
+	                    list.empty();
+	                    if(data.length === 0) {
+	                        list.hide();
+	                        return;
+	                    }
+						// 데이터가 있다면
+	                    data.forEach(title => {
+	                    	// <li>제목+본문 실시간 타이틀</li>태그 생성
+	                        const item = $(`<li>${title}</li>`);
+	                    	// <li></li> 태그 클릭시
+	                        item.on("click", function() {
+	                        	// 검색창 input태그에 value를 타이틀 부여
+	                            $("#searchInput").val(title);
+	                        	// 검색 타입을 자동완성 타입으로 부여
+	                            $("#searchType").val("autocomplete");
+	                        	// 리스트 비워고 가려준 다음에
+	                            list.empty().hide();
+	                        	// <li>태그 클릭시 바로 검색 API 호출
+	                            executeSearch(0); 
+	                        });
+	                    	// '#autocomplete-list'.append(<li>${title}</li>);
+	                        list.append(item);
+	                    });
+						// "#autocomplete-list" 보여주기
+	                    list.show();
+	                },
+	                error: function(xhr) {
+	                    console.error(xhr);
+	                }
+	            });
+	        }, 500); // 300ms 디바운스
+	    });
+	}
+
+	//*************************************************** API End ***************************************************//
+
+</script>
+</html>

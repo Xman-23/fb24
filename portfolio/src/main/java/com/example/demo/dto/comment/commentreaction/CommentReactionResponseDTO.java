@@ -19,7 +19,7 @@ public class CommentReactionResponseDTO {
 
 	private int dislikeCount;
 
-	private PostReactionType userCommnetReactionType;
+	private PostReactionType userCommentReactionType;
 
 	public static CommentReactionResponseDTO fromEntityToDto(Long commentId, 
 			                                                 int likeCount,
@@ -30,7 +30,7 @@ public class CommentReactionResponseDTO {
 				                         .commentId(commentId)
 				                         .likeCount(likeCount)
 				                         .dislikeCount(dislikeCount)
-				                         .userCommnetReactionType(userCommnetReactionType)
+				                         .userCommentReactionType(userCommnetReactionType)
 				                         .build();
 	}
 

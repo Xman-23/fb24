@@ -57,6 +57,7 @@ public class CommentServiceImpl implements CommentService {
 
     private final NotificationService notificationServiceImpl;
 
+
     // 좋아요 기준
     @Value("${comment.topPinned.likeThreshold}")
     private int likeThreshold;
@@ -75,9 +76,8 @@ public class CommentServiceImpl implements CommentService {
 
     private static final Logger logger = LoggerFactory.getLogger(CommentServiceImpl.class);
 
-
     // DFS(재귀함수) : 자식 댓글 최신순 정렬
-    private void sortChildComments(List<CommentResponseDTO> comments, boolean isRoot) {
+    private void sortChildComments(List<CommentResponseDTO> comments, boolean isRoot, String sortBy) {
 
     	// 대댓글이 없는 부모댓글 또는 상단 3개 댓글일 경우 'return'후 스택에서 메서드 종료
     	if(comments == null || comments.isEmpty()) {
@@ -96,30 +96,41 @@ public class CommentServiceImpl implements CommentService {
     				                                          .filter(comment -> comment.isPinned())
     				                                          .collect(Collectors.toList());
 
-    		// NotPinned(고정되지않은) 대댓글 분리
     		List<CommentResponseDTO> notPinnedComments = comments.stream()
-    				                                             .filter(comment -> !comment.isPinned())
-    				                                             .collect(Collectors.toList());
-
-    		// 고정되지 않은 대댓글 최신순 정렬 ('b'댓글 생성기준으로 비교하면 내림차순)
-    		notPinnedComments.sort((a,b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-
-    		// '자식 댓글'들의 정렬 순서를 초기화 (대댓글, 대댓글, 대댓글(고정))
+    			                                                 .filter(comment -> !comment.isPinned())
+    			                                                 .sorted((a,b) -> {
+    			                                                	 if ("like".equalsIgnoreCase(sortBy)) {
+    			                                                		 int likeDiff = Integer.compare(b.getLikeCount(), a.getLikeCount());
+    			                                                		 if (likeDiff != 0) return likeDiff;
+    			                                                		 return b.getCreatedAt().compareTo(a.getCreatedAt());
+    			                                                	 } else if ("recent".equalsIgnoreCase(sortBy)) {
+    			                                                		 // 고정되지 않은 대댓글 최신순 정렬 ('b'댓글 생성기준으로 비교하면 내림차순)
+    			                                                		 return b.getCreatedAt().compareTo(a.getCreatedAt());
+    			                                                	 } else {
+    			                                                		 // 고정되지 않은 대댓글 오름차순 정렬(normal)
+    			                                                		 return a.getCreatedAt().compareTo(b.getCreatedAt());
+    			                                                	 }
+    			                                                 })
+    			                                                 .collect(Collectors.toList());
+  
+    		// '자식 댓글'들의 정렬 순서를 초기화 (대댓글, 대댓글, 대댓글(상단 3개 인기댓글))
     		comments.clear();
-    		// '자식 댓글'중에 '고정된'댓글을 먼저 추가해 보여주고 (대댓글(고정)
+    		// '자식 댓글'중에 '고정된'댓글을 먼저 추가해 보여주고 (대댓글(상단 3개 인기댓글)
     		comments.addAll(pinnedComments); 
     		// 나머지 '자식 댓글'을 추가해서 보여줌 (대댓글(고정, 대댓글, 대댓글)
     		comments.addAll(notPinnedComments);
     	}
 
     	for(CommentResponseDTO comment : comments) {
-    		// 정렬이 된 'List'안에 '부모 댓글'의 'getChildComments()'를 사용하여 '자식댓글(대댓글)'들을 꺼내서 던짐
-    		sortChildComments(comment.getChildComments(),false);
+    		// 정렬이 된 ''부모 댓글'의 'getChildComments()'를 사용하여 '자식댓글(대댓글)'들을 꺼내서 던짐
+    		sortChildComments(comment.getChildComments(),false, sortBy);
     	}
     }
 
     private CommentResponseDTO convertCommentToDtoRecursive(Comment comment, Map<Long, Map<PostReactionType, Long>> reactionCountMap) {
 
+    	
+    	logger.info("CommentServiceImpl convertCommentToDtoRecursive() Start");
     	// 리액션(좋아요, 싫어요) 꺼내기
     	Map<PostReactionType, Long> counts = reactionCountMap.getOrDefault(comment.getCommentId(), Collections.emptyMap());
 
@@ -128,8 +139,14 @@ public class CommentServiceImpl implements CommentService {
     	// 싫어요 갯수 가져오기 없으면 '0'반환
         int dislikeCount = counts.getOrDefault(PostReactionType.DISLIKE, 0L).intValue();
 
+        String memberNickname = comment.getMember().getNickname();
+
         // 댓글 DTO로 반환
-        CommentResponseDTO dto = CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false, comment.getMember().getNickname());
+        CommentResponseDTO dto = CommentResponseDTO.fromEntity(comment, 
+        		                                               likeCount, 
+        		                                               dislikeCount, 
+        		                                               false, 
+        		                                               memberNickname);
 
         // 자식댓글이 존재한다면
         if (comment.getChildComments() != null && !comment.getChildComments().isEmpty()) {
@@ -149,7 +166,22 @@ public class CommentServiceImpl implements CommentService {
         }
         // 'else'분기를 거치면 자식이 없다는것이므로,
         // 자식필드에 ArrayList<>() 생성후, 재귀 종료
-        return dto;
+        return new CommentResponseDTO(dto);
+    }
+
+    // 나머지 댓글 재귀로 pinned 작업
+    private void applyPinnedRecursive(CommentResponseDTO dto, Set<Long> top3Ids) {
+        // 현재 댓글이 top3Ids 안에 있으면 pinned 처리
+        if (top3Ids.contains(dto.getCommentId())) {
+            dto.setPinned(true);
+        }
+
+        // 자식 댓글이 있으면 재귀 호출
+        if (dto.getChildComments() != null) {
+            for (CommentResponseDTO child : dto.getChildComments()) {
+                applyPinnedRecursive(child, top3Ids);
+            }
+        }
     }
 
     //*************************************************** Service START ***************************************************//
@@ -160,7 +192,6 @@ public class CommentServiceImpl implements CommentService {
 
 		logger.info("CommentServiceImpl createComment() Start");
 
-		logger.info("CommentServiceImpl createComment () authorId : {}" , authorId);
 		// Request
 		Long requestPostId = commentRequestDTO.getPostId();
 		String requestContent = UriUtils.decode(commentRequestDTO.getContent(), StandardCharsets.UTF_8);
@@ -186,11 +217,12 @@ public class CommentServiceImpl implements CommentService {
 		                        	return new NoSuchElementException("게시글이 존재하지 않습니다.");
 		                          });
 
-		// 댓글 or 대댓글 유효성 검사를 위한 변수 (Null = 댓글, NotNull = 대댓글)  
+		// 댓글 or 대댓글 유효성 검사를 위한 변수 (Null = 댓글(부모(최상위), NotNull = 대댓글,대대댓글(자식)  
 		Comment parentComment = null;
 
 		// 대댓글 유효 검사
-		// requestParentCommentId == null 이면 부모 댓글 , != null 이면 대댓글
+		// requestParentCommentId == null 이면 부모 댓글 이므로 분기 처리 X , 
+		// != null 이면 대댓글 이므로 분기 처리
 		if(requestParentCommentId != null) {
 			parentComment = commentRepository.findById(requestParentCommentId)
 					                         .orElseThrow(() -> {
@@ -212,16 +244,34 @@ public class CommentServiceImpl implements CommentService {
 				                 .authorNickname(authorNickname)
 				                 .build();
 
-		// 댓글이 'INSERT' 되기전에 등급을 올림
-		// 만약 댓글은 올라갔지만, 중간에 트랜잭션이 종료된다면,
-		// '@Transactional'어노테이션에 의해서 등급 점수가 롤백되므로 안전함. 
-		member.addCommentScore(); // 등급 점수 올리기
 
 		// 'INSERT' 후 'Comment' Entity 반환
 		Comment saved = commentRepository.save(comment);
 
-		// 알림을 받을 대상자 (게시글 작성자(자신제외), 부모댓글 작성자)
+	    // 부모 댓글에 자식 댓글 추가 (대댓글인 경우에만)
+	    if (parentComment != null) {
+	    	parentComment.getChildComments().add(saved); // 자식 댓글을 부모 댓글에 추가
+	        commentRepository.saveAndFlush(parentComment); // 부모 댓글 업데이트
+	    }
 
+	    // 댓글이 INSERT 된 후 등급 올리기 (자기 자신 제외)
+	    // "INSERT"된 댓글작성자ID와 게시글의작성자ID가 같다면은 자기 게시글의 댓글이므로, 등급 점수 올리기X
+	    boolean isAuthorOwnPost = saved.getPost().getAuthor().getId().equals(authorId);
+	    // saved.getParentComment() != null 대댓글 이므로,
+	    // 대댓글(자식댓글)의 작성자가 루트댓글(부모댓글)의 작성자가 같다면은 본인 댓글에 대댓글을 작성한것이므로, 등급점수 올리기X 
+	    boolean isAuthorOwnParentComment = saved.getParentComment() != null 
+	                                       && saved.getParentComment().getMember().getId().equals(authorId);
+
+	    // 자기 게시글에 댓글 작성 OR 자기 댓글에 대댓글 작성은 점수 제외
+	    if (!isAuthorOwnPost && !isAuthorOwnParentComment) {
+			// 댓글이 'INSERT' 된후 등급을 올림
+			// 만약 댓글은 올라갔지만, 중간에 트랜잭션이 종료된다면,
+			// '@Transactional'어노테이션에 의해서 등급 점수가 롤백되므로 안전함. 
+			member.addCommentScore(); // 등급 점수 올리기
+	    }
+
+
+		// 알림을 받을 대상자 (게시글 작성자(자신제외), 부모댓글 작성자)
 		if(saved.getParentComment() == null) {
 			// 만약 부모 댓글(일반 댓글)이라면, 게시글 작성자에게 알림 보내야됨
 			// 게시글 작성자 ID
@@ -291,7 +341,7 @@ public class CommentServiceImpl implements CommentService {
 
 
 
-		// 수정 요청 댓글과 기존의 DB댓글과 다를겨웅에만 업데이트
+		// 수정 요청 댓글과 기존의 DB댓글과 다를경우에만 업데이트
 		if(!content.equals(dbComment)) {
 			comment.setContent(content);
 			dbSetting = true;
@@ -301,7 +351,7 @@ public class CommentServiceImpl implements CommentService {
 		if(dbSetting == false) {
 			// 예외 처리로 조기 종료
 			logger.error("CommentServiceImpl updateComment() IllegalArgumentException : 잘못된 접근 입니다.");
-			throw new IllegalArgumentException("잘못된 접근 입니다.");
+			throw new IllegalArgumentException("댓글이 수정 되지 않았습니다.");
 		}
 
 		int likeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.LIKE);
@@ -340,7 +390,6 @@ public class CommentServiceImpl implements CommentService {
 
 		comment.setStatus(CommentStatus.DELETED);
 		comment.setAuthorNickname("");
-
 		// 해당 댓글 삭제시 점수 '-1'점 차감
 		member.deleteCommentScore();
 
@@ -446,7 +495,11 @@ public class CommentServiceImpl implements CommentService {
 
 
 		// 모든 댓글 상태 리스트(삭제됨, 숨김, 대댓글포함)
-		List<Comment> allComments = commentRepository.findByPostAndStatusIn(post, statuses);
+		List<Comment> allComments = commentRepository.findByPostWithStatusesDesc(post, statuses);
+		
+		// ACTIVE 상태 댓글만 조회
+		List<Comment> activeComments = commentRepository.findByPostWithStatusesDesc(post, Collections.singletonList(CommentStatus.ACTIVE));
+		long totalActiveComments = activeComments.size();
 
 		// 모든 댓글,대댓글 ID(Long) 추출
 		List<Long> allCommentIds = allComments.stream()
@@ -469,98 +522,111 @@ public class CommentServiceImpl implements CommentService {
 			// 여기서 'Key'가 없으면 HashMap이 생성되는데 <K,V>는 'Java'가 주변 코드를 살펴서 알아서 추론 
 			// 즉, 새로 생성된 HashMap은 'Key'의 'Value'인 Map<ReactionType,Long>으로 추론하여 반환
 			reactionCountMap.computeIfAbsent(rc.getCommentId(), k -> new HashMap<>())
-			// put() 을 사용하여, 반환된 Map<ReactionType,Long>에 맞게 값을 덮어씀.
-			.put(rc.getReactionType(), rc.getCount());
+							// put() 을 사용하여, 반환된 Map<ReactionType,Long>에 맞게 값을 덮어씀.
+							.put(rc.getReactionType(), rc.getCount());
 		}
 
-		// Entity -> DTO 변환 시 자식 댓글까지 좋아요/싫어요 반영 재귀 호출 함수
-		// Map<Long, CommentResponseDTO> dtoMap = new HashMap<>();
-		Map<Long, CommentResponseDTO> dtoMap = new HashMap<>();
+		// 첫 페이지에 보여줄 인기댓글 처리
+		List<CommentResponseDTO> top3Pinned = Collections.emptyList();
+		// 인기댓들, 나머지 댓글에 'pin' 작업을 위한 변수
+		Set<Long> top3Ids = null;
 
-		for (Comment comment : allComments) {
-		    CommentResponseDTO dto = convertCommentToDtoRecursive(comment, reactionCountMap);
-		    dtoMap.put(comment.getCommentId(), dto);
+		int currentPage = pageable.getPageNumber();
+		if(currentPage == 0) {
+			// Entity -> DTO 변환 시 자식 댓글까지 좋아요/싫어요 반영 재귀 호출 함수
+			// Map<Long, CommentResponseDTO> dtoMap = new HashMap<>();
+			// 상위 인기 댓글 3개 뽑기위한 변수 
+			Map<Long, CommentResponseDTO> dtoMap = new HashMap<>();
+
+			// 상위 인기 댓글 3개 뽑기위한 작업
+			for (Comment comment : allComments) {
+			    CommentResponseDTO dto = convertCommentToDtoRecursive(comment, reactionCountMap);
+			    dtoMap.put(comment.getCommentId(), dto);
+			}
+
+			// 'allComments'가 아닌 dtoMap으로 하는 이유는 'HashMap'으로 DTO 객체가 저장되어있으므로,
+			// 접근이 빠르고, 트리구조에 적합 
+			// HashMap<commentId,ResponseDTO> -> Stream<ResponseDTO> 원하는 자료구조형태로 변환 준비
+			top3Pinned = dtoMap.values()
+							   .stream()
+							   // 'ResponseDTO'를 좋아요 30개 이상, 
+							   // 좋아요 싫어요 차이가 10개보다 큰 댓글 필터링
+						       .filter(responseDto -> { 
+						    	   int diff = responseDto.getLikeCount() - responseDto.getDislikeCount();
+						    	   return responseDto.getLikeCount() >= likeThreshold && diff >= netLikeThreshold;
+						       })
+						       // 'ResponseDTO'를 좋아요 - 싫어요 '
+
+						       /* 'b'댓글의 좋아요 수와 'a'댓글의 좋아요 수를 비교 하여 (sorted),
+						        *  Integer.compare(b.getLikeCount(), a.getLikeCount()))(내림차순)
+						        *  Integer.compare(b.getLikeCount(), a.getLikeCount()) (오름차순)
+						        *  결과가 양수면 'b'댓글이 앞 'a'댓글이 뒤, 음수면 'a'댓글이 앞 'b'댓글이 뒤 (내림차순)
+						        */
+						       // 상단 고정 3개 댓글 좋아요 내림차순 + 최신순 정렬
+						       .sorted((a,b) -> {
+						    	   int likeDiff = Integer.compare(b.getLikeCount(), a.getLikeCount());
+						    	   if(likeDiff != 0) {
+						    		   return likeDiff;
+						    	   }else {
+						    		   // 만약 'Acomment'와 'Bcomment'가 '좋아요 수'가 같다면은
+						    		   // 최신순으로 정렬 메소드 호출한 'Bcomment'기준으로 'Acomment' 보다 최신이면 양수, 아니면 음수
+						    		   // 양수 : 앞 , 음수 : 뒤
+						    		   return b.getCreatedAt().compareTo(a.getCreatedAt());
+						    	   }
+						       })
+						       .limit(topLimit) // 내림차순으로 정렬된 것중에 '3개만'
+						       .collect(Collectors.toList()); // Stream<ResponseDTO> -> List<ResponseDTO>
+
+			// 상단 인기 댓글에 딸린 대댓글은 빈 리스트로 초기화
+			// 주의!! 일반댓글이 '같은 주소'의 'HashMap<>()'을 사용한다면은
+			// 일반댓글과 인기댓글들의 자식 댓글을 비우기때문에, 따로 HashMap 객체를 생성해서 분리 
+			for(CommentResponseDTO dto : top3Pinned ) {
+				dto.setChildComments(Collections.emptyList());
+			}
+
+			// List<CommentResponseDTO> -> Stream<CommentResponseDTO) 원하는 자료구조로 변환 준비
+			top3Ids = top3Pinned.stream()
+							    // map : 타입 변환
+							    // Stream<CommentResponseDTO> -> Stream<Long>(commentId)
+		                        .map(commentResponseDto -> commentResponseDto.getCommentId())
+		                        // 내림차순 순서유지를 위한 LinkedHashSet 변환
+		                        .collect(Collectors.toCollection(() -> new LinkedHashSet<>()));
+
+			// 상단 고정 댓글 'Pinned(true)' 작업
+			for(CommentResponseDTO dto : dtoMap.values()) {
+				if(top3Ids.contains(dto.getCommentId())) {
+					// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
+					// '댓글ID'라면 상단 고정을 위한 setPinned(true)
+					dto.setPinned(true);
+				}
+			}
 		}
 
-		// 루트 댓글 목록 준비 (CommentResponseDTO)
-		// private List<CommentResponseDTO> childComments;
-		List<CommentResponseDTO> rootComments = new ArrayList<>();
-
-		// 부모 댓글만 rootComments에 추가 (최상위 댓글)
+		// 나머지 댓글을 위한 변수
+		Map<Long, CommentResponseDTO> normalDtoMap = new HashMap<>();
+		// 나머지 댓글 자식 댓글 셋팅
 		for(Comment comment : allComments) {
-			CommentResponseDTO dto = dtoMap.get(comment.getCommentId());
-			// 'comment'의 'parentComment'가 'null'이면 최상위 댓글
-			if(comment.getParentComment() == null) {
-				// 루트 댓글(최상위 댓글), 
-				rootComments.add(dto);
-			}
+		    CommentResponseDTO normalDto = convertCommentToDtoRecursive(comment, reactionCountMap);
+		    normalDtoMap.put(comment.getCommentId(), normalDto);
 		}
 
-		// 'allComments'가 아닌 dtoMap으로 하는 이유는 'HashMap'으로 DTO 객체가 저장되어있으므로,
-		// 접근이 빠르고, 트리구조에 적합 
-		// HashMap<commentId,ResponseDTO> -> Stream<ResponseDTO> 원하는 자료구조형태로 변환 준비
-		List<CommentResponseDTO> top3Pinned = dtoMap.values().stream()
-															 // 'ResponseDTO'를 좋아요 30개 이상, 
-															 // 좋아요 싫어요 차이가 10개보다 큰 댓글 필터링
-														     .filter(responseDto -> { 
-														    	int diff = responseDto.getLikeCount() - responseDto.getDislikeCount();
-														    	return responseDto.getLikeCount() >= likeThreshold && diff >= netLikeThreshold;
-														     })
-														     // 'ResponseDTO'를 좋아요 - 싫어요 '
 
-														     /* 'b'댓글의 좋아요 수와 'a'댓글의 좋아요 수를 비교 하여 (sorted),
-														      *  Integer.compare(b.getLikeCount(), a.getLikeCount()))(내림차순)
-														      *  Integer.compare(b.getLikeCount(), a.getLikeCount()) (오름차순)
-														      *  결과가 양수면 'b'댓글이 앞 'a'댓글이 뒤, 음수면 'a'댓글이 앞 'b'댓글이 뒤 (내림차순)
-														      */
-														     // 상단 고정 3개 댓글 좋아요 내림차순 + 최신순 정렬
-														     .sorted((a,b) -> {
-														    	 int likeDiff = Integer.compare(b.getLikeCount(), a.getLikeCount());
-														    	 if(likeDiff != 0) {
-														    		 return likeDiff;
-														    	 }else {
-														        	// 만약 'Acomment'와 'Bcomment'가 '좋아요 수'가 같다면은
-														        	// 최신순으로 정렬 메소드 호출한 'Bcomment'기준으로 'Acomment' 보다 최신이면 양수, 아니면 음수
-														        	// 양수 : 앞 , 음수 : 뒤
-														    		 return b.getCreatedAt().compareTo(a.getCreatedAt());
-														    	 }
-														     })
-														     .limit(topLimit) // 내림차순으로 정렬된 것중에 '3개만'
-														     .collect(Collectors.toList()); // Stream<ResponseDTO> -> List<ResponseDTO>
 
-		// 인기글에 딸린 대댓글은 빈 리스트로 초기화
-		for(CommentResponseDTO dto : top3Pinned ) {
-			dto.setChildComments(Collections.emptyList());
-		}
+		List<CommentResponseDTO> rootComments = normalDtoMap.values()
+				                                            .stream()
+				                                            .filter(Objects::nonNull)
+			    									        // 루트 댓글 필터링 (부모 댓글이 null인 댓글만)
+				                                            .filter(dto -> dto.getParentCommentId() == null)
+				                                            // 리스트로 수집
+				                                            .collect(Collectors.toList());
 
-		// List<CommentResponseDTO> -> Stream<CommentResponseDTO) 원하는 자료구조로 변환 준비
-		Set<Long> top3Ids = top3Pinned.stream()
-									  // map : 타입 변환
-									  // Stream<CommentResponseDTO> -> Stream<Long>(commentId)
-				                      .map(commentResponseDto -> commentResponseDto.getCommentId())
-				                      // 내림차순 순서유지를 위한 LinkedHashSet 변환
-				                      .collect(Collectors.toCollection(() -> new LinkedHashSet<>()));
 
-		// 상단 고정 댓글 'Pinned(true)' 작업
-		for(CommentResponseDTO dto : dtoMap.values()) {
-			if(top3Ids.contains(dto.getCommentId())) {
-				// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
-				// '댓글ID'라면 상단 고정을 위한 setPinned(true)
-				dto.setPinned(true);
-			}
-		}
 
-		// 상단 3개 좋아요순 댓글 + 나머지 댓글은 최신순
+		// 나머지 댓글은 최신순
 		// 상단 3개 좋아요 먼저 처리 ('List'는 순서 유지 때문에 먼저 상단 3개 댓글 부터 넣어줘야함)
 		List<CommentResponseDTO> sortedRoot = new ArrayList<>();
 
-		// 댓글 첫 페이지만 상단 3개 좋아요 보여주기
-		int currentPage = pageable.getPageNumber();
-		if(currentPage == 0) {
-			sortedRoot.addAll(top3Pinned);
-		}
-
-		// 나머지 댓글 최신순 작업 (부모 댓글 먼저)
+		// 나머지 댓글 최신순 작업 (부모(루트) 댓글 먼저)
 		List<CommentResponseDTO> restComments = rootComments.stream()
 				                                            // Comparator.comparing(CommentResponseDTO :: getCreatedAt) 생성일자 기준 오름차순
 				                                            // -> .reversed() 내림차순 -> sorted() 정렬
@@ -574,20 +640,33 @@ public class CommentServiceImpl implements CommentService {
 				                                            			return b.getCreatedAt().compareTo(a.getCreatedAt());
 				                                            		}
 				                                            		
-				                                            	}else {
-				                                            		// 최신순(default)
+				                                            	}else if("recent".equalsIgnoreCase(sortBy)) {
 				                                            		return b.getCreatedAt().compareTo(a.getCreatedAt());
+				                                            	}else {
+				                                            		return a.getCreatedAt().compareTo(b.getCreatedAt());
 				                                            	}
 				                                            })
 				                                            .collect(Collectors.toList());
 
+		logger.info("CommentServiceImpl getCommentsTreeByPost top3Ids : {} ", top3Ids);
+		logger.info("CommentServiceImpl getCommentsTreeByPost restComments : {} ", restComments);
+
+		// 나머지 댓글에 'pin'작업
+		for(CommentResponseDTO dto : restComments) {
+			applyPinnedRecursive(dto,top3Ids);
+				logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 Start");
+				logger.info("CommentServiceImpl getCommentsTreeByPost dto.getCommentId() : {} ", dto.getCommentId());
+				// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
+				// '댓글ID'라면 상단 고정을 위한 setPinned(true)
+				logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 End");
+		}
+
 		// 현재 상단 3개 좋아요순 댓글과 부모 댓글 최신순으로 정렬된 'List'
 		sortedRoot.addAll(restComments);
+		// 정렬된 상단 3개 좋아요순 댓글과 부모 댓글 최신순으로 정렬된 'List'를 재귀 함수를 통해 자식 댓글 최신순으로 정렬
+		sortChildComments(sortedRoot,true, sortBy);
 
-		// 정렬된 'List'를 재귀 함수를 통해 자식 댓글 최신순으로 정렬
-		sortChildComments(sortedRoot,true);
-
-		CommentPageResponseDTO response = CommentPageResponseDTO.fromEntityToPage(sortedRoot, pageable);
+		CommentPageResponseDTO response = CommentPageResponseDTO.fromEntityToPage(top3Pinned,sortedRoot, pageable,totalActiveComments);
 
 		logger.info("CommentServiceImpl getCommentsTreeByPost() End");
 		return response;

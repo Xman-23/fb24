@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.member.membernotificationsettings.MemberNotificationSetting;
 import com.example.demo.domain.notification.notificationenums.NotificationType;
 
 import jakarta.persistence.Column;
@@ -22,9 +23,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Table(name = "notification")
@@ -33,9 +36,12 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Notification {
 
 	@Id
+	@EqualsAndHashCode.Include
 	@Column(name = "notification_id")
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long notificationId;

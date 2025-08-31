@@ -56,16 +56,17 @@ import lombok.ToString;
 @Setter
 @Getter
 @Builder
-@ToString(exclude = {"childComments"})
-@EqualsAndHashCode(exclude = {"childComments"})
 @AllArgsConstructor
 @NoArgsConstructor
 //등록,수정 일자를 자동관리하기 위한 어노테이션
 @EntityListeners(AuditingEntityListener.class)
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     @Column(name = "comment_id")
     private Long commentId;
 
@@ -78,6 +79,7 @@ public class Comment {
     	자식 댓글(대댓글) 입장에서 변수명(부모 변수명)을 정해야함
     	'@ManyToOne': '@JoinColumn' 사용 '외래키의 주인'
     */
+    // FetchType.LAZY로 해야 대댓글 조회를 할떄 무한재귀에 빠지지 않아, 스택 오버플로우를 방지할 수 있다
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_comment_id")
     // 'parentComment'가 'Null'이면 댓글 , 'notNull'이면 대댓글
@@ -89,6 +91,7 @@ public class Comment {
     '	@OneToMany': mappedBy 사용 ('DB'에 필드가 만들어지지 않지만, 계층(자식)조회하기 유용함)
      */
     @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<Comment> childComments = new ArrayList<>();
 
     // 'NullPointerException'을 방지하기 위해 ArrayList<>() 객체 생성(new)
@@ -97,9 +100,11 @@ public class Comment {
       	@OneToMany : mappedBy 사용 ('DB'에 필드가 만들어지지 않지만, 계층(자식)조회에 유용함)
      */
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<CommentReaction> reactions = new ArrayList<>();
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<CommentReport> reports = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)

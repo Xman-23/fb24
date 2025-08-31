@@ -6,6 +6,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.post.Post;
 
 import jakarta.persistence.CascadeType;
@@ -54,18 +55,17 @@ import java.util.*;
 // 발생할 수 있으므로 '@Data' 권장X
 @Setter
 @Getter
-//'@Data'로 인해 생기는 'toString()'에 필드 제외(Exclude)
-@ToString(exclude = {"posts", "childBoards"})
-//'@Data'로 인해 생기는 'equals()', 'hashcode()'에 필드 제외(Exclude)
-@EqualsAndHashCode(exclude = {"posts", "childBoards"})
 @NoArgsConstructor
 @AllArgsConstructor
 // 등록,수정 일자를 자동관리하기 위한 어노테이션
 @EntityListeners(AuditingEntityListener.class)
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Board {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     @Column(name = "board_id")
     private Long boardId;
 

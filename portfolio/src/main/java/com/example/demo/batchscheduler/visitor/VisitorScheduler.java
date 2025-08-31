@@ -17,9 +17,9 @@ public class VisitorScheduler {
 
 	private static final Logger logger = LoggerFactory.getLogger(VisitorScheduler.class);
 
-	@Scheduled(cron = "0 0 8 * * *")
-	public void runDailyCleanup ( ) {
-
+	//@Scheduled(cron = "*/10 * * * * *")
+	@Scheduled(cron = "0 0 0 * * *")
+	public void runDailyCleanup () {
 		logger.info("VisitorScheduler runDailyCleanup() Start");
 		visitorHistoryService.cleanOldVisits();
 		logger.info("VisitorScheduler runDailyCleanup() End");

@@ -5,6 +5,9 @@ import java.io.File;
 
 
 
+
+
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import com.example.demo.domain.board.Board;
+import com.example.demo.domain.comment.commentenums.CommentStatus;
 import com.example.demo.domain.member.Member;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.domain.post.Post;
@@ -42,6 +46,7 @@ import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionT
 import com.example.demo.domain.post.postreport.PostReport;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.post.PostBoardPostSearchPageResponseDTO;
 import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 import com.example.demo.dto.post.PostListResponseDTO;
@@ -54,9 +59,9 @@ import com.example.demo.repository.board.BoardRepository;
 import com.example.demo.repository.comment.CommentRepository;
 import com.example.demo.repository.member.MemberRepository;
 import com.example.demo.repository.post.PostRepository;
-import com.example.demo.repository.post.PostRepository.PostAggregate;
 import com.example.demo.repository.post.postimage.PostImageRepository;
 import com.example.demo.repository.post.postreaction.PostReactionRepository;
+import com.example.demo.repository.post.postreaction.PostReactionRepository.PostReactionCount;
 import com.example.demo.repository.post.postreport.PostReportRepository;
 import com.example.demo.service.notification.NotificationService;
 import com.example.demo.service.post.postimage.PostImageService;
@@ -90,13 +95,17 @@ public class PostServiceImpl implements PostService {
 	private static final String SORT_POPULAR = "popular";
     // 상단 공지글 3개 제한 변수
     private static final Pageable LIMIT_SIZE = PageRequest.of(0,3);
+    // 실시간 검색 5개 
+    private static final Pageable SEARCH_SIZE = PageRequest.of(0, 5);
     // 좋아요
     private static final PostReactionType LIKE = PostReactionType.LIKE;
     // 싫어요
     private static final PostReactionType DISLIKE = PostReactionType.DISLIKE;
 
     // 이미지 없을시 대체할 기본 이미지
-    private final String DEFAULT_THUMBNAIL_URL = "/images/default-thumbnail.jpg";
+    private final String DEFAULT_THUMBNAIL_URL = "/images/default/default-thumbnail.jpg";
+
+    private final CommentStatus COMMENT_ACTIVE = CommentStatus.ACTIVE;
 
 	// 파일 업로드 경로 ('application.properties'에서 경로처리)
 	@Value("${file.upload.base-path}")
@@ -222,7 +231,7 @@ public class PostServiceImpl implements PostService {
 			return Collections.emptyMap();
 		}
 
-		List<CommentRepository.PostCommentCount> commentCounts = commentRepository.countCommentsByPostIds(postIds);
+		List<CommentRepository.PostCommentCount> commentCounts = commentRepository.countCommentsByPostIds(postIds, COMMENT_ACTIVE);
 
 		int initialCapacity = (int) (commentCounts.size()/0.75f) +1;
 		Map<Long, Long> commentCountMap = new HashMap<>(initialCapacity);
@@ -357,7 +366,6 @@ public class PostServiceImpl implements PostService {
 		if(!PostImageValidation.isValidImages(images)) {
 			logger.info("PostServiceImpl createPost() : 이미지 파일 없음, 업로드 스킵");
 			return PostResponseDTO.convertToPostResponseDTO(post, 
-															0, 
 															userNickname,
 															0,
 															0);
@@ -374,7 +382,6 @@ public class PostServiceImpl implements PostService {
 		if (validFiles.isEmpty()) {
 		    logger.info("PostServiceImpl createPost() : 유효한 이미지 파일 없음, 업로드 스킵");
 			return PostResponseDTO.convertToPostResponseDTO(post, 
-															0, 
 															userNickname,
 															0,
 															0);
@@ -402,7 +409,6 @@ public class PostServiceImpl implements PostService {
 
 		logger.info("PostServiceImpl createPost() Success End");
 		return PostResponseDTO.convertToPostResponseDTO(post, 
-														0, 
 														userNickname,
 														0,
 														0);
@@ -583,9 +589,6 @@ public class PostServiceImpl implements PostService {
 			// 수정 날짜를 현재 날짜로 변경
 			post.setUpdatedAt(updatedAt);
 		}
-		
-		// 댓글 갯수
-		int commentCount = commentRepository.countByPostPostId(postId);
 
 		//좋아요, 싫어요 갯수
 		int likeCount = postReactionRepository.countByPostPostIdAndReactionType(postId, LIKE);
@@ -595,7 +598,6 @@ public class PostServiceImpl implements PostService {
 		if(!PostImageValidation.isValidImages(images)) {
 			logger.info("PostServiceImpl updatePost() : 이미지 파일 없음, 업로드 스킵");
 			return PostResponseDTO.convertToPostResponseDTO(post, 
-															commentCount, 
 															userNickname,
 															likeCount,
 															disLikeCount);
@@ -610,7 +612,6 @@ public class PostServiceImpl implements PostService {
 		if (validFiles.isEmpty()) {
 		    logger.info("PostServiceImpl updatePost() : 유효한 이미지 파일 없음, 업로드 스킵");
 			return PostResponseDTO.convertToPostResponseDTO(post, 
-															commentCount, 
 															userNickname,
 															likeCount,
 															disLikeCount);
@@ -640,7 +641,6 @@ public class PostServiceImpl implements PostService {
 
 		logger.info("PostServiceImpl updatePost() Success End");
 		return PostResponseDTO.convertToPostResponseDTO(post, 
-														commentCount, 
 														userNickname,
 														likeCount,
 														disLikeCount);
@@ -982,7 +982,7 @@ public class PostServiceImpl implements PostService {
 	        if (lastAccess == null || now - lastAccess > VIEW_COUNT_EXPIRATION) {
 	            int updatedRows = postRepository.incrementViewCount(postId);
 	            if (updatedRows == 0) {
-	            	logger.error("PostServiceImpl increaseViewCount() NoSuchElementException Error : {}");
+	            	logger.error("PostServiceImpl increaseViewCount() NoSuchElementException : 게시글이 존재하지 않습니다.");
 	                throw new NoSuchElementException("게시글이 존재하지 않습니다.");
 	            }
 	            return now; // 캐시 최신화
@@ -990,7 +990,7 @@ public class PostServiceImpl implements PostService {
 	        return lastAccess; // 유효기간 안 됐으면 기존 시간 유지
 	    });
 
-	    logger.info("PostServiceImpl increaseViewCount() Success End");
+	    logger.info("PostServiceImpl increaseViewCount() End");
 	}
 
 
@@ -1012,35 +1012,6 @@ public class PostServiceImpl implements PostService {
 		logger.info("PostServiceImpl togglePinPost() Success End");
 	}
 
-	// 3개의 핀으로 설정된 공지 게시글 모든 게시판에 보여주기 Service
-	@Override
-	public List<PostListResponseDTO> getTop3PinnedNoticesByBoard() {
-
-		logger.info("PostServiceImpl getTop3PinnedNoticesByBoard() Start");
-
-		Board board = boardRepository.findById(NOTICE_BOARD_ID)
-		                             .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
-
-		Pageable pageable = LIMIT_SIZE;
-	
-		List<Post> posts = postRepository.findTop3PinnedByBoard(board, pageable);
-
-		List<Long> postIds = posts.stream()
-				                  .map(post -> post.getPostId())
-				                  .collect(Collectors.toList());
-
-		Map<Long, Long> likeCountMap = this.getLikeCountMap(postIds);
-		Map<Long, String> nicknameMap = this.getNicknameMap(posts);
-
-		logger.info("PostServiceImpl getTop3PinnedNoticesByBoard() Success End");
-		return posts.stream()
-				    .map(post -> PostListResponseDTO.fromEntity(post, 
-				    		                                    likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
-				    		                                    nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
-				    		                                   ))
-				    .collect(Collectors.toList());
-	}
-
 	// 게시글 단건 조회 Service
 	@Override
 	public PostResponseDTO getPost(Long postId) {
@@ -1056,32 +1027,10 @@ public class PostServiceImpl implements PostService {
 		String userNickname = post.getAuthor().getNickname();
 
 		// 단건 게시글 댓글, 좋아요, 싫어요 집계 조회
-		PostAggregate postAggregate = postRepository.findPostAggregateByPostId(postId)
-				                                    .orElseGet(() -> { 
-				                                    	logger.error("PostServiceImpl getPost() postId : {} ", postId);
-				                                    	return new PostAggregate() {
-				                                    		@Override
-				                                    		public Long getPostId() {
-				                                    			return postId;
-				                                    		}
-				                                    		@Override
-				                                    		public Long getCommentCount() {
-				                                    			return 0L;
-				                                    		}
-				                                    		@Override
-				                                    		public Long getLikeCount() {
-				                                    			return 0L;
-				                                    		}
-				                                    		@Override
-				                                    		public Long getDislikeCount() {
-				                                    			return 0L;
-				                                    		}
-				                                    	};
-				                                    });
+		PostReactionCount postAggregate = postReactionRepository.countReactionsByPostId(postId);
 
 		logger.info("PostServiceImpl getPost() Success End");
 		return PostResponseDTO.convertToPostResponseDTO(post, 
-														postAggregate.getCommentCount().intValue(), 
 														userNickname,
 														postAggregate.getLikeCount().intValue(),
 														postAggregate.getDislikeCount().intValue());
@@ -1098,7 +1047,6 @@ public class PostServiceImpl implements PostService {
 			                        	 logger.error("PostServiceImpl getPostsByBoard() NoSuchElementException boardId : {} ",boardId);
 			                        	 return new NoSuchElementException("게시판이 존재하지 않습니다."); 
 				                     });
-
 
 	    // 인기글 담을 List
 	    List<PostListResponseDTO> topPopularPostsDto = null;
@@ -1125,12 +1073,14 @@ public class PostServiceImpl implements PostService {
 	    	Map<Long, Long> topLikeCountMap = this.getLikeCountMap(topPostIds);
 	    	Map<Long, Long> topCommentCountMap = this.getCommentCountMap(topPostIds);
 	    	Map<Long, String> topNicknameMap = this.getNicknameMap(topPopularPosts);
+	    	Map<Long, String> topThumbnailMap = this.getThumbnails(topPostIds);
 
 	    	topPopularPostsDto = topPopularPosts.stream()
 	    			                            .map(post -> PostListResponseDTO.fromEntity(post, 
 	    			                            		                                    topLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
 	    			                            		                                    topNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
-	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    			                            		                                    topThumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
 	    			                            		                                   ))
 	    			                            .collect(Collectors.toList());
 	    }
@@ -1140,7 +1090,7 @@ public class PostServiceImpl implements PostService {
 		 * Page(현재 페이지에 포함될 게시글 리스트, 페이지당 보여줄 개수, 전체 게시글 수)
 		 * => 전체 댓글 수 기준으로 페이징 처리를 수행
 		 **/
-	    Page<Post> postPage = postRepository.findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(board, PostStatus.ACTIVE, pageable);
+	    Page<Post> postPage = postRepository.findPostsByBoardLatest(board.getBoardId(), pageable);
 
 	    List<Long> postIds = postPage.stream()
 	    		                     .map(post -> post.getPostId())
@@ -1150,13 +1100,15 @@ public class PostServiceImpl implements PostService {
     	Map<Long, Long> normalLikeCountMap = this.getLikeCountMap(postIds);
     	Map<Long, Long> normalCommentCountMap = this.getCommentCountMap(postIds);
     	Map<Long, String> normalNicknameMap = this.getNicknameMap(postPage.getContent());
+    	Map<Long, String> normalThumbnailMap = this.getThumbnails(postIds);
 
 	    // 일반 게시글만 DTO 변환(Page<Post> -> Page<PostListResponseDTO>)
 	    // 'Page'는 'Stream'반환 없이 'map'을 이용해 바로 'Page'반환 가능
 	    Page<PostListResponseDTO> normalPostPage = postPage.map(post -> PostListResponseDTO.fromEntity(post, 
 	    		                                                                                       normalLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
 	    		                                                                                       normalNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
-	    		                                                                                       normalCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    		                                                                                       normalCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    		                                                                                       normalThumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
 	    		                                                                                      ));
 
 		logger.info("PostServiceImpl getPostsByBoard() Success End");
@@ -1203,12 +1155,14 @@ public class PostServiceImpl implements PostService {
 	    	Map<Long, Long> topLikeCountMap = this.getLikeCountMap(topPostIds);
 	    	Map<Long, Long> topCommentCountMap = this.getCommentCountMap(topPostIds);
 	    	Map<Long, String> topNicknameMap = this.getNicknameMap(topPopularPosts);
+	    	Map<Long, String> topThumbnailMap = this.getThumbnails(topPostIds);
 
 	    	topPopularPostsDto = topPopularPosts.stream()
 	    			                            .map(post -> PostListResponseDTO.fromEntity(post, 
 	    			                            		                                    topLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
 	    			                            		                                    topNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
-	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue()
+	    			                            		                                    topCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    			                            		                                    topThumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
 	    			                            		                                   ))
 	    			                            .collect(Collectors.toList());
 	    }
@@ -1217,10 +1171,10 @@ public class PostServiceImpl implements PostService {
 
 	    if (SORT_POPULAR.equalsIgnoreCase(sortBy)) {
 	        // 인기순 정렬: 좋아요 + 댓글 수 내림차순, 그 다음 최신순 정렬 (PostRepository에 쿼리 추가 필요)
-	    	postPage = postRepository.findPopularPostsByBoard(board, pageable);
+	    	postPage = postRepository.findPopularPosts(board.getBoardId(), pageable); 
 	    } else {
 	        // 최신순 정렬: 활성 + 공지글 제외, 최신순 (기존 메서드 활용)
-	    	postPage = postRepository.findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(board, PostStatus.ACTIVE, pageable);
+	    	postPage = postRepository.findPostsByBoardLatest(board.getBoardId(), pageable);
 	    }
 
 	    List<Long> postIds = postPage.stream()
@@ -1241,6 +1195,139 @@ public class PostServiceImpl implements PostService {
 	    logger.info("PostServiceImpl getPostsByBoardSorted() Success End");
 
 	    return PostPageResponseDTO.fromPage(topPopularPostsDto, normalPostPage);
+	}
+	
+	// 자식게시판 키워드 검색
+	@Override
+	public PostBoardPostSearchPageResponseDTO childBoardSearchPosts(Long boardId, String keyword,Pageable pageable) {
+
+		logger.info("PostServiceImpl childBoardSearchPosts() Start");
+
+	    // 자식 게시판 검증
+	    Board childBoard = boardRepository.findById(boardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if (childBoard.getParentBoard() == null) {
+	        throw new IllegalArgumentException("부모 게시판에서는 검색할 수 없습니다.");
+	    }
+
+	    Page<Post> childSearch = postRepository.searchPostsByKeyword(boardId,keyword,pageable);
+
+	    // Map 생성
+	    List<Long> postIds = childSearch.stream()
+	    		                       .map(Post::getPostId)
+	    		                       .toList();
+	    
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> searchPostLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, Long> searchPostCommentCountMap = this.getCommentCountMap(postIds);
+    	Map<Long, String> searchPostNicknameMap = this.getNicknameMap(childSearch.getContent());
+    	Map<Long, String> searchPostThumbnailMap = this.getThumbnails(postIds);
+
+    	
+    	Page<PostListResponseDTO> searchPost = childSearch.map(post -> PostListResponseDTO.fromEntity(post, 
+    			                                        		                                      searchPostLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    			                                        		                                      searchPostNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+    			                                        		                                      searchPostCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    			                                        		                                      searchPostThumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+		logger.info("PostServiceImpl childBoardSearchPosts() End");
+		return PostBoardPostSearchPageResponseDTO.fromDTO(searchPost);
+	}
+
+	// 자식게시판 작성자 검색
+	@Override
+	public PostBoardPostSearchPageResponseDTO childBoardSearchPostsAndAuthor(Long boardId, String nickname, Pageable pageable) {
+
+		logger.info("PostServiceImpl childBoardSearchPostsAndAuthor() Start");
+	    // 자식 게시판 검증
+	    Board childBoard = boardRepository.findById(boardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if (childBoard.getParentBoard() == null) {
+	        throw new IllegalArgumentException("부모 게시판에서는 검색할 수 없습니다.");
+	    }
+
+	    Member member = memberRepository.findByNickname(nickname)
+				                        .orElseThrow(() -> {
+				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+				                        }); 
+	    
+	    Page<Post> childSearch = postRepository.searchPostsByAuthor(boardId,member.getId(),pageable);
+
+	    // Map 생성
+	    List<Long> postIds = childSearch.stream()
+	    		                       .map(Post::getPostId)
+	    		                       .toList();
+	    Map<Long, Long> likeMap = getLikeCountMap(postIds);
+	    Map<Long, String> nicknameMap = getNicknameMap(childSearch.getContent());
+	    Map<Long, Long> commentMap = getCommentCountMap(postIds);
+	    Map<Long, String> thumbnailMap = getThumbnails(postIds);
+	    
+	    // DTO 변환
+	    Page<PostListResponseDTO> dtoPage = childSearch.map(post -> PostListResponseDTO.fromEntity(post,
+	    																						   likeMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																						   nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    																						   commentMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																						   thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+	    logger.info("PostServiceImpl childBoardSearchPostsAndAuthor() End");
+	    return PostBoardPostSearchPageResponseDTO.fromDTO(dtoPage);
+	}
+	
+	// 자식게시판 실시간 검색 API
+	public List<String> childPostTitlesByKeyword(Long boardId, String keyword) {
+	    logger.info("PostServiceImpl ChildPostTitlesByKeyword() Start");
+	    
+	    Board childBoard = boardRepository.findById(boardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if (childBoard.getParentBoard() == null) {
+	        throw new IllegalArgumentException("부모 게시판에서는 검색할 수 없습니다.");
+	    }
+	    Page<String> page = postRepository.autocompleteBoardNormalPosts(boardId, keyword, SEARCH_SIZE);
+
+	    List<String> response = page.getContent();
+		logger.info("PostServiceImpl ChildPostTitlesByKeyword() End");
+	    return response;
+	}
+
+	// 자식게시판 실시간 게시글만 조회
+	@Override
+	public PostBoardPostSearchPageResponseDTO childPostSearchTitlesByKeyword(Long boardId, String title, Pageable pageable) {
+		
+		logger.info("PostServiceImpl childPostSearchTitlesByKeyword() Start");
+
+	    // 자식 게시판 검증
+	    Board childBoard = boardRepository.findById(boardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if (childBoard.getParentBoard() == null) {
+	        throw new IllegalArgumentException("부모 게시판에서는 검색할 수 없습니다.");
+	    }
+
+	    Page<Post> childSearch = postRepository.autocompleteSearchBoardNormalPosts(boardId,title,pageable);
+
+	    // Map 생성
+	    List<Long> postIds = childSearch.stream()
+	    		                       .map(Post::getPostId)
+	    		                       .toList();
+	    
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> searchPostLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, Long> searchPostCommentCountMap = this.getCommentCountMap(postIds);
+    	Map<Long, String> searchPostNicknameMap = this.getNicknameMap(childSearch.getContent());
+    	Map<Long, String> searchPostThumbnailMap = this.getThumbnails(postIds);
+
+    	
+    	Page<PostListResponseDTO> searchPost = childSearch.map(post -> PostListResponseDTO.fromEntity(post, 
+    			                                        		                                      searchPostLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    			                                        		                                      searchPostNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+    			                                        		                                      searchPostCommentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+    			                                        		                                      searchPostThumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+		logger.info("PostServiceImpl childBoardSearchPosts() End");
+		return PostBoardPostSearchPageResponseDTO.fromDTO(searchPost);
 	}
 
 	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE상태) Service
@@ -1276,7 +1363,44 @@ public class PostServiceImpl implements PostService {
 		return MainPostPageResponseDTO.fromPage(dtoPage);
 	}
 
-	// 작성자별 게시글 조회 Service
+	// 통합검색 실시간 자동완성
+	public List<String> getPostTitlesByKeyword(String keyword) {
+	    return postRepository.searchTitlesByKeyword(keyword, SEARCH_SIZE);
+	}
+	
+	// 통합검색 실시간 게시글만 조회
+	@Override
+	public MainPostPageResponseDTO getSearchPostsByAuthorNickname(String title, Pageable pageable) {
+
+		logger.info("PostServiceImpl getSearchPostsByAuthorNickname() Start");
+
+		Page<Post> posts = postRepository.autoSearchByKeyword(title,pageable);
+
+		List<Long> postIds = posts.stream()
+                                  .map(post -> post.getPostId())
+                                  .collect(Collectors.toList());
+
+		// 집계 조회 (좋아요, 댓글 수, 닉네임, 대표이미지)
+		Map<Long, Long> likeCountMap = this.getLikeCountMap(postIds);
+		Map<Long, Long> commentCountMap = this.getCommentCountMap(postIds);
+		Map<Long, String> nicknameMap = this.getNicknameMap(posts.getContent());
+		Map<Long, String> thumbnailMap = this.getThumbnails(postIds);
+		
+		Page<PostListResponseDTO> dtoPage = posts.map(post -> PostListResponseDTO.fromEntity(post, 
+																					 likeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+																					 nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+																					 commentCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+																					 thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)
+		                                                                          )); 
+
+		logger.info("PostServiceImpl getSearchPostsByAuthorNickname() End");
+		//Stream<T>와 달리, Page<T>는 데이터를 'map'을 이용히여,
+		//'가공(원하는 자료형으로 변환)' 할 수 있다. 
+		return MainPostPageResponseDTO.fromPage(dtoPage);
+
+	}
+
+	// 통합 작성자별 게시글 조회 Service
 	@Override
 	public MainPostPageResponseDTO getPostsByAuthorNickname(String nickname, Pageable pageable) {
 
@@ -1366,6 +1490,103 @@ public class PostServiceImpl implements PostService {
 
 		return PostNoticeBoardResponseDTO.from(topNotices, noticePostsDto);
 	}
+	
+	// 공지게시판 키워드 검색
+	@Override
+	public PostBoardPostSearchPageResponseDTO noticeBoardSearchPosts(String keyword, Pageable pageable) {
+		logger.info("PostServiceImpl noticeBoardSearchPosts() Start");
+
+		Page<Post> noticeSearch = postRepository.searchNoticePostsByKeyword(keyword,pageable);
+
+		List<Long> postIds = noticeSearch.stream()
+				                         .map(post -> post.getPostId())
+				                         .collect(Collectors.toList());
+
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> searchPostLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, String> searchPostNicknameMap = this.getNicknameMap(noticeSearch.getContent());
+
+	    // Page<PostListResponseDTO> 변환
+	    Page<PostListResponseDTO> noticePostsDto = noticeSearch.map(post -> PostListResponseDTO.fromEntity(post, 
+	    																								  searchPostLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																								  searchPostNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+                																						 ));
+
+		logger.info("PostServiceImpl noticeBoardSearchPosts() End");
+		return PostBoardPostSearchPageResponseDTO.fromDTO(noticePostsDto);
+	}
+
+	// 공지게시판 키워드 자동완성
+	@Override
+	public List<String> noticePostTitlesByKeyword(String keyword) {
+
+		logger.info("PostServiceImpl noticePostTitlesByKeyword() Start");
+
+	    Page<String> page = postRepository.autoCompleteNoticeTitles(keyword, SEARCH_SIZE);
+
+	    List<String> response = page.getContent();
+
+		logger.info("PostServiceImpl noticePostTitlesByKeyword() End");
+
+		return response;
+	}
+
+	// 공지게시판 실시간 게시글만 조회
+	@Override
+	public PostBoardPostSearchPageResponseDTO autocompleteSearchPostsByNoticeBoard(String title, Pageable pageable) {
+		logger.info("PostServiceImpl autocompleteSearchPostsByNoticeBoard() Start");
+
+		Page<Post> noticeSearch = postRepository.autoCompleteSearchNoticeTitles(title,pageable);
+
+		List<Long> postIds = noticeSearch.stream()
+				                         .map(post -> post.getPostId())
+				                         .collect(Collectors.toList());
+
+    	// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+    	Map<Long, Long> searchPostLikeCountMap = this.getLikeCountMap(postIds);
+    	Map<Long, String> searchPostNicknameMap = this.getNicknameMap(noticeSearch.getContent());
+
+	    // Page<PostListResponseDTO> 변환
+	    Page<PostListResponseDTO> noticePostsDto = noticeSearch.map(post -> PostListResponseDTO.fromEntity(post, 
+	    																								  searchPostLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																								  searchPostNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+                																						 ));
+
+		logger.info("PostServiceImpl autocompleteSearchPostsByNoticeBoard() End");
+		return PostBoardPostSearchPageResponseDTO.fromDTO(noticePostsDto);
+	}
+
+	// 공지게시판 작성자 검색
+	@Override
+	public PostBoardPostSearchPageResponseDTO noticeBoardSearchPostsAndAuthor(String nickname,Pageable pageable) {
+
+		logger.info("PostServiceImpl noticeBoardSearchPostsAndAuthor() Start");
+
+
+	    Member member = memberRepository.findByNickname(nickname)
+				                        .orElseThrow(() -> {
+				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
+				                        });
+
+	    Page<Post> noticeSearch = postRepository.searchNoticePostsByAuthor(member,pageable);
+
+		List<Long> postIds = noticeSearch.stream()
+                                         .map(post -> post.getPostId())
+                                         .collect(Collectors.toList());
+
+		// 집계 조회 (좋아요, 댓글, 작성자 닉네임)
+		Map<Long, Long> searchPostLikeCountMap = this.getLikeCountMap(postIds);
+		Map<Long, String> searchPostNicknameMap = this.getNicknameMap(noticeSearch.getContent());
+		
+		// Page<PostListResponseDTO> 변환 List<> -> Page<> 변환시 stream() 불필요 Page 내부적으로 스트림 처리.
+		Page<PostListResponseDTO> noticePostsDto = noticeSearch.map(post -> PostListResponseDTO.fromEntity(post, 
+																						  searchPostLikeCountMap.getOrDefault(post.getPostId(), 0L).intValue(),
+																						  searchPostNicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음")
+																						 ));
+		
+		logger.info("PostServiceImpl noticeBoardSearchPosts() End");
+		return PostBoardPostSearchPageResponseDTO.fromDTO(noticePostsDto);
+	}
 
 	// 부모게시판(자식게시판 인기글 보여주기(60일기반으로, 가중치계산하여 내림차순)
 	@Override
@@ -1373,6 +1594,15 @@ public class PostServiceImpl implements PostService {
 
 	    logger.info("PostServiceImpl getPostsByParentBoard() Start");
 
+	    // 0. 부모 게시판인지 검증
+	    Board parentBoard = boardRepository.findById(parentBoardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if (parentBoard.getParentBoard() != null) {
+	        // 부모가 있으면 자식 게시판 → 잘못된 요청
+	        throw new IllegalArgumentException("자식 게시판에서는 호출할 수 없는 API입니다.");
+	    }
+	    
 	    // 현재 페이지
 	    int currentPage = pageable.getPageNumber();
 
@@ -1431,6 +1661,171 @@ public class PostServiceImpl implements PostService {
 		return PostParentBoardPostPageResponseDTO.fromDTO(topNotices, popularPostsDto);
 	}
 
+	// 부모 게시판 키워드 검색 서비스
+	@Override
+	public PostBoardPostSearchPageResponseDTO searchPostsByParentBoard(Long parentBoardId, String keyword, Pageable pageable) {
+
+	    logger.info("PostServiceImpl searchPostsByParentBoard() Start");
+	    
+	    Board parentBoard = boardRepository.findById(parentBoardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if(parentBoard.getParentBoard() != null) {
+	        throw new IllegalArgumentException("자식 게시판에서는 호출할 수 없는 API입니다.");
+	    }
+
+	    // 자식 게시판 ID 조회
+	    List<Long> childBoardIds = boardRepository.findChildBoardIds(parentBoardId);
+
+	    // Repository 호출
+	    Page<Post> searchPage = postRepository.searchParentBoardPosts(childBoardIds,
+	             													  keyword,
+	             													  popularLikeThreshold,
+	             													  popularNetLikeThreshold,
+	             													  parentPopularDayLimit,
+	             													  pageable);
+
+	    // ID 리스트 및 Map 생성
+	    List<Long> searchIds = searchPage.stream()
+	    								 .map(Post::getPostId)
+	    								 .toList();
+	    Map<Long, Long> likeMap = getLikeCountMap(searchIds);
+	    Map<Long, String> nicknameMap = getNicknameMap(searchPage.getContent());
+	    Map<Long, Long> commentMap = getCommentCountMap(searchIds);
+	    Map<Long, String> thumbnailMap = getThumbnails(searchIds);
+
+	    // DTO 변환
+	    Page<PostListResponseDTO> searchDtoPage = searchPage.map(post -> PostListResponseDTO.fromEntity(post,
+	                    																				likeMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	                    																				nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	                    																				commentMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	                    																				thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+	    logger.info("PostServiceImpl searchPostsByParentBoard() Success End");
+	    // 공지글 리스트는 null로 전달
+	    return PostBoardPostSearchPageResponseDTO.fromDTO(searchDtoPage);
+	}
+
+	// 부모게시판 실시간 검색 조회 서비스
+	public List<String> postPostTitlesByKeyword(Long parentBoardId, String keyword) {
+	    logger.info("PostServiceImpl PostPostTitlesByKeyword() Start");
+	    
+	    Board parentBoard = boardRepository.findById(parentBoardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+	    if(parentBoard.getParentBoard() != null) {
+	        throw new IllegalArgumentException("자식 게시판에서는 호출할 수 없는 API입니다.");
+	    }
+
+	    // 자식게시판 조회
+	    List<Long> childBoardIds = boardRepository.findChildBoardIds(parentBoardId);
+
+	    Page<String> page = postRepository.autocompleteParentBoardPopularPosts(childBoardIds, 
+	    		                                                               keyword, 
+	    		                                                               parentPopularDayLimit,
+	    		                                                               popularLikeThreshold, 
+	    		                                                               popularNetLikeThreshold, 
+	    		                                                               SEARCH_SIZE);
+
+	    List<String> response = page.getContent();
+
+		logger.info("PostServiceImpl PostPostTitlesByKeyword() Start");
+	    return response;
+	}
+	
+	@Override
+	public PostBoardPostSearchPageResponseDTO autocompleteSearchPostsByParentBoard(Long parentBoardId, String title,Pageable pageable) {
+	    logger.info("PostServiceImpl searchPostsByParentBoard() Start");
+	    
+	    Board parentBoard = boardRepository.findById(parentBoardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+
+	    if(parentBoard.getParentBoard() != null) {
+	        throw new IllegalArgumentException("자식 게시판에서는 호출할 수 없는 API입니다.");
+	    }
+
+	    // 자식 게시판 ID 조회
+	    List<Long> childBoardIds = boardRepository.findChildBoardIds(parentBoardId);
+
+	    // Repository 호출
+	    Page<Post> searchPage = postRepository.autocompleteSearchParentBoardPopularPosts(childBoardIds,
+	    															  title,
+	    															  parentPopularDayLimit,
+	    															  popularLikeThreshold,
+	    															  popularNetLikeThreshold,
+	             													  pageable);
+
+	    // ID 리스트 및 Map 생성
+	    List<Long> searchIds = searchPage.stream()
+	    								 .map(Post::getPostId)
+	    								 .toList();
+	    Map<Long, Long> likeMap = getLikeCountMap(searchIds);
+	    Map<Long, String> nicknameMap = getNicknameMap(searchPage.getContent());
+	    Map<Long, Long> commentMap = getCommentCountMap(searchIds);
+	    Map<Long, String> thumbnailMap = getThumbnails(searchIds);
+
+	    // DTO 변환
+	    Page<PostListResponseDTO> searchDtoPage = searchPage.map(post -> PostListResponseDTO.fromEntity(post,
+	                    																				likeMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	                    																				nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	                    																				commentMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	                    																				thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+	    logger.info("PostServiceImpl searchPostsByParentBoard() Success End");
+	    // 공지글 리스트는 null로 전달
+	    return PostBoardPostSearchPageResponseDTO.fromDTO(searchDtoPage);
+	}
+
+	// 부모게시판 작성자 검색 서비스
+	@Override
+	public PostBoardPostSearchPageResponseDTO searchPostsByParentBoardAndAuthor(Long parentBoardId, String nickname, Pageable pageable) {
+
+	    logger.info("PostServiceImpl searchPostsByParentBoardAndAuthor() Start");
+
+	    // 부모 게시판 검증
+	    Board parentBoard = boardRepository.findById(parentBoardId)
+	                                       .orElseThrow(() -> new NoSuchElementException("게시판이 존재하지 않습니다."));
+	    if (parentBoard.getParentBoard() != null) {
+	        throw new IllegalArgumentException("자식 게시판에서는 호출할 수 없는 API입니다.");
+	    }
+
+	    // 자식 게시판 ID 조회
+	    List<Long> childBoardIds = boardRepository.findChildBoardIds(parentBoardId);
+	    if (childBoardIds.isEmpty()) {
+	        return PostBoardPostSearchPageResponseDTO.fromDTO(Page.empty(pageable));
+	    }
+
+	    Member member = memberRepository.findByNickname(nickname)
+	    								.orElseThrow(() -> {
+	    									return new NoSuchElementException("회원이 존재하지 않습니다.");
+	    								});
+	    // Repository 호출
+	    Page<Post> searchPage = postRepository.searchParentBoardPostsByAuthor(childBoardIds,
+	    																	  member.getId(),
+	    																	  popularLikeThreshold,
+	    																	  popularNetLikeThreshold,
+	    																	  parentPopularDayLimit,
+	    																	  pageable);
+
+	    // Map 생성
+	    List<Long> postIds = searchPage.stream()
+	    		                       .map(Post::getPostId)
+	    		                       .toList();
+	    Map<Long, Long> likeMap = getLikeCountMap(postIds);
+	    Map<Long, String> nicknameMap = getNicknameMap(searchPage.getContent());
+	    Map<Long, Long> commentMap = getCommentCountMap(postIds);
+	    Map<Long, String> thumbnailMap = getThumbnails(postIds);
+
+	    // DTO 변환
+	    Page<PostListResponseDTO> dtoPage = searchPage.map(post -> PostListResponseDTO.fromEntity(post,
+	    																						  likeMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																						  nicknameMap.getOrDefault(post.getAuthor().getId(), "알 수 없음"),
+	    																						  commentMap.getOrDefault(post.getPostId(), 0L).intValue(),
+	    																						  thumbnailMap.getOrDefault(post.getPostId(), DEFAULT_THUMBNAIL_URL)));
+
+	    logger.info("PostServiceImpl searchPostsByParentBoardAndAuthor() End");
+	    return PostBoardPostSearchPageResponseDTO.fromDTO(dtoPage);
+	}
+
 	// 게시글 배치 삭제 
 	// 조건 : 수정일자 기준으로 5년 지나고, 조회수가 100이하이며, 
 	//       공지글이 아니며, ACTIVE상태인 게시글, pin으로 고정된 글 X
@@ -1453,6 +1848,7 @@ public class PostServiceImpl implements PostService {
 		logger.info("PostServiceImpl deleteDeadPost() Success End");
 		return postRepository.deleteDeadNoticePost(cutDate);
 	}
+
 
 	//*************************************************** Service END ***************************************************
 

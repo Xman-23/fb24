@@ -1,6 +1,5 @@
 package com.example.demo.service.member.memberauth;
 
-import java.time.LocalDateTime;
 
 
 
@@ -13,13 +12,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.domain.member.Member;
-import com.example.demo.domain.member.memberenums.MemberGradeLevel;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.dto.member.memberauth.AuthTokenResponseDTO;
 import com.example.demo.jwt.JwtUtil;
 import com.example.demo.repository.member.MemberRepository;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -109,8 +106,8 @@ public class MemberAuthService {
         // 'email'을 활용하여 다시 '액세서 토큰' 생성
         String newAccessToken = jwtUtil.generateToken(email,dbRole);
 
-        logger.info("AuthService refreshAccessToken() Success End");
-        return new AuthTokenResponseDTO(newAccessToken, null, dbRole);
+        logger.info("AuthService refreshAccessToken() End");
+        return new AuthTokenResponseDTO(newAccessToken, trimRefreshToken, dbRole);
     }
 
 

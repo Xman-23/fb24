@@ -37,7 +37,7 @@ public class JwtUtil {
 	     Date now = new Date(); // 현재 시간
 	     Date expiryDate = new Date(now.getTime() + accessExpirationMs); // 만료 시간 계산
 	
-	     // JWT 생성: 이메일을 subject로 하고, 발급 시간과 만료 시간을 설정
+	     // JWT 액세스 토큰 (페이로드 생성): 이메일을 subject로 하고, 발급 시간과 만료 시간을 설정
 	     String token = Jwts.builder()
 	             .setSubject(email) // token '주체'를 'email'로 설정
 	             .claim("role", role.name())
@@ -54,7 +54,7 @@ public class JwtUtil {
 	 public String generateRefreshToken(String email) {
 	     Date now = new Date();
 	     Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
-	
+	     // 리프레쉬 토큰 (페이로드 생성)
 	     String token = Jwts.builder()
 	             .setSubject(email) // token '주체'를 'email'로 설정
 	             .setIssuedAt(now) // 현재 날짜를 기준으로

@@ -15,7 +15,7 @@ public class CommentValidation {
 			return false;
 		}
 
-		return "recent".equalsIgnoreCase(sortBy) || "like".equalsIgnoreCase(sortBy);
+		return "recent".equalsIgnoreCase(sortBy) || "like".equalsIgnoreCase(sortBy) || "normal".equalsIgnoreCase(sortBy);
 	}
 
 }

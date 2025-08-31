@@ -8,6 +8,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
+import com.example.demo.domain.post.postreport.PostReport;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,7 +26,9 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /*
 	Entity : post_reaction
@@ -56,9 +59,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 //등록,수정 일자를 자동관리하기 위한 어노테이션
 @EntityListeners(AuditingEntityListener.class)
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class PostReaction {
 
 	@Id
+	@EqualsAndHashCode.Include
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "reaction_id")
 	private Long reactionId;

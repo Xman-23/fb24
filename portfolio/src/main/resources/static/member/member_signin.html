@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>로그인</title>
 <!-- jQuery -->
@@ -11,9 +12,9 @@
 <script src="/js/common/visitor/visitor.js"></script>
 <script src="/js/member/get_member.js"></script>
 <!-- CSS -->
-<link rel="stylesheet" href="css/common/common_header.css">
-<link rel="stylesheet" href="css/member/member_login_body/member_login_body.css">
-<link rel="stylesheet" href="css/member/member_footer.css">
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/member/member_login_body/member_login_body.css">
+<link rel="stylesheet" href="/css/member/member_footer.css">
 </head>
 <body>
 	<!-- 헤더 영역 -->
@@ -47,6 +48,7 @@
                     <option value="nate.com">nate.com</option>
                     <option value="kakao.com">kakao.com</option>
                     <option value="hotmail.com">hotmail.com</option>
+                    <option value="direct">직접 입력</option>
 			    </select>
 			</div>
         	<!-- 비밀번호 -->
@@ -91,12 +93,20 @@
 
 	// 이메일 셀렉트 박스 클릭 
 	function form_email_chang() {
+		$("#email2").val("").prop("disabled", true);
 		// select 박스 변경 시 
 		$("#email-select").on("change", function() {
-			// 해당 태그의 value가져오기
+			// 해당 태그(email-select)의 value가져오기
 		    var domain = $(this).val();
-			// 'email-domain2' input value에 domain 값 덮어쓰기 
-		    $("#email2").val(domain);
+
+			// 직접 입력 옵션일 때
+			if(domain ==="direct") {
+				$("#email2").val("").prop("disabled", false).focus();
+			} else {
+				// 다른 옵션 선택 시
+				// 'email-domain2' input value에 domain 값 덮어쓰기 
+			    $("#email2").val(domain).prop("disabled", true);
+			}
 		});
 	}
 
@@ -147,6 +157,8 @@
 		        data: JSON.stringify(loginData),
 		        success: function(res) {
 		            localStorage.setItem('accessToken', res.accessToken);
+		            localStorage.setItem('refreshToken', res.refreshToken);
+		            localStorage.setItem('role', res.role);
 		            alert('로그인 성공!');
 		            window.location.href = '/';
 		        },

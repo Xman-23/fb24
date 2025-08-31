@@ -9,14 +9,13 @@
 <!-- jQuery -->
 <!-- Common -->
 <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
-<script src="/js/common/member/member_login_or_logout.js"></script>
 <script src="/js/common/board/board.js"></script>
 <script src="/js/common/visitor/visitor.js"></script>
 <!-- Common -->
 <!-- CSS -->
-<link rel="stylesheet" href="css/common/common_header.css">
-<link rel="stylesheet" href="css/member/member_me/member_me.css">
-<link rel="stylesheet" href="css/member/member_footer.css">
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/member/member_me/member_me.css">
+<link rel="stylesheet" href="/css/member/member_footer.css">
 <!-- CSS -->
 </head>
 <body>
@@ -47,6 +46,10 @@
 	        <p>회원 등급: <span id="memberGradeLevel"></span></p>
 	        <p>게시글 알림: <span id="postNotification"></span></p>
 	        <p>댓글 알림: <span id="commentNotification"></span></p>
+	        <p id="adminSection" style="display:none;">관리자 전용 정보: 
+	        	<span id="adminSectionSpan">여기에 필요한 내용</span>
+	        	<button class="boardBtn" id="createBoardBtn">부모 게시판 만들기</button>
+	        </p>
 	    </div>
 	    <button type="button" id="update_info_btn">회원정보 변경</button>
 		<button type="button" id="withdraw-btn">회원 탈퇴</button>
@@ -73,6 +76,7 @@
 	
 	// 회원탈퇴 API
 	member_withdraw_api();
+	
 	//*************************************************** 페이지 초기화  End ***************************************************/
 
 	//*************************************************** Function  Start ***************************************************/
@@ -84,6 +88,21 @@
         window.location.href = "/"; // 메인 페이지 이동
     }
 
+	// 관리자 전용 섹션 표시
+	function showAdminSection() {
+	    var role = localStorage.getItem('role'); // ROLE_USER, ROLE_ADMIN
+	    if (role === 'ROLE_ADMIN') {
+	    	$('#adminSectionSpan').text(role);
+	        $('#adminSection').show();
+	    } else {
+	        $('#adminSection').hide(); // 혹시 안전하게
+	    }
+	}
+
+
+	$("#createBoardBtn").off("click").click(() => {
+		window.location.href = "/board_parent_create"; // 부모게시판 생성
+	})
 	//*************************************************** Function End***************************************************/
 
 	//*************************************************** API START ***************************************************//
@@ -94,6 +113,7 @@
 	        url: '/members/me',
 	        type: 'GET',
 	        success: function(res) {
+	        	console.log(res);
 	            $('#username').text(res.username);
 	            $('#nickname').text(res.nickname);
 	            $('#phoneNumber').text(res.phoneNumber);
@@ -108,7 +128,7 @@
 	            	.text(res.commentNotificationEnabled ? '활성' : '비활성')
 	            	.removeClass('notification-active notification-inactive')
 	            	.addClass(res.commentNotificationEnabled ? 'notification-active' : 'notification-inactive');
-
+	            showAdminSection();
 	        },
 	        error: function(xhr) {
 	            $('#member-info').html(`<p style="color:red;">${xhr.responseText || '회원정보를 가져오는데 실패했습니다.'}</p>`);
@@ -117,7 +137,7 @@
 	}
 
 	function update_info() {
-		$("#update_info_btn").on('click',function () {
+		$("#update_info_btn").off('click').on('click',function () {
 			ajaxWithToken({
 				url: '/members/me',
 	        	type: 'GET',

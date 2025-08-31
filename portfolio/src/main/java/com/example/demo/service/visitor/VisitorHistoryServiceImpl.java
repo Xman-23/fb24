@@ -57,7 +57,7 @@ public class VisitorHistoryServiceImpl implements VisitorHistoryService {
 
 
 	// 쿠키 또는 세션에서 visitorId 가져오기/ 없으면 생성
-    // 쿠키가 생성되는 경우의수 1. 처음방문, 2. 쿠키 만료 후 재방분, 3.사용자가 쿠키를 삭제한 경우
+    // 쿠키가 생성되는 경우의수 1. 처음방문, 2. 쿠키 만료 후 재방문, 3.사용자가 쿠키를 삭제한 경우
     // Visitor ID 가져오거나 생성
     private String getOrCreateVisitorId(HttpServletRequest request, HttpServletResponse response) {
 
@@ -116,13 +116,13 @@ public class VisitorHistoryServiceImpl implements VisitorHistoryService {
     	// 쿠키의 생명(3개월)이 있는동안에는 '동일한 visitorId'을 
     	// 현재시간(LocalDateTime.now())을 기준으로 DB에 레코드 추가
         VisitorHistory history = VisitorHistory.builder()
-                .visitorId(visitorId)
-                .member(member)
-                .ipAddress(resolveClientIp(request))
-                .userAgent(request.getHeader("User-Agent"))
-                .visitTime(LocalDateTime.now())
-                .loginTime(member == null ? null : LocalDateTime.now())
-                .build();
+                                               .visitorId(visitorId)
+                                               .member(member)
+                                               .ipAddress(resolveClientIp(request))
+                                               .userAgent(request.getHeader("User-Agent"))
+                                               .visitTime(LocalDateTime.now())
+                                               .loginTime(member == null ? null : LocalDateTime.now())
+                                               .build();
 
         visitorHistoryRepository.save(history);
 

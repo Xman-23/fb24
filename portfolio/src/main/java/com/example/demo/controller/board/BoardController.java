@@ -47,7 +47,7 @@ public class BoardController {
 	@PostMapping("/admin/create-board")
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public ResponseEntity<?> createBoard(@RequestBody @Valid BoardCreateRequestDTO boardCreateRequestDTO,
-															 BindingResult bindingResult) {
+										 BindingResult bindingResult) {
 		/*
 		 * 유효성 검사 조건 요약 *
 		 상황 | @Valid | @NotBlank | BindingResult | 결과 설명
@@ -255,7 +255,6 @@ public class BoardController {
 
     	logger.info("BoardController getBoardFullHierarchy() Start");
 
-    	logger.info("BoardController getBoardFullHierarchy() ==========> boardService.getBoardFullHierarchy()");
     	List<BoardHierarchyResponseDTO> response  = null;
     	try {
 			response = boardService.getBoardFullHierarchy();
@@ -263,7 +262,6 @@ public class BoardController {
 			logger.error("BoardController getBoardFullHierarchy NoSuchElementException Error : "+e.getMessage());
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
 		}
-    	logger.info("BoardController getBoardFullHierarchy() <========== boardService.getBoardFullHierarchy()");
 
     	if(response.isEmpty()) {
     		logger.error("게시판 계층 구조가 존재하지 않습니다.");

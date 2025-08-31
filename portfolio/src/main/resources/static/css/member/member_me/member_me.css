@@ -46,6 +46,23 @@ main h2 {
     font-weight: bold;
 }
 
+
+.boardBtn {
+    padding: 10px 20px;
+    background-color: #fff; /* 파란색 버튼 */
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 6px;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.boardBtn:hover {
+    background-color: #e6f2ff; /* 연한 파란색 변경 */
+    transform: translateY(-2px); /* 살짝 올라오는 효과 */
+}
+
 /* ============================== 버튼 ============================== */
 
 #update_info_btn {

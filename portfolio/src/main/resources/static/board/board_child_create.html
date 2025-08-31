@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자식 게시판 만들기</title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- jQuery Setting -->
+<!-- js Setting -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/board/board_common.js"></script>
+<!-- js Setting -->
+<!-- CSS Setting -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/board/board_create.css">
+<link rel="stylesheet" href="/css/common/common_footer.css">
+<!-- CSS Setting -->
+</head>
+<body>
+	<header id="header">
+	    <div class="header-top">
+	        <div id="logo"><a href="/">Log</a></div>
+	        <div id="user-actions">
+	            <button id="login-btn">로그인</button>
+	            <button id="register-btn">회원가입</button>
+	        </div>
+	    </div>
+	    <nav id="board-tabs">
+	        <ul id="parent-boards"></ul>
+	    </nav>
+	</header>
+
+	<!-- 자식 게시판 만들기 -->
+	<main>
+		<h2>자식 게시판 생성</h2>
+	
+	    <form id="create-board-form">
+	        <label for="board-name">게시판 이름:</label><br>
+	        <input type="text" id="board-name" name="name" placeholder="게시판 이름" maxlength="100" required><br>
+	
+	        <label for="board-description">게시판 설명:</label><br>
+	        <textarea id="board-description" name="description" placeholder="게시판 설명" maxlength="255"></textarea><br>
+	
+	        <button type="submit" onsubmit="return false;">생성</button>
+	    </form>
+	
+	    <div id="create-result" style="margin-top:20px;"></div>
+	</main>
+
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	        <div class="footer-spacer"></div>
+	    </div>
+	</footer>
+</body>
+<script>
+	// boardId 뽑기
+	const pathParts = window.location.pathname.split("/");
+	const boardId = Number(pathParts[pathParts.length - 1]);
+	
+	$('#create-board-form').on('submit', function(e) {
+	    e.preventDefault();
+	
+	    const name = $('#board-name').val().trim();
+	    const description = $('#board-description').val().trim();
+	
+	    if(!name) {
+	        alert("게시판 이름은 필수입니다.");
+	        return;
+	    }
+	
+	    const requestData = {
+	        name: name,
+	        description: description,
+	        parentBoardId: boardId  // 부모 게시판
+	    };
+	
+	    ajaxWithToken({
+	        url: '/boards/admin/create-board',
+	        type: 'POST',
+	        contentType: 'application/json',
+	        // 'requestData' JSON 문자열화(stringify)
+	        data: JSON.stringify(requestData),
+	        success: function(res) {
+	        	console.log("box box")
+	            $('#create-result').html(`<span style="color:green;">게시판이 생성되었습니다: ${res.name}</span>`);
+	            // 입력 초기화
+	            $('#board-name').val('');
+	            $('#board-description').val('');
+	        },
+	        error: function(xhr) {
+	            $('#create-result').html(`<span style="color:red;">${xhr.responseText || '게시판 생성 실패'}</span>`);
+	        }
+	    });
+	});
+</script>
+</html>

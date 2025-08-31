@@ -28,7 +28,13 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 		  )
 	Integer findMaxSortOrder();
 
-	List<Board> findByParentBoardIsNull();
+	@Query(
+		    "SELECT b "
+		  + "  FROM Board b "
+		  + " WHERE b.parentBoard IS NULL "
+		  + "   AND b.isActive = true "
+		  )
+	List<Board> findActiveParentBoards();
 
 	// '부모게시판의ID'를 가진 '자식게시판들의ID' 조회
 	@Query(

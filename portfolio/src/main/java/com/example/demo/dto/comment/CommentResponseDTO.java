@@ -2,15 +2,15 @@ package com.example.demo.dto.comment;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.comment.commentenums.CommentStatus;
-import com.example.demo.service.comment.CommentServiceImpl;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,7 +54,7 @@ public class CommentResponseDTO {
 
     private String content;
 
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     private List<CommentResponseDTO> childComments; // 대댓글 리스트
 
@@ -68,13 +68,94 @@ public class CommentResponseDTO {
 
     private CommentStatus status;
 
-    // "삭제된 댓글입니다", "신고 받은 댓글입니다" 등
-    private String deletedMessage; 
-
     private static final Logger logger = LoggerFactory.getLogger(CommentResponseDTO.class);
+    
+    
+    // 복사 생성자
+    public CommentResponseDTO(CommentResponseDTO other) {
+        this.commentId = other.commentId;
+        this.postId = other.postId;
+        this.parentCommentId = other.parentCommentId;
+        this.authorId = other.authorId;
+        this.authorNickname = other.authorNickname;
+        this.content = other.content;
+        this.createdAt = other.createdAt;
+        this.likeCount = other.likeCount;
+        this.dislikeCount = other.dislikeCount;
+        this.isPinned = other.isPinned;
+        this.status = other.status;
+        this.childComments = new ArrayList<>(other.childComments);
+
+        // 상태에 맞는 필드 보정 처리
+        handleCommentStatus(other);
+    }
+
+ // 상태에 맞는 필드 설정
+    private void handleCommentStatus(CommentResponseDTO other) {
+        switch (other.status) {
+            case ACTIVE:
+                this.updatedAgo = calculateUpdatedAgo(other.createdAt, other.updatedAgo);
+                break;
+
+            case DELETED:
+                this.content = "삭제된 댓글입니다.";
+                this.createdAt = null;
+                this.updatedAgo = null;
+                break;
+
+            case HIDDEN:
+                this.content = "신고받은 댓글입니다.";
+                this.createdAt = null;
+                this.updatedAgo = null;
+                break;
+        }
+    }
+    
+    
+    // ==============================
+    // updatedAgo 계산
+    // ==============================
+    private String calculateUpdatedAgo(String createdAtStr, String updatedAtStr) {
+        if (createdAtStr == null || updatedAtStr == null) return null;
+
+        // createdAt / updatedAt이 String → LocalDateTime으로 변환된다고 가정
+        LocalDateTime createdAt = LocalDateTime.parse(createdAtStr);
+        LocalDateTime updatedAt = LocalDateTime.parse(updatedAtStr);
+
+        if (updatedAt.equals(createdAt)) {
+            return null; // 수정되지 않음
+        }
+
+        Duration duration = Duration.between(createdAt, updatedAt).abs();
+        long minutes = duration.toMinutes();
+
+        if (minutes < 1) {
+            return "방금 전 수정됨";
+        } else if (minutes < 60) {
+            return minutes + "분 전 수정됨";
+        } else if (minutes < 1440) {
+            return duration.toHours() + "시간 전 수정됨";
+        } else {
+            long days = duration.toDays();
+            if (days < 10) {
+                return days + "일 전 수정됨";
+            } else if (days < 365) {
+                return (days / 7) + "주 전 수정됨";
+            } else {
+                return (days / 365) + "년 전 수정됨";
+            }
+        }
+    }
+
+    // 시간 변경
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // Entity -> DTO 변환 메서드
-    public static CommentResponseDTO fromEntity(Comment comment, int likeCount, int dislikeCount, boolean isPinned, String authorNickname) {
+    public static CommentResponseDTO fromEntity(Comment comment, 
+    		                                    int likeCount, 
+    		                                    int dislikeCount, 
+    		                                    boolean isPinned, 
+    		                                    String authorNickname) {
     	logger.info("CommentResponseDTO fromEntity() Start");
     	// 여기에 시간 포맷 추가
         CommentResponseDTO dto = CommentResponseDTO.builder()
@@ -82,7 +163,7 @@ public class CommentResponseDTO {
                                                    .postId(comment.getPost().getPostId())
                                                    .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null)
                                                    .authorId(comment.getMember().getId())
-                                                   .createdAt(comment.getCreatedAt())
+                                                   .createdAt(comment.getCreatedAt().format(formatter))
                                                    .likeCount(likeCount)
                                                    .dislikeCount(dislikeCount)
                                                    .isPinned(isPinned)
@@ -90,52 +171,6 @@ public class CommentResponseDTO {
                                                    .authorNickname(authorNickname)
                                                    .content(comment.getContent())
                                                    .build();
-
-        // 수정된 시간과 생성 시간 비교해서 updatedAg
-        if(CommentStatus.ACTIVE.equals(comment.getStatus())) {
-            if (!comment.getUpdatedAt().equals(comment.getCreatedAt())) {
-            	// Duration.between(A,B)는 -> A-B가 아닌, B-A로 계산이 된다
-                Duration duration = Duration.between(comment.getCreatedAt(), comment.getUpdatedAt()).abs();
-                long minutes = duration.toMinutes();
-                if(minutes < 1){ 
-                	dto.setUpdatedAgo("방금 전 수정됨");
-            	}else if (minutes < 60) {
-                    dto.setUpdatedAgo(minutes + "분 전 수정됨");
-                } else if ( minutes < 1440){
-                    long hours = duration.toHours();
-                    dto.setUpdatedAgo(hours + "시간 전 수정됨");
-                } else {
-                	// '일' 기준
-                	long days = duration.toDays();
-
-                	// '10일' 까지만 '일'로 취급하여 변경
-                	if(days < 10) {
-                		dto.setUpdatedAgo(days+ "일 전 수정됨");
-                	}else if(days < 365) {
-                		// '10'일 이후부터는 '주'로 취급하여 변경
-                		long weeks = days / 7; // '주' 계산
-                		dto.setUpdatedAgo(weeks + "주 전 수정됨");
-                	}else {
-                		// '365일' 이후부터는 '년'으로 취급하여 변경
-                		long years = days/365;
-                		dto.setUpdatedAgo(years + "년 전 수정됨");
-                	}
-                }
-            } else {
-            	// 수정을 안 할 경우 생성시간으로 대체
-                dto.setUpdatedAgo(null);
-            }
-        }
-
-        if(comment.getStatus() == CommentStatus.DELETED) {
-        	dto.setDeletedMessage("삭제된 댓글입니다.");
-        	dto.setContent("");  
-        }else if(comment.getStatus() == CommentStatus.HIDDEN) {
-        	dto.setDeletedMessage("신고받은 댓글입니다.");
-        	dto.setContent("");
-        }
-
-        logger.info("CommentResponseDTO fromEntity() End");
         return dto;
     }
 

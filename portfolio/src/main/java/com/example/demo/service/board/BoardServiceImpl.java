@@ -215,19 +215,17 @@ public class BoardServiceImpl implements BoardService {
 
 		logger.info("BoardServiceImpl  getBoardFullHierarchy() Start");
 
-		List<Board> parents = boardRepository.findByParentBoardIsNull();
+		List<Board> parents = boardRepository.findActiveParentBoards();
 
 		if(parents.isEmpty()) {
 			logger.error("BoardServiceImpl getAllBoards() 'parents   :"+ parents + "'이므로, 조회할 게시판이 존재하지 않습니다.");
 			throw new NoSuchElementException("조회할 게시판이 존재하지 않습니다.");
 		}
-		logger.info("BoardServiceImpl getBoardFullHierarchy() parents   :"+ parents );
 
 		List<BoardHierarchyResponseDTO> response = parents.stream()
 				                                           .map(BoardHierarchyResponseDTO :: convertToHierarchy)
 													       .collect(Collectors.toList());
 
-		logger.info("BoardServiceImpl getBoardFullHierarchy() response   :"+ response );
 
 		logger.info("BoardServiceImpl  getBoardFullHierarchy() Success End");
 		return response;

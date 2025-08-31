@@ -1,6 +1,6 @@
 // 로그인 버튼
 function signin() {
-    $('#login-btn').on('click', function() {
+    $('#login-btn').off('click').on('click', function() {
         // "/signin"으로 요청 → WebMvcConfig에서 forward 처리
         window.location.href = '/signin';
     });
@@ -9,7 +9,7 @@ function signin() {
 // 회원가입 버튼
 
 function signup() {
-	$('#register-btn').on('click',function(){
+	$('#register-btn').off('click').on('click',function(){
 
 		// "/signup"으로 요청 → WebMvcConfig에서 forward 처리
 		window.location.href = '/signup_consent';

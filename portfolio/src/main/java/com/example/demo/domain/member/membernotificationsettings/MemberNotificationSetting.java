@@ -13,7 +13,9 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "member_notification_settings")
@@ -21,6 +23,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class MemberNotificationSetting {
 
 	// 'id' 자동 증가 필드를 사용하지 않는 이유:
@@ -29,6 +33,7 @@ public class MemberNotificationSetting {
 	// 즉, 별도의 ID 없이 memberId = member.id 구조로 게시글/댓글 알림 여부를 설정할 수 있음.
 	@Id
 	@Column(name = "member_id") // 주요키(PK)이자, 외래키(PK)로 사용되므로, 'OneToOne' 관계에서 컬럴명을 "member_id"로 통일
+	@EqualsAndHashCode.Include
 	private Long memberId;
 
 	// @MapsId: NotificationSetting은 회원(Member)과 1:1 관계이며,

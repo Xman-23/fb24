@@ -1,7 +1,8 @@
 package com.example.demo.controller.post;
 
 
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.StandardCharsets; 
+
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,12 +33,11 @@ import org.springframework.web.util.UriUtils;
 import com.example.demo.domain.member.memberenums.Role;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.post.PostBoardPostSearchPageResponseDTO;
 import com.example.demo.dto.post.PostPinUpdateRequestDTO;
 import com.example.demo.dto.MainPostPageResponseDTO;
-import com.example.demo.dto.comment.commentreport.CommentReportRequestDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 import com.example.demo.dto.post.PostDeleteRequestDTO;
-import com.example.demo.dto.post.PostListResponseDTO;
 import com.example.demo.dto.post.PostPageResponseDTO;
 import com.example.demo.dto.post.PostResponseDTO;
 import com.example.demo.dto.post.PostUpdateRequestDTO;
@@ -49,7 +48,9 @@ import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.post.PostService;
 import com.example.demo.service.post.PostServiceImpl;
 import com.example.demo.validation.board.BoardValidation;
+import com.example.demo.validation.comment.CommentValidation;
 import com.example.demo.validation.post.PostValidation;
+import com.example.demo.validation.string.WordValidation;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -429,73 +430,14 @@ public class PostController {
             // 비로그인 유저면 IP 주소 사용
             userIdentifier = this.getClientIp(request);
         }
-
         try {
             postService.increaseViewCount(postId, userIdentifier);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
         }
 
-		logger.info("PostController increaseViewCount() Success End");
+		logger.info("PostController increaseViewCount() End");
 		return ResponseEntity.ok().build();
-	}
-
-	// 핀 설정/해제 (관리자만 가능)
-	/**테스트 완료*/
-	@PatchMapping("/{postId}/pin")
-	// 관리자 권한만 가능
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public ResponseEntity<?> togglePin(@PathVariable(name = "postId") Long postId,
-									   @RequestBody PostPinUpdateRequestDTO pinUpdateRequestDTO,
-									   @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-
-		logger.info("PostController togglePin() Start");
-
-		// Request
-		boolean dtoPinned  = pinUpdateRequestDTO.isPinned();
-
-		try {
-			postService.togglePinPost(postId, dtoPinned);
-		} catch (NoSuchElementException e) {
-			logger.error("PostController togglePin() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController togglePin() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController togglePin() Success Start");
-		return ResponseEntity.ok().build();
-	}
-
-	// 핀 설정된 공지사항 3개 최신순으로 조회
-	/**테스트 완료*/
-	@GetMapping("notices/pinned")
-	public ResponseEntity<?> getTopPinnedNoticesByBoard() {
-
-		logger.info("PostController getTopPinnedNoticesByBoard() Start");
-
-		List<PostListResponseDTO> response = null;
-
-		try {
-			response = postService.getTop3PinnedNoticesByBoard();
-		} catch (NoSuchElementException e) {
-			logger.error("PostController getTopPinnedNoticesByBoard() NoSuchElementException Error : {}", e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController getTopPinnedNoticesByBoard() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		if(response == null) {
-			logger.error("PostController getTopPinnedNoticesByBoard() INTERNAL_SERVER_ERROR : {}");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController getTopPinnedNoticesByBoard() Success End");
-		return ResponseEntity.ok(response);
 	}
 
 	// 게시글 단건 조회 API엔드포인트
@@ -535,81 +477,38 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 자식 게시판 게시글 목록 조회 (공지글 제외)
+	// 핀 설정/해제 (관리자만 가능)
 	/**테스트 완료*/
-	@GetMapping("/board/{boardId}")
-	public ResponseEntity<?> getPostsByBoard(@PathVariable(name = "boardId") Long boardId,
-											 @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+	@PatchMapping("/{postId}/pin")
+	// 관리자 권한만 가능
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	public ResponseEntity<?> togglePin(@PathVariable(name = "postId") Long postId,
+									   @RequestBody PostPinUpdateRequestDTO pinUpdateRequestDTO,
+									   @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-		logger.info("PostController getPostsByBoard() Start");
+		logger.info("PostController togglePin() Start");
 
-		if(!BoardValidation.isValidBoardId(boardId)) {
-			logger.error("PostController getPostsByBoard() BAD_REQUEST Error : " + "입력값이 유효하지 않습니다.");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
-		}
-
-		// Response
-		PostPageResponseDTO response = null;
+		// Request
+		boolean dtoPinned  = pinUpdateRequestDTO.isPinned();
 
 		try {
-			response = postService.getPostsByBoard(boardId, pageable);
+			postService.togglePinPost(postId, dtoPinned);
 		} catch (NoSuchElementException e) {
-			logger.error("PostController getPostsByBoard() NoSuchElementException Error : {}", e.getMessage(), e);
+			logger.error("PostController togglePin() NoSuchElementException Error : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
 		} catch (Exception e) {
-			logger.error("PostController getPostsByBoard() Exception Error : {}","서버 에러",e);
+			logger.error("PostController togglePin() Exception Error : {}","서버 에러",e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
-
-		if(response == null) {
-			logger.error("PostController getPostsByBoard() INTERNAL_SERVER_ERROR : 서버에러");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-		logger.info("PostController getPostsByBoard() Success End");
-		return ResponseEntity.ok(response);
-	}
-
-	// 자식게시판 정렬
-	/**테스트 완료*/
-	@GetMapping("/boards/{boardId}/posts/sorted")
-	public ResponseEntity<?> getPostsByBoardSorted(@PathVariable(name = "boardId") Long boardId,
-												   @RequestParam(name = "sortBy", defaultValue = "latest")String sortBy,
-												   @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)Pageable pageable) {
-
-		logger.info("PostController getPostsByBoardSorted() Start");
-
-		if(!BoardValidation.isValidBoardId(boardId)) {
-			logger.error("PostController getPostsByBoard() BAD_REQUEST Error : 입력값이 유효하지 않습니다." );
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
-		}
-
-		PostPageResponseDTO response = null;
-
-	    try {
-	    	response = postService.getPostsByBoardSorted(boardId, sortBy, pageable);
-	    } catch (NoSuchElementException e) {
-	        logger.error("PostController getPostsByBoardSorted() NotFound: {}", e.getMessage());
-	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-	    } catch (Exception e) {
-	        logger.error("PostController getPostsByBoardSorted() Error: {}", e.getMessage());
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-	    }
-
-		if(response == null) {
-			logger.error("PostController getPostsByBoardSorted() INTERNAL_SERVER_ERROR : 서버에러");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
-		}
-
-	    logger.info("PostController getPostsByBoardSorted() End");
-	    return ResponseEntity.ok(response);
+		logger.info("PostController togglePin() Success Start");
+		return ResponseEntity.ok().build();
 	}
 
 	// 전체 공지글(공지 게시판용) API엔드포인트
 	/**테스트 완료*/
 	@GetMapping("/notices")
-	public ResponseEntity<?> getAllNotices (@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+	public ResponseEntity<?> getAllNotices (@PageableDefault(size = 10) Pageable pageable) {
 
 		logger.info("PostController getAllNotices() Start");
 
@@ -635,7 +534,351 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 게시글 키워드 검색 API엔드포인트
+	// 공지 게시판 키워드 검색
+	@GetMapping("/boards/notice/{boardId}/search")
+	public ResponseEntity<?> noticeBoardSearchPosts(@PathVariable(name = "boardId") Long boardId,
+            										@RequestParam(name = "keyword") String keyword,
+            										@PageableDefault(size = 10) Pageable pageable) {
+
+		logger.info("PostController noticeBoardSearchPosts() Start");
+
+		if(!boardId.equals(Long.valueOf(1))) {
+			logger.warn("PostServiceImpl noticeBoardSearchPosts() : 공지게시판이 아닙니다.");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("잘못된 접근입니다.");
+		}
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl noticeBoardSearchPosts() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8);
+		
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.error("PostServiceImpl noticeBoardSearchPosts() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = postService.noticeBoardSearchPosts(keywordUTF8, pageable);
+
+		logger.info("PostController noticeBoardSearchPosts() End");
+		return ResponseEntity.ok(response);
+	}
+	
+	// 공지 게시판 키워드 자동완성
+	@GetMapping("/boards/notice/{boardId}/autocomplete")
+	public ResponseEntity<?> autocompletePostsByNoticeBoard(@PathVariable(name = "boardId") Long boardId,
+            										        @RequestParam(name = "keyword") String keyword) {
+
+		logger.info("PostController autocompletePostsByNoticeBoard() Start");
+
+		if(!boardId.equals(Long.valueOf(1))) {
+			logger.warn("PostServiceImpl autocompletePostsByNoticeBoard() : 공지게시판이 아닙니다.");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("잘못된 접근입니다.");
+		}
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompletePostsByNoticeBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8);
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.error("PostServiceImpl autocompletePostsByNoticeBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+		List<String> response = postService.noticePostTitlesByKeyword(keywordUTF8);
+
+		logger.info("PostController autocompletePostsByNoticeBoard() End");
+		return ResponseEntity.ok(response);
+	}
+	
+    // 공지 타이틀 게시글 조회
+    @GetMapping("/boards/notice/{boardId}/autocomplete/search")
+	public ResponseEntity<?> autocompleteSearchPostsByNoticeBoard(@PathVariable(name = "boardId") Long boardId,
+	                                                              @RequestParam(name = "keyword") String keyword,
+	                                                              @PageableDefault(size = 10) Pageable pageable) {
+
+		logger.info("PostController autocompleteSearchPostsByNoticeBoard() Start");
+
+		if(!boardId.equals(Long.valueOf(1))) {
+			logger.warn("PostServiceImpl autocompleteSearchPostsByNoticeBoard() : 공지게시판이 아닙니다.");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("잘못된 접근입니다.");
+		}
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompleteSearchPostsByNoticeBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String titleUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8);
+		
+		if(!WordValidation.containsForbiddenWord(titleUTF8)) {
+			logger.error("PostServiceImpl autocompleteSearchPostsByNoticeBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = postService.autocompleteSearchPostsByNoticeBoard(titleUTF8, pageable);
+
+		logger.info("PostController autocompleteSearchPostsByNoticeBoard() End");
+		return ResponseEntity.ok(response);
+    }
+
+	// 공지게시판 작성자 검색
+	@GetMapping("/boards/notice/{boardId}/search/author/{nickname}")
+	public ResponseEntity<?> noticeBoardSearchPostsAndAuthor(@PathVariable(name = "boardId") Long boardId,
+	                                                         @PathVariable(name = "nickname") String nickname,
+	                                                         @PageableDefault(size = 10) Pageable pageable) {
+
+		logger.info("PostController noticeBoardSearchPostsAndAuthor() Start");
+
+		if(!boardId.equals(Long.valueOf(1))) {
+			logger.warn("PostServiceImpl noticeBoardSearchPosts() : 공지게시판이 아닙니다.");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("잘못된 접근입니다.");
+		}
+
+		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8);
+
+		if(!PostValidation.isValidString(nicknameUTF8) || nickname.trim().length() < 2) {
+			logger.warn("PostServiceImpl noticeBoardSearchPostsAndAuthor() : 'nickname'이 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = null;
+		try {
+			response = postService.noticeBoardSearchPostsAndAuthor(nicknameUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController noticeBoardSearchPostsAndAuthor() NoSuchElementException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		logger.info("PostController noticeBoardSearchPostsAndAuthor() End");
+	    return ResponseEntity.ok(response);
+	}
+
+	// 자식 게시판 게시글 목록 조회 (공지글 제외)
+	/**테스트 완료*/
+	@GetMapping("/board/{boardId}")
+	public ResponseEntity<?> getPostsByBoard(@PathVariable(name = "boardId") Long boardId,
+											 @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+		logger.info("PostController getPostsByBoard() Start");
+
+		if(!BoardValidation.isValidBoardId(boardId)) {
+			logger.error("PostController getPostsByBoard() BAD_REQUEST Error : " + "입력값이 유효하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+
+		// Response
+		PostPageResponseDTO response = null;
+
+		try {
+			response = postService.getPostsByBoard(boardId, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController getPostsByBoard() NoSuchElementException Error : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		if(response == null) {
+			logger.error("PostController getPostsByBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+		logger.info("PostController getPostsByBoard() Success End");
+		return ResponseEntity.ok(response);
+	}
+
+	// 자식게시판 정렬 (좋아요, 최신순)
+	/**테스트 완료*/
+	@GetMapping("/boards/{boardId}/posts/sorted")
+	public ResponseEntity<?> getPostsByBoardSorted(@PathVariable(name = "boardId") Long boardId,
+												   @RequestParam(name = "sortBy", defaultValue = "latest")String sortBy,
+												   @PageableDefault(size = 10)Pageable pageable) {
+
+		logger.info("PostController getPostsByBoardSorted() Start");
+
+		logger.info("PostController getPostsByBoardSorted() sortBy : {} ", sortBy);
+
+		if(!BoardValidation.isValidBoardId(boardId)) {
+			logger.error("PostController getPostsByBoard() BAD_REQUEST Error : 입력값이 유효하지 않습니다." );
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+
+		if(!PostValidation.isValidSortBy(sortBy)) {
+			logger.error("CommentController getCommentsTreeByPost() IllegalArgumentException Error : 'sortBy'가 유효하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
+		}
+		PostPageResponseDTO response = null;
+
+	    try {
+	    	response = postService.getPostsByBoardSorted(boardId, sortBy, pageable);
+	    } catch (NoSuchElementException e) {
+	        logger.error("PostController getPostsByBoardSorted() NotFound: {}", e.getMessage());
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+	    }
+
+		if(response == null) {
+			logger.error("PostController getPostsByBoardSorted() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+	    logger.info("PostController getPostsByBoardSorted() End");
+	    return ResponseEntity.ok(response);
+	}
+	
+	// 자식게시판 키워드 검색
+	@GetMapping("/boards/child/{boardId}/search")
+	public ResponseEntity<?> childBoardSearchPosts(@PathVariable(name = "boardId") Long boardId,
+	                                               @RequestParam(name = "keyword") String keyword,
+	                                               @PageableDefault(size = 10) Pageable pageable) {
+
+		logger.info("PostController childBoardSearchPosts() Start");
+
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl childBoardSearchPosts() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.error("PostServiceImpl childBoardSearchPosts() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+		PostBoardPostSearchPageResponseDTO response = null;
+		
+		try {
+			response = postService.childBoardSearchPosts(boardId, keywordUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController childBoardSearchPosts() NoSuchElementException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController childBoardSearchPosts() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		logger.info("PostController childBoardSearchPosts() End");
+	    return ResponseEntity.ok(response);
+	}
+
+	// 자식게시판 실시간 검색
+    @GetMapping("/boards/child/{boardId}/autocomplete")
+    public ResponseEntity<?> autocompletePostsByChildBoard(@PathVariable(name = "boardId") Long boardId,
+    													   @RequestParam(name = "keyword") String keyword) {
+
+    	logger.info("PostController autocompletePostsByChildBoard() Start");
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompletePostsByChildBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 한글 깨짐 방지
+        String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.warn("PostServiceImpl autocompletePostsByChildBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 서비스 호출
+        List<String> response = postService.childPostTitlesByKeyword(boardId, keywordUTF8);
+
+		if(response == null) {
+			logger.error("PostController autocompletePostsByChildBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        logger.info("PostController autocompletePostsByChildBoard() End");
+        return ResponseEntity.ok(response);
+    }
+
+	// 자식게시판 실시간 제목 게시글 조회
+    @GetMapping("/boards/child/{boardId}/autocomplete/search")
+    public ResponseEntity<?> autocompleteSearchPostsByChildBoard(@PathVariable(name = "boardId") Long boardId,
+    													         @RequestParam(name = "keyword") String keyword,
+    													         @PageableDefault(size = 10) Pageable pageable) {
+
+    	logger.info("PostController autocompleteSearchPostsByChildBoard() Start");
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompleteSearchPostsByChildBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 한글 깨짐 방지
+        String titleUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(titleUTF8)) {
+			logger.warn("PostServiceImpl autocompleteSearchPostsByChildBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = null;
+
+        // 서비스 호출
+		try {
+			response = postService.childPostSearchTitlesByKeyword(boardId, titleUTF8,pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController childBoardSearchPosts() NoSuchElementException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController childBoardSearchPosts() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		if(response == null) {
+			logger.error("PostController autocompletePostsByChildBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        logger.info("PostController autocompletePostsByChildBoard() End");
+        return ResponseEntity.ok(response);
+    }
+
+    // 자식게시판 닉네임 검색
+	@GetMapping("/boards/child/{boardId}/search/author/{nickname}")
+	public ResponseEntity<?> childBoardSearchPostsAndAuthor(@PathVariable(name = "boardId") Long boardId,
+	                                                        @PathVariable(name = "nickname") String nickname,
+	                                                        @PageableDefault(size = 10) Pageable pageable) {
+
+		logger.info("PostController childBoardSearchPostsAndAuthor() Start");
+
+		if(!PostValidation.isValidString(nickname) || nickname.trim().length() < 2) {
+			logger.warn("PostServiceImpl childBoardSearchPostsAndAuthor() : 'nickname'이 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable));//빈페이지
+		}
+
+		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(nicknameUTF8)) {
+			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = null;
+		try {
+			response = postService.childBoardSearchPostsAndAuthor(boardId, nicknameUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController childBoardSearchPosts() NoSuchElementException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController childBoardSearchPosts() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		logger.info("PostController childBoardSearchPostsAndAuthor() End");
+	    return ResponseEntity.ok(response);
+	}
+
+	// 통합 키워드 검색 API엔드포인트
 	/**테스트 완료*/
 	@GetMapping("/search")
 	public ResponseEntity<?> searchPosts (@RequestParam(name = "keyword") String keyword,
@@ -643,15 +886,17 @@ public class PostController {
 
 		logger.info("PostController searchPosts() Start");
 
-		logger.info("keywordUT : {}", keyword);
-		// 한글 깨짐 방지를 위한 UTF_8 인코더
-		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8);
-
-		logger.info("keywordUTF8 : {}", keywordUTF8);
-
-		if(!PostValidation.isValidString(keywordUTF8)) {
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
 			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
-			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
 		}
 
 		MainPostPageResponseDTO response = postService.searchPostsByKeyword(keywordUTF8, pageable);
@@ -664,8 +909,39 @@ public class PostController {
 		logger.info("PostController searchPosts() Success End");
 		return ResponseEntity.ok(response);
 	}
+	
+    // 통합 자동완성 API
+    @GetMapping("/autocomplete")
+    public ResponseEntity<List<String>> autocompletePosts(@RequestParam(name = "keyword") String keyword) {
 
-	// 작성자별 게시글 조회 API엔드포인트
+        if(keyword == null || keyword.trim().length() < 2) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        List<String> titles = postService.getPostTitlesByKeyword(keyword);
+        return ResponseEntity.ok(titles);
+    }
+
+    // 자동완성 타이틀 게시글 조회
+    @GetMapping("/autocomplete/search")
+    public ResponseEntity<?> autocompleteSearchPosts(@RequestParam(name = "keyword") String keyword,
+    		 													@PageableDefault(size = 10) Pageable pageable) {
+
+    	logger.info("PostController autocompleteSearchPosts() Start");
+
+        if(keyword == null || keyword.trim().length() < 2) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+        MainPostPageResponseDTO response = postService.getSearchPostsByAuthorNickname(keywordUTF8, pageable);
+
+        logger.info("PostController autocompleteSearchPosts() End");
+        return ResponseEntity.ok(response);
+    }
+
+	//통합 작성자별 게시글 조회 API엔드포인트
 	/**테스트 완료*/
 	@GetMapping("/author/{nickname}")
 	public ResponseEntity<?> getPostsByAuthor(@PathVariable(name = "nickname") String nickname,
@@ -674,11 +950,12 @@ public class PostController {
 		logger.info("PostController getPostsByAuthor() Start");
 
 		// 한글 깨짐 방지를 위한 UTF_8 인코더
-		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8);
+		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8).trim();
 
 		if(!PostValidation.isValidString(nicknameUTF8)) {
 			logger.warn("PostServiceImpl getPostsByAuthor() : 'nickname'이 유효하지 않습니다.");
-			return ResponseEntity.ok(PostPageResponseDTO.fromPage(Collections.emptyList(), Page.empty(pageable))); //빈페이지
+			return ResponseEntity.ok(Page.empty(pageable));
+			//빈페이지
 		}
 
 		MainPostPageResponseDTO response = null;
@@ -688,9 +965,6 @@ public class PostController {
 		} catch (NoSuchElementException e) {
 			logger.error("PostController getPostsByAuthor() NoSuchElementException  : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController getPostsByAuthor() Exception Error : {}","서버 에러",e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
 		if(response == null) {
@@ -717,9 +991,6 @@ public class PostController {
 		} catch (NoSuchElementException e) {
 			logger.error("PostController getPostsByParentBoard() NoSuchElementException Error : {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-		} catch (Exception e) {
-			logger.error("PostController getPostsByParentBoard() Exception Error : {}",e.getMessage(),e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
 		if(response == null) {
@@ -730,6 +1001,178 @@ public class PostController {
 		logger.info("PostController getPostsByParentBoard() SuccessEnd");
 		return ResponseEntity.ok(response);
 	}
+
+	// 부모 게시판 키워드 검색
+    @GetMapping("/boards/{parentBoardId}/search")
+    public ResponseEntity<?> searchPostsByParentBoard(@PathVariable(name = "parentBoardId") Long parentBoardId,
+            								          @RequestParam(name = "keyword") String keyword,
+            										  @PageableDefault(size = 10) Pageable pageable) {
+
+    	logger.info("PostController searchPostsByParentBoard() Start");
+    	
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.error("PostServiceImpl searchPostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지 //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.error("PostServiceImpl searchPostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		PostBoardPostSearchPageResponseDTO response = null;
+
+		try {
+			response = postService.searchPostsByParentBoard(parentBoardId, keywordUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController searchPostsByParentBoard() NoSuchElementException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController searchPostsByParentBoard() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+        
+
+		if(response == null) {
+			logger.error("PostController searchPostsByParentBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        logger.info("PostController searchPostsByParentBoard() End");
+        return ResponseEntity.ok(response);
+    }
+
+    // 부모게시판 키워드 실시간 자동완성
+    @GetMapping("/boards/{parentBoardId}/autocomplete")
+    public ResponseEntity<?> autocompletePostsByParentBoard(@PathVariable(name = "parentBoardId") Long parentBoardId,
+    													    @RequestParam(name = "keyword") String keyword) {
+
+    	logger.info("PostController autocompletePostsByParentBoard() Start");
+
+		if(!PostValidation.isValidString(keyword) || keyword.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompletePostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 한글 깨짐 방지
+        String keywordUTF8 = UriUtils.decode(keyword, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.warn("PostServiceImpl autocompletePostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 서비스 호출
+        List<String> response = null;
+
+        try {
+        	response = postService.postPostTitlesByKeyword(parentBoardId, keywordUTF8);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController autocompletePostsByParentBoard() NoSuchElementException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController autocompletePostsByParentBoard() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+        
+
+		if(response == null) {
+			logger.error("PostController searchPostsByParentBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        logger.info("PostController searchPostsByParentBoard() End");
+        return ResponseEntity.ok(response);
+    }
+    
+    // 부모게시판 키워드 실시간 자동완성 조회
+    @GetMapping("/boards/{parentBoardId}/autocomplete/search")
+    public ResponseEntity<?> autocompleteSearchPostsByParentBoard(@PathVariable(name = "parentBoardId") Long parentBoardId,
+    													          @RequestParam(name = "title") String title,
+    													          @PageableDefault(size = 10) Pageable pageable) {
+
+    	logger.info("PostController autocompleteSearchPostsByParentBoard() Start");
+
+		if(!PostValidation.isValidString(title) || title.trim().length() < 2) {
+			logger.warn("PostServiceImpl autocompletePostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 한글 깨짐 방지
+        String keywordUTF8 = UriUtils.decode(title, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
+			logger.warn("PostServiceImpl autocompletePostsByParentBoard() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Collections.emptyList()); //빈페이지
+		}
+
+        // 서비스 호출
+		PostBoardPostSearchPageResponseDTO response = null;
+		
+		try {
+			response = postService.autocompleteSearchPostsByParentBoard(parentBoardId, keywordUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController autocompletePostsByParentBoard() NoSuchElementException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController autocompletePostsByParentBoard() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+        
+
+		if(response == null) {
+			logger.error("PostController searchPostsByParentBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        logger.info("PostController autocompleteSearchPostsByParentBoard() End");
+        return ResponseEntity.ok(response);
+    }
+
+    // 부모게시판 작성자 검색
+    @GetMapping("/boards/{parentBoardId}/search/author/{nickname}")
+    public ResponseEntity<?> searchPostsByParentBoardAndAuthor(@PathVariable(name = "parentBoardId") Long parentBoardId,
+            												   @PathVariable(name = "nickname") String nickname,
+            												   @PageableDefault(size = 10) Pageable pageable) {
+
+        logger.info("PostController searchPostsByParentBoardAndAuthor() Start");
+
+		if(!PostValidation.isValidString(nickname) || nickname.trim().length() < 2) {
+			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+		// 한글 깨짐 방지를 위한 UTF_8 인코더
+		String nicknameUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8).trim();
+
+		if(!WordValidation.containsForbiddenWord(nicknameUTF8)) {
+			logger.warn("PostServiceImpl searchPostsByKeyword() : 'keyword'가 유효하지 않습니다.");
+			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
+		}
+
+        PostBoardPostSearchPageResponseDTO response = null; 
+
+        try {
+			response = postService.searchPostsByParentBoardAndAuthor(parentBoardId, nicknameUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("PostController searchPostsByParentBoard() NoSuchElementException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalArgumentException e) {
+			logger.error("PostController searchPostsByParentBoard() IllegalArgumentException : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		}
+
+		if(response == null) {
+			logger.error("PostController searchPostsByParentBoard() INTERNAL_SERVER_ERROR : 서버에러");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+		}
+
+        return ResponseEntity.ok(response);
+    }
+
 
 	//*************************************************** API End ***************************************************//
 

@@ -22,4 +22,12 @@ public class PostValidation {
 		return true;
 	}
 
+	
+	public static boolean isValidSortBy (String sortBy) {
+		if(sortBy == null) {
+			return false;
+		}
+
+		return "latest".equalsIgnoreCase(sortBy) || "like".equalsIgnoreCase(sortBy);
+	}
 }

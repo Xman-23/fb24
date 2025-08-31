@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.example.demo.domain.board.Board;
 import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.member.Member;
+import com.example.demo.domain.notification.Notification;
 import com.example.demo.domain.post.postenums.PostStatus;
 import com.example.demo.domain.post.postimage.PostImage;
 import com.example.demo.domain.post.postreaction.PostReaction;
@@ -68,17 +69,18 @@ import lombok.ToString;
 @Setter
 @Getter
 @Builder
-@ToString(exclude = {"images", "comments", "reactions"})
-@EqualsAndHashCode(exclude = {"images", "comments", "reactions"})
 @AllArgsConstructor
 @NoArgsConstructor
 //등록,수정 일자를 자동관리하기 위한 어노테이션
 @EntityListeners(AuditingEntityListener.class)
+@ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
+@EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Post {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@EqualsAndHashCode.Include
 	@Column(name = "post_id")
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long postId;
 
 	// EAGER : 불필요한 JOIN이 많고, 참조 오류가 날 수있음

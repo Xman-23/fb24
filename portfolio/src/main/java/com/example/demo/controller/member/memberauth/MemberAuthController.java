@@ -69,29 +69,19 @@ public class MemberAuthController {
             logger.warn("AuthController Login failed - reason: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 정보가 유효하지 않습니다.");
         }
-        // HTTP Only Cookie로 리프레시 토큰 전달
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", tokens.getRefreshToken())
-                                              .httpOnly(true)
-                                              .secure(true)
-                                              .path("/")
-                                              .maxAge(7 * 24 * 60 * 60)
-                                              .sameSite("Strict")
-                                              .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
- 
+
         logger.info("AuthController login() Success End");
         return ResponseEntity.ok(tokens);
-
     }
 
     // 액세스 토큰 재발급 API엔드포인트
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestHeader("Authorization")String refreshToken) {
 
-    	logger.info("AuthController login() Start");
+    	logger.info("MemberAuthController refreshToken() Start");
 
     	if(refreshToken == null) {
-        	logger.error("MemberAuthController refreshToken refreshToken : null ");
+        	logger.error("MemberAuthController refreshToken() refreshToken : null ");
         	return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("null");
     	}
 
@@ -107,38 +97,13 @@ public class MemberAuthController {
 
         try {
             tokens = authService.refreshAccessToken(trimSubStringRefreshToken);
-            logger.info("Access token reissued successfully.");
         } catch (IllegalArgumentException e) {
-            logger.warn("Refresh token invalid: {}", e.getMessage());
+            logger.warn("MemberAuthController refreshToken() IllegalArgumentException : {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
 
-        logger.info("AuthController login() Success End");
+        logger.info("MemberAuthController refreshToken() End");
         return ResponseEntity.ok(tokens);
-    }
-
-    // 로그아웃 API엔드포인트
-    // 로그아웃은 리프레시 토큰을 DB에서 지우는 작업이라 상태 변화 생김
-    // 조회(GET) 아님 → POST로 보내야 함
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response,
-    		                        @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-
-    	logger.info("AuthController logout() Start");
-
-        // 1. HTTP Only 쿠키 삭제 (maxAge=0)
-        ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
-                                                    .httpOnly(true)
-                                                    .secure(true)
-                                                    .path("/")
-                                                    .maxAge(0)       // 만료
-                                                    .sameSite("Strict")
-                                                    .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
- 
-    	logger.info("AuthController logout() Success End");
-    	return ResponseEntity.ok("로그아웃 되었습니다.");
     }
 
     //*************************************************** API END ***************************************************//

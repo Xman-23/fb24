@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- jQuery Setting -->
+<!-- js Setting -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/member/member_signin_signup_button.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/board/search.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/board/board_common.js"></script>
+<script src="/js/board/board_page/board_page.js"></script>
+<!-- js Setting -->
+<!-- CSS Setting -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_page_button.css">
+<link rel="stylesheet" href="/css/board/board_child.css">
+<link rel="stylesheet" href="/css/board/board_common_footer.css">
+<!-- CSS Setting -->
+</head>
+<body>
+	<header id="header">
+	    <div class="header-top">
+	        <div id="logo"><a href="/">Log</a></div>
+	        <div id="user-actions">
+	            <button id="login-btn">로그인</button>
+	            <button id="register-btn">회원가입</button>
+	        </div>
+	    </div>
+	    <nav id="board-tabs">
+	        <ul id="parent-boards"></ul>
+	    </nav>
+	</header>
+
+	<main>
+	    <div class="board-header">
+	        <h2>
+	            <span id="child-name">자식 게시판 이름</span>
+	            <span id="child-description">(설명)</span>
+	        </h2>
+	        <div class="sort-box">
+	            <select id="sortSelect">
+	                <option value="latest">최신순</option>
+	                <option value="popular">좋아요순</option>
+	            </select>
+	        </div>
+	    </div>
+	
+	    <!-- 자식게시판 인기 게시글 -->
+	    <div id="child_popular_post">
+	        <ul id="child_popular_post_list"></ul>
+	    </div>
+	
+	    <!-- 일반 게시글 -->
+	    <div id="child_normal_post">
+	        <ul id="child_normal_post_list"></ul>
+	    </div>
+	
+	    <!-- 페이징 버튼 영역 -->
+	    <div id="pagination-container">
+	        <button id="first-page">처음</button>
+	        <button id="jump-backward">&lt;&lt;</button>
+	        <button id="prev-page">이전</button>
+	        <span id="page-buttons"><!-- 페이지 번호 버튼 생성 --></span>
+	        <button id="next-page">다음</button>
+	        <button id="jump-forward">&gt;&gt;</button>
+	        <button id="last-page">마지막</button>
+	    </div>
+	</main>
+
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	        <div class="footer-search">
+	            <select id="searchType">
+	                <option value="keyword">제목/본문</option>
+	                <option value="author">작성자</option>
+	                <option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+	            </select>
+	            <div class="autocomplete-wrapper">
+	                <input type="text" id="searchInput" placeholder="검색어 입력..." />
+	                <ul id="autocomplete-list" class="autocomplete-items"></ul>
+	            </div>
+	            <button class="search-btn">🔍</button>
+	        </div>
+	        <div class="footer-spacer">
+	       		<!-- 관리자 버튼 -->
+				<div id="admin-footer-buttons" style="display:none; margin-top:10px;">
+				    <!--<button id="createChildBoardBtn">자식게시판 만들기</button> -->
+				    <button id="editParentBoardBtn">자식게시판 수정하기</button>
+				    <button id="deleteParentBoardBtn">부모게시판 삭제하기</button>
+				</div>
+	        </div>
+	    </div>
+	</footer>
+</body>
+
+<script>
+	//*************************************************** 변수 START ***************************************************//
+	const popularList = $("#child_popular_post_list");
+	const normalList = $("#child_normal_post_list");
+
+	var currentKeyword = '';     
+	var currentSearchType = 'keyword'; 
+
+	var sortBy = 'latest';
+	//*************************************************** 변수 START ***************************************************//
+
+	//*************************************************** 페이지 초기화 START ***************************************************//
+	check_child_board();
+	//*************************************************** 페이지 초기화 End ***************************************************//
+
+	//*************************************************** Function Start ***************************************************//
+	function check_child_board() {
+		if(!parentBoardIds.includes(boardId) && !noticeBoard.includes(boardId)) {
+			getBoardInfo();
+			getMain(0);
+			sort_select_change();
+			keywordSearch();
+			auto_search();
+			adminButton();
+		}else {
+	        alert("잘못된 접근입니다. 일반 게시판이 아닙니다.");
+	    }
+	}
+
+	function sort_select_change() {
+		// select 박스 변경 이벤트
+		$("#sortSelect").on("change", function() {
+		    sortBy = $(this).val();
+		    getMain(0);
+		});
+	}
+
+	// 검색 버튼 및 Enter 키 이벤트 처리
+	function keywordSearch() {
+	    // (1) 검색 버튼 클릭 이벤트
+	    $(".search-btn").click(function() {
+	        executeSearch(0); // 검색 버튼을 누르면 1페이지(0번)부터 검색 실행
+	    });
+
+	    // (2) Enter 키 입력 이벤트
+	    $("#searchInput").on("keydown", function(e) {
+	        if (e.key === "Enter") {
+	            executeSearch(0); // 엔터 누르면 검색 실행
+	        }
+	    });
+	}
+
+	function adminButton() {
+	    // 관리자면 버튼 보여주기
+	    const role = localStorage.getItem('role');
+	    if(role === 'ROLE_ADMIN') {
+	        $('#admin-footer-buttons').show();
+
+			/*
+		    // 버튼 클릭 이벤트
+		    $('#createChildBoardBtn').on('click', function() {
+		        window.location.href = `/board_child_create/${boardId}`;
+		    });
+			*/
+
+		    $('#editParentBoardBtn').off('click').on('click', function() {
+		        window.location.href = `/board_child_update/${boardId}`;
+		    });
+
+	        $('#deleteParentBoardBtn').off('click').on('click', function() {
+	            if(confirm("정말 이 부모게시판을 삭제하시겠습니까?")) {
+	                ajaxWithToken({
+	                    url: `/boards/admin/${boardId}`,
+	                    type: 'DELETE',
+	                    success: function(res) {
+	                        alert("삭제 완료");
+	                        window.location.href = '/'; // 메인으로 이동
+	                    },
+	                    error: function(xhr) {
+	                        alert(xhr.responseText || "삭제 실패");
+	                    }
+	                });
+	            }
+	        });
+	    }
+
+	}
+
+	//*************************************************** Function End ***************************************************//
+
+	//*************************************************** 랜더링 Start ***************************************************//
+
+		// 인기글 렌더링
+	function renderPopularPosts(posts) {
+
+	    if (check_posts(posts)) {
+	        popularList.append(no_posts_tag(no_popularList));
+	        return;
+	    }
+
+	    posts.forEach(post => {
+	        const thumbnailHtml = post.thumbnailImageUrl ? `<img src="${post.thumbnailImageUrl}" class="post-thumbnail">` : '';
+	        popularList.append(`
+	            <li class="post-card popular">
+	                <a href="/posts/${post.postId}" class="post-link">
+	                    ${thumbnailHtml}
+	                    <div class="post-info">
+	                        <h3 class="post-title">[HOT] ${post.title}</h3>
+	                        <p class="post-meta">
+	                            작성자: ${post.userNickname} | 좋아요: ${post.reactionCount} | 댓글: ${post.commentCount} <br>
+	                            게시판: ${post.boardName} | 조회수: ${post.viewCount} | 작성일자: ${post.createdAt}
+	                        </p>
+	                    </div>
+	                </a>
+	            </li>
+	        `);
+	    });
+	}
+
+	// 일반글 렌더링
+	function renderNormalPosts(posts) {
+
+	    if (check_posts(posts)) {
+	        normalList.append(no_posts_tag(no_normalList));
+	        return;
+	    }
+	
+	    posts.forEach(post => {
+	        normalList.append(`
+	            <li class="post-card">
+	                <a href="/post/${post.postId}" class="post-link">
+	                    <div class="post-info">
+	                        <h3 class="post-title">${post.title}</h3>
+	                        <p class="post-meta">
+	                            작성자: ${post.userNickname} | 좋아요: ${post.reactionCount} | 댓글: ${post.commentCount} <br>
+	                            게시판: ${post.boardName} | 조회수: ${post.viewCount} | 작성일자: ${post.createdAt}
+	                        </p>
+	                    </div>
+	                </a>
+	            </li>
+	        `);
+	    });
+	}
+
+	//*************************************************** 랜더링 Start ***************************************************//
+
+	//*************************************************** API Start ***************************************************//
+
+	// 게시판 정보 조회
+	function getBoardInfo() {
+	    if (!boardId || isNaN(boardId)) {
+	    	alert("올바른 boardId가 필요합니다."); 
+	    	return; 
+	    }
+	    $.getJSON(`/boards/${boardId}`, function(board) {
+	    	document.title = "Log | " + board.name;
+	        $("#child-name").text(board.name);
+	        $("#child-description").text(`(${board.description})`);
+	    }).fail(function(xhr) {
+	        console.error("게시판 단건 조회 실패:", xhr.responseText);
+	    });
+	}
+	
+	// 게시글 조회 (인기글 + 일반글)
+	function getMain(page = 0) {
+
+		popularList.empty();
+		normalList.empty();
+
+		currentMode = 'post';
+
+	    $.getJSON(`/posts/boards/${boardId}/posts/sorted?sortBy=${sortBy}&page=${page}`, function(response) {
+	    	if(Number(page) === 0) {
+			    renderPopularPosts(response.popularPosts); // 인기글 렌더링
+	    	}
+	        renderNormalPosts(response.normalPosts);   // 일반글 렌더링
+	        renderPagination(response);           // 페이징 렌더링
+	    }).fail(function(xhr) {
+	    	popularList.append(no_posts_tag(no_popularList));
+	    	normalList.append(no_posts_tag(no_normalList));
+	        alert("게시글 조회 실패:", xhr.responseText);
+	    });
+	}
+
+	function executeSearch(page = 0) {
+
+		currentKeyword  = $("#searchInput").val().trim(); //제목+본문 or 작성자
+		currentSearchType = $("#searchType").val();
+
+		// 검색어를 명시하지 않을시
+		if(!currentKeyword) {
+			alert("검색어를 입력하세요.");
+			return;
+		}
+
+	    if (currentKeyword.length < 2) {
+	        alert("검색어는 최소 2글자 이상 입력해주세요.");
+	        return;
+	    }
+
+	    currentMode = 'search';
+	    
+	    var url = "";
+	    if(currentSearchType === "keyword") {
+	    	url = `/posts/boards/child/${boardId}/search?keyword=${encodeURIComponent(currentKeyword)}&page=${page}`;
+	    } else if (currentSearchType=== "author") {
+	    	url = `/posts/boards/child/${boardId}/search/author/${encodeURIComponent(currentKeyword)}?page=${page}`;
+	    }  else if(currentSearchType === "autocomplete") {
+	    	url = `/posts/boards/child/${boardId}/autocomplete/search?keyword=${encodeURIComponent(currentKeyword)}`;
+	    }
+
+		popularList.empty();
+		normalList.empty();
+
+		$.ajax({
+			url : url,
+			method : "GET",
+			success: function(data) {
+
+	            // 제목 변경: 검색 결과일 경우
+	            $("#parent-name").text(`검색 결과: "${currentKeyword}"`);
+	    		$("#board-description").text("");
+
+				if(data.posts && data.posts.length > 0) {
+					renderNormalPosts(data.posts || []);
+				}else {
+					normalList.append(no_posts_tag(no_searchList));
+				}
+				renderPagination(data);
+			},
+			error: function(xhr) {
+				normalList.append(no_posts_tag(no_searchList));
+				renderPagination(errorPage);
+			    alert(xhr.responseText || "");
+			}
+		})
+	}
+	function auto_search() {
+	    // 자동완성 (키워드 검색 전용)
+	    $("#searchInput").on("input", function() {
+	        if(currentSearchType !== 'keyword') return; // 작성자 검색 시 자동완성 비활성화
+
+	        clearTimeout(debounceTimer);
+	        const keyword = $(this).val().trim();
+	        const list = $("#autocomplete-list");
+
+	        if(keyword.length < 2) {
+	            list.empty().hide();
+	            return;
+	        }
+
+	        debounceTimer = setTimeout(() => {
+	            $.ajax({
+	                url: `/posts/boards/child/${boardId}/autocomplete?keyword=${encodeURIComponent(keyword)}`,
+	                method: "GET",
+	                success: function(data) {
+	                    list.empty();
+	                    if(!data || data.length === 0) {
+	                        list.hide();
+	                        return;
+	                    }
+	                    data.forEach(title => {
+	                        const item = $(`<li class="autocomplete-item">${title}</li>`);
+	                        item.on("click", function() {
+	                            $("#searchInput").val(title);
+	                            $("#searchType").val("autocomplete");
+	                            list.empty().hide();
+	                            executeSearch(0);
+	                        });
+	                        list.append(item);
+	                    });
+	                    list.show();
+	                },
+	                error: function(xhr) {
+	                    console.error("자동완성 조회 실패:", xhr.responseText);
+	                }
+	            });
+	        }, 500); // 0.5초 디바운스
+	    });
+	}
+
+  //*************************************************** API End ***************************************************//
+</script>
+</html>

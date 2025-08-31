@@ -15,11 +15,24 @@ import java.util.*;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-	// 해당 게시글과 모든 상태의 댓글을 가져옴
-	List<Comment> findByPostAndStatusIn(Post post, List<CommentStatus> statuses);
+    @Query(
+    		"SELECT c "
+    	  + "  FROM Comment c "
+          + " WHERE c.post = :post AND c.status IN :statuses " 
+          + " ORDER BY c.createdAt DESC"
+          )
+     List<Comment> findByPostWithStatusesDesc(@Param("post") Post post,
+                                              @Param("statuses") List<CommentStatus> statuses);
 
 	// 댓글 갯수 세기
-	int countByPostPostId (Long postId);
+	@Query(
+			"SELECT COUNT(c) "
+		  + "  FROM Comment c "
+		  + " WHERE c.post.postId = :postId "
+		  + "   AND c.status = :status "
+		  )
+	int countActiveCommentsByPostId (@Param("postId") Long postId,
+			                         @Param("status") CommentStatus status);
 
 	// 게시글들의 모든 댓글 집계 조회
 	@Query(
@@ -27,9 +40,11 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 			+ "     COUNT(c) AS commentCount "
 		  + "  FROM Comment c "
 		  + " WHERE c.post.postId IN (:postIds) "
+		  + "   AND c.status = :status "
 		  + " GROUP BY c.post.postId "
 		  )
-	List<PostCommentCount> countCommentsByPostIds(@Param("postIds") List<Long> postIds);
+	List<PostCommentCount> countCommentsByPostIds(@Param("postIds") List<Long> postIds,
+			                                      @Param("status") CommentStatus status);
 
 	interface PostCommentCount {
 		Long getPostId();

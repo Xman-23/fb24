@@ -3,8 +3,8 @@ package com.example.demo.repository.post;
 
 import com.example.demo.domain.post.Post;
 
+
 import com.example.demo.domain.post.postenums.PostStatus;
-import com.example.demo.domain.board.Board;
 import com.example.demo.domain.member.Member;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,6 +24,18 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
+	// 상단 공지 게시글 3개뽑기
+	@Query(
+			"SELECT p "
+		  + "  FROM Post p "
+		  + " WHERE p.board.boardId = 1 "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.isNotice = true "
+		  + "   AND p.isPinned = true "
+		  + " ORDER BY p.createdAt DESC "
+		  )
+	List<Post> findTop3FixedNotices(Pageable pageable);
+
 	// 전체 공지글 (공지 게시판 전용)
 	@Query(
 			"SELECT p "
@@ -35,7 +47,61 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  )
 	Page<Post> findNoticePosts(Pageable pageable);
 
-	// 제목 또는 내용에 키워드를 포함한 게시글 검색 (ACTIVE 상태만 검색, 대소문자 무시, 페이징 처리) 사용
+	// 공지게시판 제목/본문 키워드 검색
+	@Query(
+	      "SELECT p "
+	    + "  FROM Post p "
+	    + " WHERE p.board.boardId = 1 "
+	    + "   AND p.status = 'ACTIVE' "
+	    + "   AND p.isNotice = true "
+	    + "   AND ("
+	    + "        p.title LIKE %:keyword% "
+	    + "    OR  p.content LIKE %:keyword% "
+	    + "       ) "
+	    + " ORDER BY p.createdAt DESC "
+	)
+	Page<Post> searchNoticePostsByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+	// 공지게시판 제목 자동완성 (최대 10개)
+	@Query(
+	      "SELECT p.title "
+	    + "  FROM Post p " 
+	    + " WHERE p.board.boardId = 1 "
+	    + "   AND p.status = 'ACTIVE' "
+	    + "   AND p.isNotice = true "
+	    + "   AND ("
+	    + "        p.title LIKE %:keyword% "
+	    + "    OR  p.content LIKE %:keyword% "
+	    + "       ) "
+	    + " ORDER BY p.createdAt DESC "
+	)
+	Page<String> autoCompleteNoticeTitles(@Param("keyword") String keyword, Pageable pageable);
+	
+	// 공지게시판 제목 게시글 조회
+	@Query(
+		  "SELECT p "
+	    + "  FROM Post p " 
+	    + " WHERE p.board.boardId = 1 "
+	    + "   AND p.status = 'ACTIVE' "
+	    + "   AND p.isNotice = true "
+	    + "   AND p.title = :title "
+	    + " ORDER BY p.createdAt DESC "
+	)
+	Page<Post> autoCompleteSearchNoticeTitles(@Param("title")String title, Pageable pageable);
+
+	// 공지게시판 작성자 닉네임 검색
+	@Query(
+	      "SELECT p "
+	    + "  FROM Post p "
+	    + " WHERE p.board.boardId = 1 "
+	    + "   AND p.status = 'ACTIVE' "
+	    + "   AND p.isNotice = true "
+	    + "   AND p.author = :member "
+	    + " ORDER BY p.createdAt DESC "
+	)
+	Page<Post> searchNoticePostsByAuthor(@Param("member") Member member, Pageable pageable);
+
+	// 통합검색 제목 또는 내용에 키워드를 포함한 게시글 검색 (ACTIVE 상태만 검색, 대소문자 무시, 페이징 처리) 사용
 	@Query( "SELECT p " 
 		  + "  FROM Post p " 
 		  + " WHERE p.status = 'ACTIVE' " 
@@ -43,52 +109,183 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "         LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " 
 		  + "    OR "
 		  + "         LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))" 
-		  + "       )"
+		  + "       ) "
+		  + " ORDER BY p.createdAt DESC"
 		  )
 	Page<Post> searchByKeyword(@Param("keyword")String keyword, Pageable pageable);
 
-	// 자식게시판 인기순 정렬
-	@Query( "SELECT p "
+    // 통합검색 자동완성용: 제목 LIKE 검색, ACTIVE 상태, 대소문자 무시, 최대 10개
+    @Query(
+    		"SELECT p.title "
+    	  + "FROM Post p " 
+          + "WHERE p.status = 'ACTIVE' "
+          + "  AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+          + "ORDER BY p.createdAt DESC"
+          )
+     List<String> searchTitlesByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+	// 통합검색 자동완성 제목 게시글 조회
+	@Query(
+		    "SELECT p "
 		  + "  FROM Post p "
-		  + " WHERE p.board = :board "
-		  + "   AND p.status = 'ACTIVE' "
-		  + "   AND p.isNotice = false "
-		  + " ORDER BY (SELECT COUNT(r)"
-		  + "             FROM PostReaction r"
-		  + "            WHERE r.post = p"
-		  + "              AND r.reactionType = 'LIKE'"
-		  + "          ) DESC, "
-		  + "          p.createdAt DESC"
-		  )
-	Page<Post> findPopularPostsByBoard(@Param("board") Board board, Pageable pageable);
+		  + " WHERE p.status = 'ACTIVE' "
+		  + "   AND p.title = :title "
+		  + " ORDER BY p.createdAt DESC"
+		)
+	Page<Post> autoSearchByKeyword(@Param("title")String title, Pageable pageable);
 
-	// 자식게시판 최신순 정렬
-	Page<Post> findByBoardAndStatusAndIsNoticeFalseOrderByCreatedAtDesc(Board board, 
-																		PostStatus status, 
-																		Pageable pageable);
-
-	// 'ACTIVE 게시글'에서 '작성자ID(memberId)'를 검색 하여 페이징 처리
+	// 통합검색 'ACTIVE 게시글'에서 '작성자ID(memberId)'를 검색 하여 페이징 처리
 	@Query(
 			"SELECT p "
 		  + "  FROM Post p "
 		  + " WHERE p.author = :member "
 		  + "   AND p.status = :status "
-		  )
-	Page<Post> findByAuthorAndStatus (@Param("member") Member member, 
-			                           @Param("status") PostStatus status, 
-			                           Pageable pageable);
-	
-	// 3개의 핀으로 설정된 공지 게시글 모든 게시판에 보여주기
-	@Query(
-			"SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board = :board "
-		  + "   AND p.isPinned = true "
-		  + "   AND p.isNotice = true "
-		  + "   AND p.status = 'ACTIVE' "
 		  + " ORDER BY p.createdAt DESC "
 		  )
-	List<Post> findTop3PinnedByBoard (@Param("board") Board board, Pageable pageable);
+	Page<Post> findByAuthorAndStatus (@Param("member") Member member, 
+			                          @Param("status") PostStatus status, 
+			                          Pageable pageable);
+
+	// 자식게시판 최신순 정렬
+    @Query(value = 
+    		"SELECT * "
+    	  + "  FROM post p "
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false "
+    	  + "  ORDER BY p.created_at DESC ",
+    	  countQuery =
+    	  	"SELECT COUNT(*) "
+    	  + "  FROM post p "
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false",
+    	  nativeQuery = true)
+	Page<Post> findPostsByBoardLatest(@Param("boardId") Long boardId,  Pageable pageable);
+
+    // 자식게시판 인기순 정렬
+    @Query(value = 
+            "SELECT p.* "
+          + "  FROM post p "
+          + "  LEFT JOIN ( " 
+          + "             SELECT post_id, "
+          + "                    COUNT(*) AS like_count "
+          + "               FROM post_reaction "
+          + "              WHERE reaction_type = 'LIKE' "
+          + "              GROUP BY post_id "
+          + "            ) r ON r.post_id = p.post_id "
+          + " WHERE p.board_id = :boardId "
+          + "   AND p.status = 'ACTIVE' "
+          + "   AND p.is_notice = false "
+          + "ORDER BY COALESCE(r.like_count, 0) DESC, p.created_at DESC ",
+            countQuery = 
+            "SELECT COUNT(*) "
+          + "  FROM post p "
+          + "  LEFT JOIN ( " 
+          + "             SELECT post_id, "
+          + "                    COUNT(*) AS like_count "
+          + "               FROM post_reaction "
+          + "              WHERE reaction_type = 'LIKE' "
+          + "              GROUP BY post_id "
+          + "            ) r ON r.post_id = p.post_id "
+          + " WHERE p.board_id = :boardId "
+          + "   AND p.status = 'ACTIVE' "
+          + "   AND p.is_notice = false ",
+            nativeQuery = true
+          )
+	Page<Post> findPopularPosts(@Param("boardId") Long boardId, Pageable pageable);
+
+    // 자식게시판 실시간 검색: 제목만 조회, 생성일 내림차순
+    @Query(value = 
+             "SELECT p.title "
+           + "  FROM post p "
+           + " WHERE p.board_id = :boardId "
+           + "   AND p.status = 'ACTIVE' "
+           + "   AND p.is_notice = false "
+           + "   AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+           + " ORDER BY p.created_at DESC",
+           countQuery =
+             "SELECT COUNT(*) "
+           + "  FROM post p "
+           + " WHERE p.board_id = :boardId "
+           + "   AND p.status = 'ACTIVE' "
+           + "   AND p.is_notice = false "
+           + "   AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))",
+           nativeQuery = true)
+    Page<String> autocompleteBoardNormalPosts(@Param("boardId") Long boardId,
+                                              @Param("keyword") String keyword,
+                                              Pageable pageable);
+
+    // 자식게시판 실시간 검색: 제목  게시글만 조회
+    @Query(value = 
+             "SELECT p.* "
+           + "  FROM post p "
+           + " WHERE p.board_id = :boardId "
+           + "   AND p.status = 'ACTIVE' "
+           + "   AND p.is_notice = false "
+           + "   AND p.title = :title "
+           + " ORDER BY p.created_at DESC",
+           countQuery =
+             "SELECT COUNT(*) "
+           + "  FROM post p "
+           + " WHERE p.board_id = :boardId "
+           + "   AND p.status = 'ACTIVE' "
+           + "   AND p.is_notice = false "
+           + "   AND p.title = :title ",
+           nativeQuery = true)
+    Page<Post> autocompleteSearchBoardNormalPosts(@Param("boardId") Long boardId,
+                                                  @Param("title") String title,
+                                                  Pageable pageable);
+
+	// 자식게시판 키워드 검색
+    @Query(value = 
+    		"SELECT * "
+    	  + "  FROM post p"
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false "
+    	  + "   AND ( "
+    	  + "        LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+    	  + "    OR "
+    	  + "        LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))"
+    	  + "       ) "
+    	  + "  ORDER BY created_at DESC ",
+    	  countQuery =
+    	  	"SELECT COUNT(*) "
+    	  + "  FROM post p"
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false "
+    	  + "   AND ( "
+    	  + "        LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+    	  + "    OR "
+    	  + "        LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))"
+    	  + "       ) ",
+    	  nativeQuery = true)
+	Page<Post> searchPostsByKeyword(@Param("boardId") Long boardId,  
+			                        @Param("keyword") String keyword,
+			                        Pageable pageable);
+
+	// 자식게시판 닉네임 검색
+    @Query(value = 
+    		"SELECT * "
+    	  + "  FROM post p"
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false "
+    	  + "   AND p.author_id  = :authorId "
+    	  + "  ORDER BY created_at DESC ",
+    	  countQuery =
+    	  	"SELECT COUNT(*) "
+    	  + "  FROM post p"
+    	  + " WHERE p.board_id = :boardId "
+    	  + "   AND p.status = 'ACTIVE' "
+    	  + "   AND p.is_notice = false "
+    	  + "   AND p.author_id = :authorId ",
+    	  nativeQuery = true)
+	Page<Post> searchPostsByAuthor(@Param("boardId") Long boardId,  
+			                       @Param("authorId") Long authorId,
+			                       Pageable pageable);
 
 	/* 조회수 증가
 	   @Modifying(clearAutomatically = true)
@@ -125,7 +322,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "   AND p.status = 'ACTIVE' "
 		  + "   AND p.created_at >= :recentThreshold "
 		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
-		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
 		  + " ORDER BY COALESCE(pr_summary.like_count, 0) DESC, "
 		  + "          p.created_at DESC "
 		  + " LIMIT :limit ", 
@@ -136,22 +333,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 											   @Param("recentThreshold") LocalDateTime recentThreshold,
 											   @Param("limit") int limit);
 
-	// 상단 공지 게시글 3개뽑기
-	@Query(
-			"SELECT p "
-		  + "  FROM Post p "
-		  + " WHERE p.board.boardId = 1 "
-		  + "   AND p.status = 'ACTIVE' "
-		  + "   AND p.isNotice = true "
-		  + "   AND p.isPinned = true "
-		  + " ORDER BY p.createdAt DESC "
-		  )
-	List<Post> findTop3FixedNotices(Pageable pageable);
-
 	/* 좋아요 60일 기준으로 가중치 계산 
 	 한 페이지당 받을 데이터(content)와 데이터의 총 갯수 (totalElements) 구하기
 	 파라미터로 'Pageable'을 받을시에 개발자가 직접 정해준 'size'에 의해 'totlaPage' 구해짐
 	 */
+	//(좋아요순 먼저 정렬후, 최신순 정렬)
 	@Query(value = 
 		    "SELECT p.* "
 		  + "  FROM post p "
@@ -174,7 +360,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "   AND p.status = 'ACTIVE' "
 		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
 		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
-		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
 		  + " ORDER BY (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, :dayLimit - DATEDIFF(NOW(), p.created_at))) DESC, "
 		  + "          p.created_at DESC ",
 		  countQuery = 
@@ -199,13 +385,257 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "   AND p.status = 'ACTIVE' "
 		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
 		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
-		  + "   AND COALESCE(pr_summary.net_like_count, 0) >= :netLikeThreshold ",
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold ",
 		  nativeQuery = true)
 	Page<Post> findPopularPostsByWeightedScore(@Param("childBoardIds") List<Long> childBoardIds,
 			                                   @Param("likeThreshold") int likeThreshold,
 			                                   @Param("netLikeThreshold") int netLikeThreshold,
 			                                   @Param("dayLimit") int dayLimit,
 			                                   Pageable pageable);
+	
+	// 부모게시판 키워드 검색 (최신순 먼저 정렬후, 좋아요순 정렬)
+	@Query(value = 
+		    "SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "							  WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "							  ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND ( "
+		  + "        LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+		  + "    OR "
+		  + "        LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))"
+		  + "       ) "
+		  + " ORDER BY p.created_at DESC, "
+		  + "          (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, :dayLimit - DATEDIFF(NOW(), p.created_at))) DESC ",
+		  countQuery = 
+		    "SELECT COUNT(*) "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                              WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                              WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                              ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND ( "
+		  + "        LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+		  + "    OR "
+		  + "        LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))"
+		  + "       ) ",
+		  nativeQuery = true)
+	Page<Post> searchParentBoardPosts(@Param("childBoardIds") List<Long> childBoardIds,
+									  @Param("keyword") String keyword,
+									  @Param("likeThreshold") int likeThreshold,
+									  @Param("netLikeThreshold") int netLikeThreshold,
+									  @Param("dayLimit") int dayLimit,
+									  Pageable pageable);
+
+	// 부모게시판 실시간 검색 (최신순 먼저 정렬후, 좋아요순 정렬)
+	@Query(value = 
+		    "SELECT p.title "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "							  WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "							  ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+		  + " ORDER BY p.created_at DESC, "
+		  + "          (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, :dayLimit - DATEDIFF(NOW(), p.created_at))) DESC ",
+		  countQuery = 
+		    "SELECT COUNT(*) "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                              WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                              WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                              ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) ",
+		  nativeQuery = true)
+	Page<String> autocompleteParentBoardPopularPosts (@Param("childBoardIds") List<Long> childBoardIds,
+	         										  @Param("keyword") String keyword,
+	         										  @Param("dayLimit") int dayLimit,
+	         										  @Param("likeThreshold") int likeThreshold,
+	         										  @Param("netLikeThreshold") int netLikeThreshold,
+	         										  Pageable pageable);
+	
+	// 부모게시판 실시간 검색 이동 (최신순 먼저 정렬후, 좋아요순 정렬)
+	@Query(value = 
+		    "SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "							  WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "							  ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND p.title = :title "
+		  + " ORDER BY p.created_at DESC, "
+		  + "          (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, :dayLimit - DATEDIFF(NOW(), p.created_at))) DESC ",
+		  countQuery = 
+		    "SELECT COUNT(*) "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                              WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                              WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                              ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND p.title = :title ",
+		  nativeQuery = true)
+	Page<Post> autocompleteSearchParentBoardPopularPosts (@Param("childBoardIds") List<Long> childBoardIds,
+	         										      @Param("title") String title,
+	         										      @Param("dayLimit") int dayLimit,
+	         										      @Param("likeThreshold") int likeThreshold,
+	         										      @Param("netLikeThreshold") int netLikeThreshold,
+	         										      Pageable pageable);
+
+	// 부모게시판 작성자 검색 (최신순 먼저 정렬후, 좋아요순 정렬)
+	@Query(value = 
+		    "SELECT p.* "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "							  WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "							  ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND p.author_id = :authorId"
+		  + " ORDER BY p.created_at DESC, "
+		  + "          (COALESCE(pr_summary.like_count, 0) * 1.0 + GREATEST(0, :dayLimit - DATEDIFF(NOW(), p.created_at))) DESC ",
+		  countQuery = 
+		    "SELECT COUNT(*) "
+		  + "  FROM post p "
+		  + "  LEFT JOIN ("
+		  + "              SELECT pr.post_id, "
+		  + "                     SUM(CASE "
+		  + "                             WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                             ELSE 0 "
+		  + "                          END) AS like_count, "
+		  + "                     SUM(CASE "
+		  + "                              WHEN pr.reaction_type = 'LIKE' THEN 1 "
+		  + "                              WHEN pr.reaction_type = 'DISLIKE' THEN -1 "
+		  + "                              ELSE 0 "
+		  + "                          END) AS net_like_count "
+		  + "                FROM post_reaction pr "
+		  + "               GROUP BY pr.post_id "
+		  + "            ) AS pr_summary ON p.post_id = pr_summary.post_id "
+		  + " WHERE p.board_id IN (:childBoardIds) "
+		  + "   AND p.is_notice = false "
+		  + "   AND p.status = 'ACTIVE' "
+		  + "   AND p.created_at >= DATE_SUB(NOW(), INTERVAL :dayLimit DAY) "
+		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
+		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
+		  + "   AND p.author_id = :authorId ",
+		  nativeQuery = true)
+	Page<Post> searchParentBoardPostsByAuthor(@Param("childBoardIds") List<Long> childBoardIds,
+											  @Param("authorId") Long authorId,
+											  @Param("likeThreshold") int likeThreshold,
+											  @Param("netLikeThreshold") int netLikeThreshold,
+											  @Param("dayLimit") int dayLimit,
+											  Pageable pageable);
 
 	/** 게시글 배치 조회
 	    조건 : 수정일자 기준으로 5년 지나고, 조회수가 100이하이며, 
@@ -282,38 +712,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "                   HAVING COUNT(c.comment_id) = 0 "
 		  + "                  )", nativeQuery =  true)
 	int deleteDeadNoticePost (@Param("cutDate") LocalDateTime cutDate);
-
-	/** 
-	 * 단건 게시글 집계조회 (댓글, 좋아요, 싫어요)
-	 * post_id   comment_id   reaction_id   reaction_type
-	 *		1         101          1001          LIKE       // 댓글 101에 대한 좋아요 반응
-	 *		1         102          1001          LIKE       // 댓글 102에 대한 좋아요 반응 (같은 reaction_id인 걸로 봐서 같은 사용자 혹은 같은 반응일 수 있음)
-	 *		1         103          1002          DISLIKE    // 댓글 103에 대한 싫어요 반응
-	 *		1         104          1003          LIKE       // 댓글 104에 대한 좋아요 반응
-	 *		1         105          NULL          NULL       // 댓글 105에 대해 반응이 없는 경우 (reaction이 NULL)
-	 */
-
-	public interface PostAggregate {
-		Long getPostId(); 		// AS postId
-		Long getCommentCount(); // AS commentCount
-		Long getLikeCount(); 	// AS likeCount;
-		Long getDislikeCount(); // AS dislikeCount;
-	}
-
-	@Query(value = 
-			"SELECT p.post_id AS postId, "
-		  + "      COALESCE(COUNT(DISTINCT c.comment_id), 0) AS commentCount, "
-		  + "      COALESCE(SUM(CASE "
-		  + "                       WHEN r.reaction_type  = 'LIKE' THEN 1 ELSE 0 "
-		  + "                    END), 0) AS likeCount, "
-		  + "      COALESCE(SUM(CASE "
-		  + "                       WHEN r.reaction_type = 'DISLIKE' THEN 1 ELSE 0 "
-		  + "                    END), 0) AS dislikeCount "
-		  + "  FROM post p "
-		  + "  LEFT JOIN comment c ON p.post_id = c.post_id "
-		  + "  LEFT JOIN post_reaction r ON p.post_id = r.post_id "
-		  + " WHERE p.post_id = :postId "
-		  + " GROUP BY p.post_id ", nativeQuery = true)
-	Optional<PostAggregate> findPostAggregateByPostId(@Param("postId") Long postId);
 
 }

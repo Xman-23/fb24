@@ -47,127 +47,115 @@ class PostReactionServiceImpl implements PostReactionService {
 
 	//*************************************************** Service START ***************************************************//
 
-	// 게시글 리액션
+	// 게시글 리액션 처리
 	@Override
 	public PostReactionResponseDTO reactionToPost(Long postId, Long memberId,
-			                                      PostReactionRequestDTO postReactionRequestDTO) {
+	                                              PostReactionRequestDTO postReactionRequestDTO) {
 
-		logger.info("PostReactionServiceImpl reactionToPost() Start");
+	    //  게시글 조회: 요청한 postId에 해당하는 게시글이 존재하는지 확인
+	    Post post = postRepository.findById(postId)
+	                              .orElseThrow(() -> new NoSuchElementException("게시글이 존재하지 않습니다."));
 
-		// 게시글 조회
-		Post post = postRepository.findById(postId)
-				                  .orElseThrow(() -> {
-				                	  logger.error("PostReactionServiceImpl reactionToPost() NoSuchElementException postId : {}", postId);
-				                	  return new NoSuchElementException("게시글이 존재하지 않습니다.");
-				                  });
+	    // 반응을 누른 회원 조회
+	    Member reactingMember = memberRepository.findById(memberId)
+	                                            .orElseThrow(() -> new NoSuchElementException("회원이 존재하지 않습니다."));
 
-		// 멤버 조회
-		Member member = memberRepository.findById(memberId)
-				                        .orElseThrow(() -> {
-				                        	logger.error("PostReactionServiceImpl reactionToPost() NoSuchElementException memberId : {}", memberId);
-				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
-				                        });
+	    //  게시글 작성자: 점수 반영 대상
+	    Member postAuthor = post.getAuthor();
 
-		// 삭제된 댓글 반응 X
-		if(post.getStatus().equals(PostStatus.DELETED)) {
-			logger.error("PostReactionServiceImpl reactionToPost() IllegalStateException : 삭제된 게시글입니다.");
-		    throw new IllegalStateException("삭제된 게시글입니다.");
-		}
+	    // 게시글 상태 체크: 삭제되거나 신고된 게시글에는 반응 금지
+	    if(post.getStatus().equals(PostStatus.DELETED)) {
+	        throw new IllegalStateException("삭제된 게시글입니다.");
+	    }
+	    if(post.getStatus().equals(PostStatus.BLOCKED)) {
+	        throw new IllegalStateException("신고된 게시글입니다.");
+	    }
 
-		// 신고된 댓글 반응 X
-		if(post.getStatus().equals(PostStatus.BLOCKED)) {
-			logger.error("PostReactionServiceImpl reactionToPost() IllegalStateException : 신고된 게시글입니다.");
-		    throw new IllegalStateException("신고된 게시글입니다.");
-		}
+	    // 5️⃣ 기존 반응 조회: 해당 회원이 이 게시글에 이미 반응했는지 확인
+	    Optional<PostReaction> existingPostReaction = postReactionRepository.findByPostAndUserId(post, memberId);
+	    // 6️⃣ 클라이언트 요청 반응 타입 (좋아요/싫어요)
+	    PostReactionType dtoNewReactionType = postReactionRequestDTO.getReactionType();
+	    // 7️⃣ 업데이트 후 반영될 최종 반응 타입
+	    PostReactionType newReactionType = null;
 
-		// 게시글 기존 반응 조회 
-		// 해당 게시글에 회원의 최초진입이라, 'reaction'이 없을 수 도 있어, 'orElseThrow()'로 예외 발생 X 
-		Optional<PostReaction> existingPostReaction = postReactionRepository.findByPostAndUserId(post, memberId);
-		// 클라이언트 요청 반응 가져오기
-		PostReactionType dtoNewReactionType = postReactionRequestDTO.getReactionType();
-		// 업데이트된 새로운 반응 조회없이 가져오기 위한 변수
-		PostReactionType newReactionType = null;
+	    // 기존 반응이 존재할 경우 처리
+	    if(existingPostReaction.isPresent()) {
+	        PostReaction existingReaction = existingPostReaction.get();
+	        PostReactionType existingType = existingReaction.getReactionType();
 
-		// 'Optional' 만약 해당 게시글에 회원의 '반응'이 존재한다면
-		if(existingPostReaction.isPresent()) {
-			// 'Optional'에서 'PostReaction' 가져오기
-			PostReaction existingReaction = existingPostReaction.get();
-			PostReactionType existionPostReactionType = existingReaction.getReactionType();
+	        if(existingType == dtoNewReactionType) {
+	            // 동일한 반응을 다시 누른 경우 -> 반응 취소
+	            // 점수는 게시글 작성자 기준으로 복구
+	            if(existingType.equals(POST_LIKE)) {
+	            	postAuthor.cancelPostLikeScore();
+	            }
+	            else if(existingType.equals(POST_DISLIKE)) {
+	            	postAuthor.cancelPostDislikeScore();
+	            }
 
-			// 만약 클라이언트의 요청 '반응'과 기존의 '반응'이 같다면은
-			if(existionPostReactionType == dtoNewReactionType) {
-				if(existionPostReactionType.equals(POST_LIKE)) {
-					//그리고 그 반응이 '좋아요'라면은 '좋아요 점수(+5)' 원상복구(-5)
-					member.cancelPostLikeScore();
-				}else if(existionPostReactionType.equals(POST_DISLIKE)) {
-					// 혹은 그 반응이 '싫어요'라면은 '싫어요 점수(-3)' 원상 복구(+3)
-					member.cancelPostDislikeScore();
-				}
-				// 기존 반응 삭제
-				postReactionRepository.delete(existingReaction);
-				// 반응이 삭제되어 없으므로 'null'
-				newReactionType = null;
-			}else {
-				// 만약 클라이언트의 요청 '반응'과 기존의 '반응'이 다르면은
-				// 새로운 반응으로 업데이트 ('좋아요' -> '싫어요' 또는 '싫어요' -> '좋아요')
-				existingReaction.setReactionType(dtoNewReactionType);
+	            // DB에서 기존 반응 삭제
+	            postReactionRepository.delete(existingReaction);
+	            newReactionType = null;
 
-				// 새로운 반응으로 업데이트된 리액션 타입을 가져와 그 리액션이 좋아요라면은
-				if(existingReaction.getReactionType().equals(POST_LIKE)) {
-					// '싫어요'-> '좋아요'상태 즉, 싫어요 점수 압수(+3) 원상복구
-					member.cancelPostDislikeScore();
-					// 좋아요, 멤버등급 +5점
-					member.addPostLikeScore();
-					newReactionType = POST_LIKE;
-				}else if(existingReaction.getReactionType().equals(POST_DISLIKE)) {
-					// 싫어요라면은 '좋아요' -> '싫어요'상태 즉, 좋아요 점수 압수(-5) 원상 복구
-					member.cancelPostLikeScore();
-					// 싫어요, 멤버등급 -3점
-					member.addPostDislikeScore();
-					newReactionType = POST_DISLIKE;
-				}
-				// 만약 변경한 반응이 '좋아요'일 경우
-				if(dtoNewReactionType == POST_LIKE) {
-					notificationService.notifyPostLike(existingReaction);
-				}
-				postReactionRepository.save(existingReaction);
-			}
-		}else {
-			// 회원이 게시글에 최초진입하여 반응버튼을 누를시
-			// 새로운 반응 생성
-			PostReaction newReaction =  PostReaction.builder()
-					                                .post(post)
-					                                .userId(memberId)
-					                                .reactionType(dtoNewReactionType)
-					                                .build();
+	        } else {
+	            //기존 반응과 다른 반응을 누른 경우 -> 반응 변경
+	            existingReaction.setReactionType(dtoNewReactionType);
 
-			// 만약 처음 누른 리액션이 좋아요 라면은
-			if(dtoNewReactionType.equals(POST_LIKE)) {
-				// 좋아요, 멤버 점수 +5
-				member.addPostLikeScore();
-				newReactionType = POST_LIKE;
-			}else if(dtoNewReactionType.equals(POST_DISLIKE)) {
-				// 만약 처음 누른 리액션이 싫어요 라면은
-				// 싫어요 , 멤버 점수 -3 (만약 등급 점수가 음수로 떨어질시 '0'으로 초기화)
-				member.addPostDislikeScore();
-				newReactionType = POST_DISLIKE;
-			}
+	            if(existingReaction.getReactionType().equals(POST_LIKE)) {
+	                // 기존 싫어요 점수 복구 후, 좋아요 점수 추가 (작성자 기준)
+	                postAuthor.cancelPostDislikeScore();
+	                postAuthor.addPostLikeScore();
+	                newReactionType = POST_LIKE;
+	            } else if(existingReaction.getReactionType().equals(POST_DISLIKE)) {
+	                // 기존 좋아요 점수 복구 후, 싫어요 점수 추가 (작성자 기준)
+	                postAuthor.cancelPostLikeScore();
+	                postAuthor.addPostDislikeScore();
+	                newReactionType = POST_DISLIKE;
+	            }
+	            // 좋아요일 경우 알림 발송
+	            if(dtoNewReactionType == POST_LIKE) {
+	                notificationService.notifyPostLike(existingReaction);
+	            }
+	            // 변경된 반응 저장
+	            postReactionRepository.save(existingReaction);
+	        }
 
-			postReactionRepository.save(newReaction);
+	    } else {
+	        // 회원이 게시글에 최초 반응을 누른 경우
+	        PostReaction newReaction = PostReaction.builder()
+	                                               .post(post)
+	                                               .userId(memberId)
+	                                               .reactionType(dtoNewReactionType)
+	                                               .build();
 
-			// 새로운 반응이 좋아요일 경우 알림바송
-			if(dtoNewReactionType == POST_LIKE) {
-				notificationService.notifyPostLike(newReaction);
-			}
-		}
+	        // 게시글 작성자 기준으로 점수 추가
+	        if(dtoNewReactionType.equals(POST_LIKE)) {
+	            postAuthor.addPostLikeScore();
+	            newReactionType = POST_LIKE;
+	        } else if(dtoNewReactionType.equals(POST_DISLIKE)) {
+	            postAuthor.addPostDislikeScore();
+	            newReactionType = POST_DISLIKE;
+	        }
 
-		PostReactionCount postReactionCount = postReactionRepository.countReactionsByPostId(postId);
-		int likeCount = postReactionCount.getLikeCount().intValue();
-		int disLikeCount = postReactionCount.getDislikeCount().intValue();
+	        // DB 저장
+	        postReactionRepository.save(newReaction);
 
-		logger.info("PostReactionServiceImpl reactionToPost() End");
-		return PostReactionResponseDTO.fromEntityToDto(postId, likeCount, disLikeCount, newReactionType);
+	        // 좋아요일 경우 알림 발송
+	        if(dtoNewReactionType == POST_LIKE) {
+	            notificationService.notifyPostLike(newReaction);
+	        }
+	    }
+
+	    // 최신 카운트 집계
+	    PostReactionCount reactionCount = postReactionRepository.countReactionsByPostId(postId);
+	    int likeCount = reactionCount.getLikeCount().intValue();
+	    int dislikeCount = reactionCount.getDislikeCount().intValue();
+
+	    logger.info("PostReactionServiceImpl reactionToPost() End");
+
+	    return PostReactionResponseDTO.fromEntityToDto(postId, likeCount, dislikeCount, newReactionType);
 	}
+
 
 	// 배치 처리할 메서드
 	// 배치로 휴먼 계정 반응 삭제 ( 0 0 3 * * ? => 매일 새벽 3시)

@@ -67,5 +67,4 @@ public class PostPageResponseDTO {
 				                  .jumpForwardPage(normalPostPage.getTotalPages() == 0 ? 0 : Math.min(normalPostPage.getNumber() +10 , normalPostPage.getTotalPages()-1))
 				                  .build();
 	}
-
 }

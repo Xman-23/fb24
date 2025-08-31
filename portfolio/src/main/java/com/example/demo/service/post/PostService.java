@@ -3,11 +3,14 @@ package com.example.demo.service.post;
 
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 
+
+
+
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
+import com.example.demo.dto.post.PostBoardPostSearchPageResponseDTO;
 import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
 
-import com.example.demo.dto.post.PostListResponseDTO;
 import com.example.demo.dto.post.PostPageResponseDTO;
 import com.example.demo.dto.post.PostResponseDTO;
 import com.example.demo.dto.post.PostUpdateRequestDTO;
@@ -46,26 +49,48 @@ public interface PostService {
 	// 전체 공지글 (공지 게시판 전용)
 	PostNoticeBoardResponseDTO getAllNotices(Pageable pageable);
 
+	// 전체 공지글 키워드 검색
+	PostBoardPostSearchPageResponseDTO noticeBoardSearchPosts (String keyword, Pageable pageable);
+
+	// 전체 공지글 키워드 자동완성
+	List<String> noticePostTitlesByKeyword(String keyword);
+
+	PostBoardPostSearchPageResponseDTO autocompleteSearchPostsByNoticeBoard(String title,Pageable pageable);
+
+	// 전체 공지글 닉네임 검색
+	PostBoardPostSearchPageResponseDTO noticeBoardSearchPostsAndAuthor (String nickname, Pageable pageable);
+
 	// 자식 게시판의 게시글 목록 조회 (ACTIVE + 공지글 제외)
 	PostPageResponseDTO getPostsByBoard(Long boardId, Pageable pageable);
 
 	// 자식 게시판 정렬
 	PostPageResponseDTO getPostsByBoardSorted(Long boardId, String sortBy, Pageable pageable);
 
-	// 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
+	// 자식 게시판 키워드 검색
+	PostBoardPostSearchPageResponseDTO childBoardSearchPosts(Long boardId, String keyword, Pageable pageable);
+
+	// 자식 게시팜 닉네임 검색
+	PostBoardPostSearchPageResponseDTO childBoardSearchPostsAndAuthor(Long boardId, String nickname, Pageable pageable);
+
+	// 자식 게시판 키워드 자동완성
+	List<String> childPostTitlesByKeyword(Long boardId, String keyword);
+
+	PostBoardPostSearchPageResponseDTO childPostSearchTitlesByKeyword(Long boardId, String title, Pageable pageable);
+
+	// 통합 게시글 키워드 검색 (제목 또는 본문에 키워드 포함 + ACTIVE 상태)
 	MainPostPageResponseDTO searchPostsByKeyword(String keyword, Pageable pageable);
 
-	// 작성자별 게시글 조회
+	// 통합 작성자별 게시글 조회
 	MainPostPageResponseDTO getPostsByAuthorNickname(String nickname,Pageable pageable);
+
+	// 통합 실시간 검색 제목 게시글 조회
+	MainPostPageResponseDTO getSearchPostsByAuthorNickname(String title, Pageable pageable);
 
 	// 조회수 중복 방지
 	void increaseViewCount(Long postId, String userIdentifier);
 
 	// 핀 게시글 설정/해제
 	void togglePinPost(Long postId, boolean pin);
-
-	// 3개의 핀으로 설정된 공지 게시글 모든 게시판에 보여주기
-	List<PostListResponseDTO> getTop3PinnedNoticesByBoard();
 
 	// 이미지 생성
 	void savePostImages(Long postId, List<MultipartFile> files);
@@ -87,11 +112,24 @@ public interface PostService {
 
 	// 부모게시판 페이징
 	PostParentBoardPostPageResponseDTO getPostsByParentBoard (Long parentBoardId, Pageable pageable);
+	
+	// 부모 게시판 키워드 검색
+	PostBoardPostSearchPageResponseDTO searchPostsByParentBoard(Long parentBoardId, String keyword, Pageable pageable);
+	// 부모게시판 실시간 검색
+	List<String> postPostTitlesByKeyword(Long parentBoardId, String keyword);
+	
+	PostBoardPostSearchPageResponseDTO autocompleteSearchPostsByParentBoard(Long parentBoardId, String title, Pageable pageable);
+	// 부모 게시판 닉네임 검색
+	PostBoardPostSearchPageResponseDTO searchPostsByParentBoardAndAuthor(Long parentBoardId, String nickname, Pageable pageable);
+	
 
 	// 게시글 배치 삭제
 	int deleteDeadPost(LocalDateTime cutDate, int maxViewCount);
 
 	// 공지 게시글 배치 삭제
 	int deleteDeadNoticePost(LocalDateTime cutDate);
+	
+	// 검색어 자동완성
+	List<String> getPostTitlesByKeyword(String keyword);
 
 }

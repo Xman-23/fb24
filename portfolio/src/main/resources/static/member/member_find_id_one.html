@@ -13,9 +13,9 @@
 <script src="/js/member/member_validation.js"></script>
 <script src="/js/member/get_member.js"></script>
 <!-- CSS -->
-<link rel="stylesheet" href="css/common/common_header.css">
-<link rel="stylesheet" href="css/member/member_find_id/member_find_id_one.css">
-<link rel="stylesheet" href="css/member/member_footer.css">
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/member/member_find_id/member_find_id_one.css">
+<link rel="stylesheet" href="/css/member/member_footer.css">
 <!-- CSS -->
 </head>
 <body>
@@ -114,8 +114,9 @@
         nextBtn.prop("disabled", !(usernameFilled && residentFilled));
     }
 
-  //*************************************************** Function Start ***************************************************//
+	//*************************************************** Function End ***************************************************//
 
+	//*************************************************** API Start ***************************************************//
 	function find_id_one_api() {
 
 	    // 폼 제출 이벤트 ("Enter"key로 폼 제출가능)
@@ -157,7 +158,7 @@
 	            }
 	        });
 	    });
-  }
-
+	}
+	//*************************************************** API End ***************************************************//
 </script>
 </html>
