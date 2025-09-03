@@ -40,6 +40,8 @@ public class PostListResponseDTO {
 	// 필드 Start
     private Long postId;
 
+    private Long boardId;
+
     private String title;
 
     private String boardName;
@@ -78,6 +80,7 @@ public class PostListResponseDTO {
                                   .createdAt(formatCreatedAt)
                                   .userNickname(userNickname)
                                   .reactionCount(reactionCount)
+                                  .boardId(post.getBoard().getBoardId())
                                   .build();
     }
 
@@ -96,6 +99,7 @@ public class PostListResponseDTO {
                                   .reactionCount(reactionCount)
                                   .userNickname(userNickname)
                                   .commentCount(commentCount)
+                                  .boardId(post.getBoard().getBoardId())
                                   .build();
     }
 
@@ -115,6 +119,7 @@ public class PostListResponseDTO {
                                   .userNickname(userNickname)
                                   .commentCount(commentCount)
                                   .thumbnailImageUrl(thumbnailUrl)
+                                  .boardId(post.getBoard().getBoardId())
                                   .build();
     }
 

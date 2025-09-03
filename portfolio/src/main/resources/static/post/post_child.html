@@ -7,22 +7,32 @@
 <title></title>
 <!-- jQuery Setting -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- jQuery Setting -->
 <!-- js Setting -->
+<!-- 헤더 Start -->
 <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
 <script src="/js/common/member/member_signin_signup_button.js"></script>
 <script src="/js/common/board/board.js"></script>
-<script src="/js/common/board/search.js"></script>
-<script src="/js/common/visitor/visitor.js"></script>
-<script src="/js/board/board_child/board_child.js"></script>
+<!-- 헤더 End -->
+<!-- Main Start -->
+<script src="/js/post/post_child/post_child.js"></script>
+<script src="/js/post/post_child/post_child_comment.js"></script>
+<script src="/js/post/post_child/post_child_board.js"></script>
 <script src="/js/board/board_page/board_page.js"></script>
+<script src="/js/common/board/search.js"></script>
+<!-- Main Start -->
+<!-- 바텀 Start -->
+<script src="/js/common/visitor/visitor.js"></script>
+<!-- 바텀 Start -->
 <!-- js Setting -->
 <!-- CSS Setting -->
 <link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/post/post_child/post_child.css">
+<link rel="stylesheet" href="/css/post/post_child/post_child_comment.css">
+<link rel="stylesheet" href="/css/post/post_child/post_child_comment_button.css">
+<link rel="stylesheet" href="/css/post/post_child/post_child_board.css">
 <link rel="stylesheet" href="/css/common/common_page_button.css">
-<link rel="stylesheet" href="/css/board/board_child.css">
 <link rel="stylesheet" href="/css/board/board_common_footer.css">
-<!-- CSS Setting -->
+
 </head>
 <body>
 	<header id="header">
@@ -39,6 +49,86 @@
 	</header>
 
 	<main>
+		<div id="parent_post">
+			<!-- 메인 인기 게시글(post) 보여주기 -->
+			<section id="main_post_section">
+				<!-- 공통으로 빼기 -->
+				<!-- 게시글 단 한건이므로, '<article></article> 태그  -->
+				<article id="post_detail">
+					<header class="post_header">
+						<h1 id="post_title">게시글 제목</h1> <!-- script 'id'사용 -->
+						<!-- 게시글 메타데이터(게시판,작성자, 작성자 작성일, 조회수, 좋아요... -->
+						<p id="post_meta">
+							작성자: <span id="post_author">작성자</span> | <!-- script 'id'사용 -->
+							조회수: <span id="post_views">0</span> <br> <!-- script 'id'사용 -->
+							게시판: <span id="post_board">게시판 이름</span> | <!-- script 'id'사용 -->
+				        	작성일: <span id="post_created">2025-08-28 15:00</span>  <!-- script 'id'사용 -->
+				      	</p>
+				    </header>
+
+					<!-- 본문 영역-->
+					<div id="post_content_images">
+						<div id="post_content"> <!-- script 'id'사용 -->
+							게시글 내용이 들어가는 영역
+						</div>
+						<!-- 이미지 영역 -->
+						<div id="post_images"> <!-- script 'id'사용 -->
+							<!-- <img src="이미지URL" alt="게시글 이미지"> 형태로 jQuery 렌더링 -->
+						</div>
+					</div>
+
+					<!-- 이미지 다운로드 영역 (이미지 있을때만 보여주기(show())-->
+					<div id="post_images_download" style="display: none"> <!-- script 'id'사용 -->
+						<!-- <img src="이미지URL" alt="게시글 이미지"> 형태로 jQuery 렌더링 -->
+					</div>
+
+					<!-- 좋아요 영역 -->
+					<div id="post_reactions">
+					  <button id="post_btn_like">👍 좋아요 <span id="post_likes">0</span></button> <!-- script 'id'사용 --> 
+					  <button id="post_btn_dislike">👎 싫어요 <span id="post_dislikes">0</span></button> <!-- script 'id'사용 -->
+					</div>
+				</article>
+				<!-- 공통으로 빼기 -->
+			</section>
+						<!-- 2. 댓글 섹션 자리  공토으로 빼기-->
+			<section id="comments_section">
+				<div id="post_comments_header">
+					<div id="comments_count">댓글: <span id="post_comments">0</span></div>
+					<select id="comment_sort">
+	            		<option value="normal">원래대로</option>
+	            		<option value="recent">최신순</option>
+	            		<option value="like">좋아요순+최신순</option>
+	        		</select>
+        		</div>
+        		<div id="comment_list_body">
+	        		<div id="all_commnet_list">
+		        		<div id="popular_comments_list">
+							<!-- 인기 댓글은 나중에 jQuery로 렌더링 -->
+						</div>
+						<div id="comments_list">
+							<!-- 댓글은 나중에 jQuery로 렌더링 -->
+						</div>
+	        		</div>
+        		</div>
+	        	<!-- 댓글 페이징 버튼 영역 Start -->
+	    		<div id="comment_pagination_container">
+	        		<button id="comment_first_page">처음</button>
+	        		<button id="comment_prev_page">이전</button>
+	        		<span id="comment_page_buttons"><!-- 페이지 번호 버튼 생성 --></span>
+	        		<button id="comment_next_page">다음</button>
+	        		<button id="comment_last_page">마지막</button>
+	    		</div>
+	    		<!-- 댓글 페이징 버튼 영역 End -->
+				<div id="commet_write_footer">
+				    <div id="comment_write_section">
+				        <div class="textarea_wrapper">
+				            <textarea id="new_comment_content" placeholder="댓글을 입력하세요."></textarea>
+				            <button id="btn_add_comment">댓글 작성</button>
+				        </div>
+				    </div>
+				</div>
+			</section>
+		</div>
 	    <div class="board-header">
 	        <h2>
 	            <span id="child-name">자식 게시판 이름</span>
@@ -102,6 +192,7 @@
 	        </div>
 	    </div>
 	</footer>
+	
 			<!-- 신고 팝업 -->
 	<!-- 공통으로 빼야됨 일반, 부모 -->
 	<div id="post_popup">

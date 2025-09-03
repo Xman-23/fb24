@@ -1,0 +1,93 @@
+@charset "UTF-8";
+
+/* -------------------------------------------------상세 게시글 Start----------------------------------------------------------------------*/
+
+/* 게시글 상세 영역 */
+#post_detail {
+    border: 1px solid #e0e0e0; /* 연한 회색 테두리 */
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* 연한 회색 그림자 */
+}
+
+/* 게시글 헤더 */
+#post_detail .post_header {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e0e0e0; /* 연한 회색 구분선 */
+}
+
+#post_detail #post_title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+#post_detail #post_meta {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* 본문 및 이미지 영역 */
+#post_detail #post_content_images {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+#post_detail #post_content {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+#post_detail #post_images img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+/* 이미지 다운로드 영역 구분선 추가 */
+#post_detail #post_images_download {
+    display: none;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0; /* 연한 회색 구분선 */
+    margin-top: 12px;
+}
+
+#post_detail #post_images_download img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+/* 좋아요/싫어요 영역 */
+#post_detail #post_reactions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+}
+
+#post_detail #post_reactions button {
+    padding: 6px 12px;
+    font-size: 14px;
+    border: 1px solid #e0e0e0; /* 연한 회색 테두리 */
+    border-radius: 6px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#post_detail #post_reactions button:hover {
+    background-color: #f9f9f9; /* hover 연한 회색 */
+    transform: translateY(-1px);
+}
+
+/* -------------------------------------------------상세 게시글 End----------------------------------------------------------------------*/

@@ -2,20 +2,36 @@
 var debounceTimer;
 var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가져오기
 
-//***************************************** ID Start *************************************************************
+// 타이머 변수
+var debounceTimer;
+
+var currentKeyword = '';     
+var currentSearchType = 'keyword'; 
+
+var sortBy = 'latest';
+
+//*****************************************Board ID Start*************************************************************
 // 도메인에서 '/'기준으로 배열화[] 5 -1  
 const pathParts = window.location.pathname.split("/");
+console.log("pathParts:", pathParts);
 // 도메인 배열에서 2번째 인덱스 boardId 가져오기
-//const boardId = Number(pathParts[pathParts.lenth -3]);
+const boardId = Number(pathParts[pathParts.length - 4]);
 // 도메인에서 마지막 인덱스 postId 가져오기
 const postId = Number(pathParts[pathParts.length - 1]);
 // 공지게시판 BoardId
-//const noticeBoard = [1];
+const noticeBoard = [1];
 // 부모게시판 BoardId
-//const parentBoardIds = [9, 14, 15, 20];
-var memberId = Number(localStorage.getItem('memberId'));
-//***************************************** ID End *************************************************************
+const parentBoardIds = [9, 14, 15, 20];
 
+var memberId = Number(localStorage.getItem('memberId'));
+//*****************************************No Comment Start************************************************************* 
+const no_main_popularList = "메인 인기 게시글이 없습니다.";
+const no_popularList = "인기 게시글이 없습니다.";
+const no_normalList = "게시글이 없습니다.";
+const no_searchList = "검색 결과가 없습니다.";
+const no_fin_noticeList ="고정된 공지 게시글이 없습니다.";
+const no_noticeList ="공지 게시글이 없습니다.";
+//*****************************************No Comment End*************************************************************
 // 이미지 영역(post_images_download)보여주기 메인, 부모 , 자식 게시글 공용으로 사용
 function shwo_image_download(imageUrls) {
 
@@ -137,7 +153,7 @@ function reaction_api(postId,token) {
 //*************************************************** Post 랜더링 Start ***************************************************//
 
 function renderPost(post) {
-	$("#post_title").text("[🔥HOT🔥] " + post.title);
+	$("#post_title").text("[HOT]"+post.title);
 	$("#post_board").text(post.boardName);
 	$("#post_views").text(post.viewCount);
 	$("#post_author").text(post.userNickname);
@@ -154,7 +170,6 @@ function renderPost(post) {
     }
 }
 
-
 //*************************************************** Post 랜더링 End ***************************************************//
 
 //*****************************************API End******************************************************************
@@ -163,5 +178,4 @@ $(document).ready(function() {
 	view_count_increment(postId); //조회수 증가(그안에 게시글 불러오기)
 	reaction_api(postId,token); // 게시글 리액션
 	/* Post API End */
-
 });

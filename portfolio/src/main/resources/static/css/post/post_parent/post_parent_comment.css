@@ -45,7 +45,7 @@
 
 
 /* -------------------------------------------------댓글 body Start----------------------------------------------------------------------*/
-/* -------------------------------------------------인기 댓글 Start----------------------------------------------------------------------*/
+/* ------------------------------------------------- 인기 댓글 Start ------------------------------------------------- */
 /* 인기 댓글 리스트 */
 #popular_comments_list {
     display: flex;
@@ -56,17 +56,17 @@
 
 /* 인기 댓글 카드 */
 .popular_comment {
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4d79ff; /* 선명한 파랑 테두리 */
     border-radius: 6px;
     padding: 8px 12px;
-    background-color: #fff0f0;
-    box-shadow: 0 2px 4px rgba(255, 107, 107, 0.1);
+    background-color: #e6f0ff; /* 안쪽 연한 파랑 배경 */
+    box-shadow: 0 2px 4px rgba(77, 121, 255, 0.1); /* 파랑 그림자 */
 }
 
 /* 댓글 헤더 (작성자, 작성일, 버튼) */
 .popular_comment_header {
     display: flex;
-    justify-content: space-between; /* info는 왼쪽, 버튼 그룹은 오른쪽 */
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 6px;
     font-size: 13px;
@@ -76,13 +76,13 @@
 .popular_comment_info {
     display: flex;
     align-items: center;
-    gap: 8px; /* 작성자와 작성일 사이 간격 */
+    gap: 8px;
 }
 
 /* 작성자 */
 .popular_comment_author {
     font-weight: 700;
-    color: #ff6b6b;
+    color: #4d79ff; /* 선명한 파랑 */
 }
 
 /* 작성일 */
@@ -96,15 +96,15 @@
     font-size: 12px;
     padding: 2px 6px;
     margin-left: 4px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4d79ff; /* 파랑 테두리 */
     border-radius: 4px;
-    background-color: #fff5f5;
+    background-color: #d0e4ff; /* 버튼 배경도 연한 파랑 */
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .popular_comment_actions button:hover {
-    background-color: #ffeded;
+    background-color: #b8d8ff; /* hover 연한 파랑 */
     transform: translateY(-1px);
 }
 
@@ -115,8 +115,10 @@
     color: #2c3e50;
     margin-bottom: 6px;
 }
-/* -------------------------------------------------인기 댓글 End----------------------------------------------------------------------*/
-/* -------------------------------------------------일반 댓글 Start---------------------------------------------------------------------- */
+/* ------------------------------------------------- 인기 댓글 End ------------------------------------------------- */
+
+
+/* ------------------------------------------------- 일반 댓글 Start ------------------------------------------------- */
 
 /* 댓글 리스트 전체 */
 #comments_list {
@@ -127,21 +129,21 @@
 
 /* 루트 댓글 (일반 댓글) */
 .comment.root-comment {
-    border: 1px solid #ff6b6b;
+    border: 1px solid #a3c4ff; /* 연한 파랑 테두리 */
     border-radius: 6px;
     padding: 8px 12px;
     background-color: #ffffff; /* 일반 댓글 하얀색 */
-    box-shadow: 0 1px 3px rgba(255, 107, 107, 0.1);
+    box-shadow: 0 1px 3px rgba(163, 196, 255, 0.1); /* 연한 파랑 그림자 */
 }
 
 /* 자식 댓글 (일반 댓글) */
 .comment.child-comment {
-    border: 1px solid #ffc0c0;
+    border: 1px solid #c0d4ff; /* 더 연한 파랑 */
     border-radius: 6px;
     padding: 6px 10px 6px 20px;
-    background-color: #ffffff; /* 일반 댓글 하얀색 */
-    margin-left: 24px; /* 부모 댓글 대비 들여쓰기 */
-    box-shadow: 0 1px 2px rgba(255, 107, 107, 0.05);
+    background-color: #ffffff;
+    margin-left: 24px;
+    box-shadow: 0 1px 2px rgba(163, 196, 255, 0.05);
     position: relative;
 }
 
@@ -152,19 +154,19 @@
     left: 6px;
     top: 50%;
     transform: translateY(-50%);
-    color: #ff6b6b;
+    color: #a3c4ff; /* 화살표 연한 파랑 */
     font-size: 14px;
 }
 
-/* 인기 댓글 / pinned */
-.comment.pinned, 
-.popular_comment {
-    border-color: #ff6b6b;
-    background-color: #ffe5e5; /* 인기 댓글 강조 분홍색 유지 */
+/* pinned 댓글 강조 */
+.comment.root-comment.pinned,
+.comment.child-comment.pinned {
+    border: 1px solid #a3c4ff; /* 연한 파랑 테두리 */
+    background-color: #e7f0ff; /* 연한 파랑 배경 */
 }
 
 /* 댓글 헤더 */
-.comment_header, .popular_comment_header {
+.comment_header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -176,65 +178,63 @@
 .comment_info {
     display: flex;
     align-items: center;
-    gap: 8px; /* 작성자와 작성일 사이 간격 */
+    gap: 8px;
 }
 
-/* 작성자 일반 댓글: 기본 글자색, pinned 댓글: 분홍 */
-.comment.root-comment .comment_author,
-.comment.child-comment .comment_author {
+/* 작성자 */
+.comment_author {
     font-weight: 700;
-    color: #2c3e50; /* 일반 댓글 작성자 기본 글자색 */
+    color: #666666; /* 기본 회색 */
 }
 
-.comment.pinned .comment_author,
-.popular_comment .popular_comment_author {
-    color: #ff6b6b; /* pinned / 인기 댓글 작성자 분홍 */
+/* pinned 댓글 작성자 */
+.comment.root-comment.pinned .comment_author,
+.comment.child-comment.pinned .comment_author {
+    color: #4d79ff; /* 연한 파랑 */
 }
 
 /* 작성일 */
-.comment_created, .popular_comment_created {
+.comment_created {
     color: #999;
     font-size: 12px;
 }
 
 /* 버튼 그룹 */
-.comment_actions button, .popular_comment_actions button {
+.comment_actions button {
     font-size: 12px;
     padding: 2px 6px;
     margin-left: 4px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #a3c4ff; /* 연한 파랑 테두리 */
     border-radius: 4px;
-    background-color: #fff5f5;
+    background-color: #f0f4ff; /* 연한 파랑 배경 */
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.comment_actions button:hover, .popular_comment_actions button:hover {
-    background-color: #ffeded;
+.comment_actions button:hover {
+    background-color: #e7f0ff; /* 버튼 hover 연한 파랑 */
     transform: translateY(-1px);
 }
 
 /* 댓글 내용 */
-.comment_content, .popular_comment_content {
+.comment_content {
     font-size: 14px;
     line-height: 1.4;
     color: #2c3e50;
     margin-bottom: 6px;
 }
 
-/* -------------------------------------------------일반 댓글 End---------------------------------------------------------------------- */
-
+/* ------------------------------------------------- 일반 댓글 End ------------------------------------------------- */
 
 /* -------------------------------------------------댓글 body End----------------------------------------------------------------------*/
 
 /* ------------------------------------------------- 댓글 작성 영역 Start ------------------------------------------------- */
-
 /* ------------------------------------------------- 본문 댓글 작성 영역 Start ------------------------------------------------- */
 
 #commet_write_footer {
     margin-top: 12px; /* 댓글 리스트와 간격 맞춤 */
     padding: 12px;
-    border: 1px solid #ff6b6b; /* 테두리 핑크 유지 */
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 6px;
     background-color: #ffffff; /* 배경 하얀색 */
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -251,11 +251,11 @@
     width: 100%;
     min-height: 60px;
     padding: 8px 70px 8px 10px; /* 오른쪽 버튼 공간 확보 */
-    border: 1px solid #ccc;
+    border: 1px solid #4dabf7; /* 파란 테두리 */
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
-    background-color: #fdfdfd;
+    background-color: #ffffff; /* 배경 하얀색 */
     color: #2c3e50;
     box-sizing: border-box;
 }
@@ -268,26 +268,28 @@
     transform: translateY(-50%);
     padding: 6px 12px;
     font-size: 13px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4dabf7; /* 파란 테두리 */
     border-radius: 4px;
-    background-color: #ffffff;
+    background-color: #ffffff; /* 배경 하얀색 */
     cursor: pointer;
     transition: all 0.2s;
 }
 
 #btn_add_comment:hover {
-    background-color: #f2f2f2;
+    background-color: #ffffff; /* hover 시 하얀색 유지 */
     transform: translateY(-50%);
 }
 
 /* ------------------------------------------------- 본문 댓글 작성 영역 End ------------------------------------------------- */
+
+
 /* ------------------------------------------------- 인기 댓글 대댓글 작성 영역 Start ------------------------------------------------- */
 /* 대댓글 입력창 wrapper */
 .child_popular_comment_input {
     position: relative;
     margin-top: 6px;
     padding: 6px;
-    border: 1px solid #ffc0c0; /* 연한 핑크 테두리 */
+    border: 1px solid #a0c4ff; /* 연한 파랑 테두리 */
     border-radius: 6px;
     background-color: #ffffff; /* 입력창 배경 하얀색 */
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -298,7 +300,7 @@
     width: 100%;
     min-height: 50px;
     padding: 8px 80px 8px 10px; /* 오른쪽 버튼 공간 확보 */
-    border: 1px solid #ccc;
+    border: 1px solid #4d79ff; /* 파란색 테두리 */
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
@@ -316,7 +318,7 @@
     transform: translateY(-50%);
     padding: 4px 10px;
     font-size: 12px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4d79ff; /* 파란색 테두리 */
     border-radius: 4px;
     background-color: #ffffff;
     cursor: pointer;
@@ -325,7 +327,7 @@
 
 .child_popular_comment_submit:hover,
 .child_popular_comment_cancel:hover {
-    background-color: #f2f2f2;
+    background-color: #e6f0ff; /* 연한 파랑 배경 */
     transform: translateY(-50%);
 }
 
@@ -334,12 +336,10 @@
     right: 11px; /* 취소 버튼 오른쪽 위치 */
 }
 .child_popular_comment_submit {
-    right: 60px; /* 작성 버튼 취소 버튼 왼쪽 */
+    right: 60px; /* 작성 버튼 왼쪽 */
 }
-
-
-
 /* ------------------------------------------------- 인기 댓글 대댓글 작성 영역 End ------------------------------------------------- */
+
 
 /* ------------------------------------------------- 인기 댓글 수정  영역 Start ------------------------------------------------- */
 /* 인기 댓글 수정창 wrapper */
@@ -347,7 +347,7 @@
     position: relative;
     margin-top: 6px;
     padding: 6px;
-    border: 1px solid #ffc0c0; /* 연한 핑크 테두리 */
+    border: 1px solid #a0c4ff; /* 연한 파랑 테두리 */
     border-radius: 6px;
     background-color: #ffffff;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -358,7 +358,7 @@
     width: 100%;
     min-height: 50px;
     padding: 8px 80px 8px 10px; /* 오른쪽 버튼 공간 확보 */
-    border: 1px solid #ccc;
+    border: 1px solid #4d79ff; /* 파란색 테두리 */
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
@@ -376,7 +376,7 @@
     transform: translateY(-50%);
     padding: 4px 10px;
     font-size: 12px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4d79ff; /* 파란색 테두리 */
     border-radius: 4px;
     background-color: #ffffff;
     cursor: pointer;
@@ -385,7 +385,7 @@
 
 .poular_edit_comment_save:hover,
 .poular_edit_comment_cancel:hover {
-    background-color: #f2f2f2;
+    background-color: #e6f0ff; /* 연한 파랑 배경 */
     transform: translateY(-50%);
 }
 
@@ -394,18 +394,18 @@
     right: 11px; /* 취소 버튼 오른쪽 위치 */
 }
 .poular_edit_comment_save {
-    right: 60px; /* 저장 버튼 취소 버튼 왼쪽 */
+    right: 60px; /* 저장 버튼 왼쪽 */
 }
-
 /* ------------------------------------------------- 인기 댓글 수정  영역 End ------------------------------------------------- */
 
 /* ------------------------------------------------- 일반 댓글 대댓글 작성 영역 Start ------------------------------------------------- */
+
 /* 대댓글 입력창 wrapper */
 .child_comment_input {
     position: relative;
     margin-top: 6px;
     padding: 6px;
-    border: 1px solid #ffc0c0; /* 연한 핑크 테두리 */
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 6px;
     background-color: #ffffff; /* 입력창 배경 하얀색 */
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -416,11 +416,11 @@
     width: 100%;
     min-height: 50px;
     padding: 8px 80px 8px 10px; /* 오른쪽 버튼 공간 확보 */
-    border: 1px solid #ccc;
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
-    background-color: #fdfdfd;
+    background-color: #ffffff; /* 배경 하얀색 */
     color: #2c3e50;
     box-sizing: border-box;
 }
@@ -434,16 +434,16 @@
     transform: translateY(-50%);
     padding: 4px 10px;
     font-size: 12px;
-    border: 1px solid #ff6b6b;
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 4px;
-    background-color: #ffffff;
+    background-color: #ffffff; /* 버튼 배경 하얀색 */
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .child_comment_submit:hover,
 .child_comment_cancel:hover {
-    background-color: #f2f2f2;
+    background-color: #ffffff; /* hover 시 하얀색 유지 */
     transform: translateY(-50%);
 }
 
@@ -452,77 +452,71 @@
     right: 11px; /* 취소 버튼 오른쪽 위치 */
 }
 .child_comment_submit {
-    right: 60px; /* 작성 버튼 취소 버튼 왼쪽 */
+    right: 60px; /* 작성 버튼 왼쪽 위치 */
 }
+
 /* ------------------------------------------------- 일반 댓글 대댓글 작성 영역 End ------------------------------------------------- */
 
+
 /* ------------------------------------------------- 일반 댓글 수정 영역 Start ------------------------------------------------- */
+
 /* 수정창 wrapper */
-.edit_comment_form,
-.poular_edit_comment_form {  /* 일반 댓글 / 인기 댓글 공통 */
+.edit_comment_form {  /* 일반 댓글 전용 */
     position: relative;
     margin-top: 6px;
     padding: 6px;
-    border: 1px solid #ffc0c0; /* 연한 핑크 테두리 (대댓글) / 수정창도 동일 */
-    /*border: 1px solid #a0c4ff;  연한 파랑 테두리 */
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 6px;
     background-color: #ffffff; /* 배경 하얀색 */
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 /* textarea */
-.edit_comment_textarea,
-.poular_edit_comment_textarea {
+.edit_comment_textarea {
     width: 100%;
     min-height: 50px;
     padding: 8px 80px 8px 10px; /* 오른쪽 버튼 공간 확보 */
-    border: 1px solid #ccc;
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
-    background-color: #fdfdfd;
+    background-color: #ffffff; /* 배경 하얀색 */
     color: #2c3e50;
     box-sizing: border-box;
 }
 
 /* 저장/취소 버튼 */
 .edit_comment_save,
-.edit_comment_cancel,
-.poular_edit_comment_save,
-.poular_edit_comment_cancel {
+.edit_comment_cancel {
     position: absolute;
     top: 50%;
     right: 6px;
     transform: translateY(-50%);
     padding: 4px 10px;
     font-size: 12px;
-    border: 1px solid #4d79ff;
+    border: 1px solid #4dabf7; /* 파란색 테두리 */
     border-radius: 4px;
-    background-color: #ffffff;
+    background-color: #ffffff; /* 배경 하얀색 */
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .edit_comment_save:hover,
-.edit_comment_cancel:hover,
-.poular_edit_comment_save:hover,
-.poular_edit_comment_cancel:hover {
-    background-color: #f2f2f2;
+.edit_comment_cancel:hover {
+    background-color: #ffffff; /* hover 시 하얀색 유지 */
     transform: translateY(-50%);
 }
 
 /* 버튼 간 간격 */
-.edit_comment_cancel,
-.poular_edit_comment_cancel {
+.edit_comment_cancel {
     right: 11px; /* 취소 버튼 오른쪽 위치 */
 }
-.edit_comment_save,
-.poular_edit_comment_save {
+.edit_comment_save {
     right: 60px; /* 저장 버튼 왼쪽 위치 */
-    
-    
 }
+
 /* ------------------------------------------------- 일반 댓글 수정 영역 End ------------------------------------------------- */
+
 
 /* -------------------------------------------------  댓글 신고 영역 Start ------------------------------------------------- */
 

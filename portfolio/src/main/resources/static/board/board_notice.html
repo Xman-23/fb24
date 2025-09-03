@@ -177,7 +177,7 @@
 			if(post.notice === true) {
 				const finNoticeHtml =`
 						                <li class="post-card notice">
-					                    	<a href="/posts/${post.postId}" class="post-link">
+					                    	<a href="board/${post.boardId}/notice/${post.postId}" class="post-link">
 					                        	<div class="post-info">
 					                            	<h3 class="post-title">📌 [공지] ${post.title}</h3>
 					                            	<p class="post-meta">
@@ -205,7 +205,7 @@
 			if(post.notice === true) {
 				const normalNoticeHtml =`
 						                <li class="post-card normalnotice">
-					                    	<a href="/posts/${post.postId}" class="post-link">
+											<a href="board/${post.boardId}/notice/${post.postId}" class="post-link">
 					                        	<div class="post-info">
 					                            	<h3 class="post-title">[공지] ${post.title}</h3>
 					                            	<p class="post-meta">
@@ -258,12 +258,12 @@
 	            renderNormalNotices(response.notices);
 
 	            // 페이징 정보 업데이트
-	            renderPagination(response);
+	            post_renderPagination(response);
 	        },
 	        error: function(xhr) {
 				finNoticeList.append(no_posts_tag(no_fin_noticeList));
 				normalNoticeList.append(no_posts_tag(no_noticeList));
-				renderPagination(errorPage);
+				post_renderPagination(errorPage);
 	            alert("공지글 조회 실패:", xhr.responseText);
 	        }
 	    });
@@ -311,16 +311,16 @@
 
 				if(data.posts && data.posts.length > 0) {
 					renderNormalNotices(data.posts || []);
-					renderPagination(data);
+					post_renderPagination(data);
 				}else {
 					normalNoticeList.append(no_posts_tag(no_searchList));
-					renderPagination(data);
+					post_renderPagination(data);
 				}
 				
 			},
 			error: function(xhr) {
 				normalNoticeList.append(no_posts_tag(no_searchList));
-				renderPagination(errorPage);
+				post_renderPagination(errorPage);
 			    alert(xhr.responseText || "");
 			}
 		})

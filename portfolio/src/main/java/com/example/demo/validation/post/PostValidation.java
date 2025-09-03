@@ -28,6 +28,6 @@ public class PostValidation {
 			return false;
 		}
 
-		return "latest".equalsIgnoreCase(sortBy) || "like".equalsIgnoreCase(sortBy);
+		return "latest".equalsIgnoreCase(sortBy) || "popular".equalsIgnoreCase(sortBy);
 	}
 }

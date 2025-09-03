@@ -1,61 +1,56 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
 <meta charset="UTF-8">
 <!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>메인 인기 게시글</title>
+<title></title>
 <!-- jQuery Setting -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- js Setting -->
-<!-- Common -->
+<!-- 헤더 Start -->
 <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
 <script src="/js/common/member/member_signin_signup_button.js"></script>
 <script src="/js/common/board/board.js"></script>
-<script src="/js/common/visitor/visitor.js"></script>
-<script src="/js/main_post.js"></script>
-<script src="/js/main_post_comment.js"></script>
-<script src="/js/main_post_board.js"></script>
+<!-- 헤더 End -->
+<!-- Main Start -->
+<script src="/js/post/post_parent/post_parent.js"></script>
+<script src="/js/post/post_parent/post_parent_board.js"></script>
+<script src="/js/post/post_parent/post_parent_comment.js"></script>
+<script src="/js/board/board_page/board_page.js"></script>
 <script src="/js/common/board/search.js"></script>
-
-<!-- Common -->
-<!-- CSS Setting Start -->
+<!-- Main Start -->
+<!-- 바텀 Start -->
+<script src="/js/common/visitor/visitor.js"></script>
+<!-- 바텀 Start -->
+<!-- js Setting -->
+<!-- CSS Setting -->
 <link rel="stylesheet" href="/css/common/common_header.css">
-<link rel="stylesheet" href="/css/main/main_post.css">
-<link rel="stylesheet" href="/css/main/main_post_comment.css">
-<link rel="stylesheet" href="/css/main/main_post_comment_button.css">
-<link rel="stylesheet" href="/css/main/main_post_board.css">
-<link rel="stylesheet" href="/css/main/main_post_board_button.css">
-<link rel="stylesheet" href="/css/common/common_footer.css">
-<!-- CSS Setting End-->
+<link rel="stylesheet" href="/css/post/post_parent/post_parent.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent_comment.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent_comment_button.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent_board.css">
+<link rel="stylesheet" href="/css/common/common_page_button.css">
+<link rel="stylesheet" href="/css/board/board_common_footer.css">
+
 </head>
 <body>
-	
-	<!-- header Start -->
 	<header id="header">
-		<!-- 첫 번째 줄 -->
-		<div class="header-top">
-			<div id="logo">
-    			<a href="/">Log</a>
-			</div>
-			<!-- 오른쪽 사용자 메뉴 -->
-			<div id="user-actions">
-				<button id="login-btn">로그인</button>
-				<button id="register-btn">회원가입</button>
-			</div>
-		</div>
-
-		<nav id="board-tabs">
-			<ul id="parent-boards">
-			<!-- 게시판 영역  -->
-			</ul>
-		</nav>
+	    <div class="header-top">
+	        <div id="logo"><a href="/">Log</a></div>
+	        <div id="user-actions">
+	            <button id="login-btn">로그인</button>
+	            <button id="register-btn">회원가입</button>
+	        </div>
+	    </div>
+	    <nav id="board-tabs">
+	        <ul id="parent-boards"></ul>
+	    </nav>
 	</header>
-	<!-- header End -->
 
-	<!-- 메인 바디 영역(메인 인기 게시글) -->
+	<!-- 부모 상세게시글로 빼기 -->
 	<main>
-		<div id="main_post">
+		<div id="parent_post">
 			<!-- 메인 인기 게시글(post) 보여주기 -->
 			<section id="main_post_section">
 				<!-- 공통으로 빼기 -->
@@ -96,7 +91,7 @@
 				</article>
 				<!-- 공통으로 빼기 -->
 			</section>
-			<!-- 2. 댓글 섹션 자리  공토으로 빼기-->
+						<!-- 2. 댓글 섹션 자리  공토으로 빼기-->
 			<section id="comments_section">
 				<div id="post_comments_header">
 					<div id="comments_count">댓글: <span id="post_comments">0</span></div>
@@ -134,58 +129,71 @@
 				    </div>
 				</div>
 			</section>
-			<!-- <!-- 2. 댓글 섹션 자리  공토으로 빼기-->
 		</div>
-
-		<!-- 메인 인기 게시글 리스트 Start -->
-		<section id="popular-posts">
-			<h2>[🔥HOT🔥]메인 인기 게시글</h2>
-			<ul id = "popular-posts-container">
-				  <!-- jQuery로 게시글 추가 -->
-			</ul>
-			<!-- 게시글 페이징 버튼 영역 Start-->
-    		<div id="pagination-container">
-        		<button id="first-page">처음</button>
-        		<button id="jump-backward">&lt;&lt;</button>
-        		<button id="prev-page">이전</button>
-        		<span id="page-buttons"><!-- 페이지 번호 버튼 생성 --></span>
-        		<button id="next-page">다음</button>
-        		<button id="jump-forward">&gt;&gt;</button>
-        		<button id="last-page">마지막</button>
-    		</div>
-    		<!-- 게시글 페이징 버튼 영역 End-->
-		</section>
-		<!-- 메인 인기 게시글 리스트 End -->
-	</main>
-
-	<!-- footer Start -->
-	<footer id="main-footer">
-		<div class="footer-container">
-			<!-- 접속자 영역 -->
-			<div class="footer-stats">
-				<span>오늘 접속자: <strong id="today-visitors">0</strong></span>
-				<span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+		<!-- <!-- 2. 댓글 섹션 자리  공토으로 빼기-->
+		<div id="post_board" class="content-section">
+			<div class = "board-header">
+			<h2 id="board_parent_h2">
+				<!-- 부모게시판 이름 -->
+		        <span id="parent-name"></span>
+		        <!-- 부모게시판 설명 -->
+		        <span id="board-description"></span>
+		    </h2>
+		    <!-- 자식게시판 리스트 -->
+		     <div class="child-list" id="child-boards"></div>
 			</div>
-        	<!-- 중앙: 검색창 -->
-        	<div class="footer-search">
-        		<select id="searchType">
-        			<option value="keyword">제목/본문</option>
-        			<option value="author">작성자</option>
-        			<option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
-        		</select>
-		    <div class="autocomplete-wrapper">
-		        <input type="text" id="searchInput" placeholder="검색어 입력..." />
-		        <ul id="autocomplete-list" class="autocomplete-items"></ul>
-		    </div>
-            	<button class="search-btn">🔍</button>
-        	</div>
-        	    <!-- 오른쪽: 균형용 스페이서 -->
-    		<div class="footer-spacer"></div>
-    	</div>
-	</footer>
-	<!-- footer End -->
 	
-	<!-- 신고 팝업 -->
+			<!-- 공지용 게시글 -->
+		    <div id="post_notice">
+		    	<ul id ="post_notice_list"></ul>
+		    </div>
+		    <!-- 부모게시판 인기글 -->
+		    <div id="post_popluar">
+		    	<ul id="post_popluar_list"></ul>
+		    </div>
+	    	<!-- 페이징 버튼 영역 -->
+	   		<div id="pagination-container">
+	       		<button id="first-page">처음</button>
+	       		<button id="jump-backward">&lt;&lt;</button>
+	       		<button id="prev-page">이전</button>
+	       		<span id="page-buttons"><!-- 페이지 번호 버튼 생성 --></span>
+	       		<button id="next-page">다음</button>
+	       		<button id="jump-forward">&gt;&gt;</button>
+	       		<button id="last-page">마지막</button>
+	   		</div>
+   		</div>
+	</main>
+	<!-- 부모 상세게시글로 빼기 -->
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	        <div class="footer-search">
+	            <select id="searchType">
+	                <option value="keyword">제목/본문</option>
+	                <option value="author">작성자</option>
+	                <option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+	            </select>
+	            <div class="autocomplete-wrapper">
+	                <input type="text" id="searchInput" placeholder="검색어 입력..." />
+	                <ul id="autocomplete-list" class="autocomplete-items"></ul>
+	            </div>
+	            <button class="search-btn">🔍</button>
+	        </div>
+	        <div class="footer-spacer">
+	       		<!-- 관리자 버튼 -->
+				<div id="admin-footer-buttons" style="display:none; margin-top:10px;">
+				    <button id="createChildBoardBtn">자식게시판 만들기</button>
+				    <button id="editParentBoardBtn">부모게시판 수정하기</button>
+				    <button id="deleteParentBoardBtn">부모게시판 삭제하기</button>
+				</div>
+	        </div>
+	    </div>
+	</footer>
+	
+		<!-- 신고 팝업 -->
 	<!-- 공통으로 빼야됨 일반, 부모 -->
 	<div id="post_popup">
 		<div id="comment_report_popup" style="display:none;">

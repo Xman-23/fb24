@@ -6,7 +6,8 @@ var errorPage = {
 					totalPages : 0
 				};
 
-function renderPagination(data) {
+function post_renderPagination(data) {
+	console.log("data :", data);
     var currentPage = data.pageNumber; //현재 페이지
     var totalPages = data.totalPages; // 총데이터/Size = 총 페이지
     var lastPage = totalPages - 1; // 마지막페이지(인덱스 기준)

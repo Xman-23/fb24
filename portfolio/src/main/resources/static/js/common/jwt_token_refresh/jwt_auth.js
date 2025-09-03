@@ -4,7 +4,6 @@ var refreshRetryCount = 0;      // 자동 갱신 재시도 카운트
 var MAX_RETRY = 3;              // 토큰 갱신 최대 재시도 횟수
 var RETRY_INTERVAL = 5000;      // 실패 시 재시도 간격 (밀리초 단위)
 var ajaxRetryCountMap = {};     // AJAX 요청별 401 재시도 카운트 저장
-
 // ===================== JWT 파싱 =====================
 function parseJwt(token) {
 	// '토큰' 유효성 체크
@@ -80,6 +79,7 @@ function refreshToken(callback) {
             localStorage.setItem('accessToken', res.accessToken);
             localStorage.setItem('refreshToken', res.refreshToken);
             localStorage.setItem('role', res.role);
+			localStorage.setItem('memberId', res.memberId);
 
             refreshRetryCount = 0; // 재시도 카운트 초기화
             scheduleTokenRefresh(); // 다음 갱신 스케줄링
@@ -113,6 +113,7 @@ function refreshToken(callback) {
 function ajaxWithToken(options) {
 	// 로컬스토리지에서 액세스 토큰 가져오기
     var token = localStorage.getItem('accessToken');
+
 	// ajax 옵션 에서 'headers' 꺼내기, 없으면 빈 객체({})
     var headers = options.headers || {};
 
@@ -208,9 +209,19 @@ function renderUserMenu(memberInfo) {
     $('#logout-btn').off('click').on('click', function() {
 		localStorage.removeItem('accessToken'); // 토큰 삭제
 		localStorage.removeItem('refreshToken'); // 토큰 삭제
+		localStorage.removeItem('memberId'); // 토큰 삭제
 		updateUserMenu(); // 메뉴 초기화
 		window.location.href ="/";
     });
+}
+
+// ===================== 로그아웃 =====================
+function logout() {
+    localStorage.removeItem('accessToken'); // 액세스 토큰 삭제
+    localStorage.removeItem('refreshToken'); // 리프레시 토큰 삭제
+	localStorage.removeItem('memberId'); // 토큰 삭제
+	updateUserMenu();
+	window.location.href ="/";
 }
 
 // ===================== 페이지 로드 시 자동 시작 =====================
@@ -219,10 +230,4 @@ $(document).ready(function() {
 	updateUserMenu();
 });
 
-// ===================== 로그아웃 =====================
-function logout() {
-    localStorage.removeItem('accessToken'); // 액세스 토큰 삭제
-    localStorage.removeItem('refreshToken'); // 리프레시 토큰 삭제
-	updateUserMenu();
-	window.location.href ="/";
-}
+

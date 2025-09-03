@@ -33,6 +33,7 @@ import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.comment.CommentService;
 import com.example.demo.validation.comment.CommentValidation;
 import com.example.demo.validation.post.PostValidation;
+import com.example.demo.validation.string.WordValidation;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -214,7 +215,13 @@ public class CommentController {
 			return ResponseEntity.badRequest().body("입력값이 유효하지 않습니다.");
 		}
 
-		String reason = commentReportRequestDTO == null ? null : commentReportRequestDTO.getReason();
+		String reason = commentReportRequestDTO == null ? null : commentReportRequestDTO.getReason().trim();
+
+		// 신고이유가 10글자 미만, 비속어 포함되면 신고내용이 유효하지 않음.
+		if(reason.length() < 10 && !WordValidation.containsForbiddenWord(reason)) {
+			logger.error("CommentController reportComment() reason : 신고 내용이 유효하지 않습니다.");
+			return ResponseEntity.badRequest().body("신고 내용이 유효하지 않습니다.");
+		}
 		Long requestReporterId = customUserDetails.getMemberId();
 
 		CommentReportResponseDTO response = null;

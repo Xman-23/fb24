@@ -92,7 +92,14 @@ public class WebConfig implements WebMvcConfigurer {
 		//********************************************************Board End*****************************************************
 
 		//********************************************************Post Start*****************************************************
-		viewControllerRegistry.addViewController("/main_post/**").setViewName("forward:/main_post.html");
+		viewControllerRegistry.addViewController("/main/{postId:\\d+}").setViewName("forward:/main_post.html");
+
+		viewControllerRegistry.addViewController("/board/{boardId:\\d+}/popular/{postId:\\d+}").setViewName("forward:/post/post_parent.html");
+
+		viewControllerRegistry.addViewController("/board/{boardId:\\d+}/normal/{postId:\\d+}").setViewName("forward:/post/post_child.html");
+		viewControllerRegistry.addViewController("/board/{boardId:\\d+}/normal/popular/{postId:\\d+}").setViewName("forward:/post/post_child_popular.html");
+
+		viewControllerRegistry.addViewController("/board/{boardId:\\d+}/notice/{postId:\\d+}").setViewName("forward:/post/post_notice.html");
 		//********************************************************Post End*****************************************************
 		
 	}

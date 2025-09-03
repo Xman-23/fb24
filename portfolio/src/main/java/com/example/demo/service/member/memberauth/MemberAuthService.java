@@ -70,6 +70,7 @@ public class MemberAuthService {
         String dbTrimPassword = safeTrim(member.getPassword());
         // role : Admin, User
         Role dbRole = member.getRole();
+        Long memberId = member.getId();
 
         // 첫번쨰 파라미터 암호화 되지 않은 DTO Password, 두번째 파라미터 암호화된 DB Password
         if (!passwordEncoder.matches(dtoPassword, dbTrimPassword)) {
@@ -82,7 +83,7 @@ public class MemberAuthService {
         String refreshToken  = jwtUtil.generateRefreshToken(dtoEmail);
 
         logger.info("AuthService login() Success End");
-        return new AuthTokenResponseDTO(accessToken, refreshToken, dbRole);
+        return new AuthTokenResponseDTO(accessToken, refreshToken, memberId,dbRole);
     }
 
     // 액세스 토큰 재발급 Service
@@ -102,12 +103,13 @@ public class MemberAuthService {
 
         // DB Role : Admin, User
         Role dbRole = member.getRole();
+        Long memberId = member.getId();
 
         // 'email'을 활용하여 다시 '액세서 토큰' 생성
         String newAccessToken = jwtUtil.generateToken(email,dbRole);
 
         logger.info("AuthService refreshAccessToken() End");
-        return new AuthTokenResponseDTO(newAccessToken, trimRefreshToken, dbRole);
+        return new AuthTokenResponseDTO(newAccessToken, trimRefreshToken,memberId ,dbRole);
     }
 
 

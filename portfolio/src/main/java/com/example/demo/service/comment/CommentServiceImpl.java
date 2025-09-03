@@ -358,7 +358,7 @@ public class CommentServiceImpl implements CommentService {
 		int dislikeCount = commentReactionRepository.countByCommentAndReactionType(comment, PostReactionType.DISLIKE);
 
 		logger.info("CommentServiceImpl updateComment() End");
-		return CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false, authorNickname);
+		return new CommentResponseDTO(CommentResponseDTO.fromEntity(comment, likeCount, dislikeCount, false, authorNickname));
 	}
 
 	// 댓글 삭제 Service
@@ -394,7 +394,7 @@ public class CommentServiceImpl implements CommentService {
 		member.deleteCommentScore();
 
 		logger.info("CommentServiceImpl deleteComment() End");
-		return CommentResponseDTO.fromEntity(comment, 0, 0, false, "");
+		return new CommentResponseDTO(CommentResponseDTO.fromEntity(comment, 0, 0, false, ""));
 	}
 
 	// 댓글 신고 Service
@@ -454,8 +454,8 @@ public class CommentServiceImpl implements CommentService {
 
 		CommentReportResponseDTO response = null;
 
-		// 신고가 15번 당할시 상태 변경 (report_count(DB) == 15)
-		// 그리고(AND(&&)), CommentStatus.ACTIVE
+		// 신고가 50번 당할시 (report_count(DB) == 50)
+		// 그리고(AND(&&)), CommentStatus.ACTIVE 상태 변경(HIDDEN)
 		if(Objects.equals(reportCount, this.reportThreshold) && comment.getStatus().equals(CommentStatus.ACTIVE)) {
 			// 댓글 신고시 회원 등급 점수 차감
 			member.benCommentScore();
@@ -465,8 +465,8 @@ public class CommentServiceImpl implements CommentService {
 			commentReactionRepository.deleteByComment(comment);
 			// 신고로 인한 댓글 알림
 			notificationServiceImpl.notifyCommentWarned(comment);
-			CommentResponseDTO updatedCommentDto = CommentResponseDTO.fromEntity(comment, 0, 0, false, "");
-			response = new CommentReportResponseDTO("",updatedCommentDto);
+			CommentResponseDTO updatedCommentDto =  new CommentResponseDTO(CommentResponseDTO.fromEntity(comment, 0, 0, false, ""));;
+			response = new CommentReportResponseDTO("신고가 누적되어 삭제되었습니다.",updatedCommentDto);
 		}else {
 			// 신고만 할시
 			response = new CommentReportResponseDTO("댓글 신고가 접수되었습니다.",null);
@@ -549,6 +549,8 @@ public class CommentServiceImpl implements CommentService {
 			// HashMap<commentId,ResponseDTO> -> Stream<ResponseDTO> 원하는 자료구조형태로 변환 준비
 			top3Pinned = dtoMap.values()
 							   .stream()
+			                   // ACTIVE 상태인 댓글만
+			                   .filter(responseDto -> responseDto.getStatus() == CommentStatus.ACTIVE)
 							   // 'ResponseDTO'를 좋아요 30개 이상, 
 							   // 좋아요 싫어요 차이가 10개보다 큰 댓글 필터링
 						       .filter(responseDto -> { 
@@ -651,14 +653,17 @@ public class CommentServiceImpl implements CommentService {
 		logger.info("CommentServiceImpl getCommentsTreeByPost top3Ids : {} ", top3Ids);
 		logger.info("CommentServiceImpl getCommentsTreeByPost restComments : {} ", restComments);
 
-		// 나머지 댓글에 'pin'작업
-		for(CommentResponseDTO dto : restComments) {
-			applyPinnedRecursive(dto,top3Ids);
-				logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 Start");
-				logger.info("CommentServiceImpl getCommentsTreeByPost dto.getCommentId() : {} ", dto.getCommentId());
-				// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
-				// '댓글ID'라면 상단 고정을 위한 setPinned(true)
-				logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 End");
+		
+		if(top3Ids != null) {
+			// 나머지 댓글에 'pin'작업
+			for(CommentResponseDTO dto : restComments) {
+				applyPinnedRecursive(dto,top3Ids);
+					logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 Start");
+					logger.info("CommentServiceImpl getCommentsTreeByPost dto.getCommentId() : {} ", dto.getCommentId());
+					// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
+					// '댓글ID'라면 상단 고정을 위한 setPinned(true)
+					logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 End");
+			}
 		}
 
 		// 현재 상단 3개 좋아요순 댓글과 부모 댓글 최신순으로 정렬된 'List'

@@ -73,6 +73,7 @@ public class CommentResponseDTO {
     
     // 복사 생성자
     public CommentResponseDTO(CommentResponseDTO other) {
+    	logger.info("CommentResponseDTO 복사 생성자() Start");
         this.commentId = other.commentId;
         this.postId = other.postId;
         this.parentCommentId = other.parentCommentId;
@@ -84,10 +85,13 @@ public class CommentResponseDTO {
         this.dislikeCount = other.dislikeCount;
         this.isPinned = other.isPinned;
         this.status = other.status;
-        this.childComments = new ArrayList<>(other.childComments);
+        this.childComments = other.childComments != null 
+                								 ? new ArrayList<>(other.childComments) 
+                								 : new ArrayList<>();
 
         // 상태에 맞는 필드 보정 처리
         handleCommentStatus(other);
+        logger.info("CommentResponseDTO 복사 생성자() End");
     }
 
  // 상태에 맞는 필드 설정
@@ -99,14 +103,14 @@ public class CommentResponseDTO {
 
             case DELETED:
                 this.content = "삭제된 댓글입니다.";
-                this.createdAt = null;
-                this.updatedAgo = null;
+                this.createdAt = "";
+                this.updatedAgo = "";
                 break;
 
             case HIDDEN:
                 this.content = "신고받은 댓글입니다.";
-                this.createdAt = null;
-                this.updatedAgo = null;
+                this.createdAt = "";
+                this.updatedAgo = "";
                 break;
         }
     }
@@ -157,6 +161,7 @@ public class CommentResponseDTO {
     		                                    boolean isPinned, 
     		                                    String authorNickname) {
     	logger.info("CommentResponseDTO fromEntity() Start");
+
     	// 여기에 시간 포맷 추가
         CommentResponseDTO dto = CommentResponseDTO.builder()
                                                    .commentId(comment.getCommentId())
@@ -171,6 +176,7 @@ public class CommentResponseDTO {
                                                    .authorNickname(authorNickname)
                                                    .content(comment.getContent())
                                                    .build();
+        logger.info("CommentResponseDTO fromEntity() End");
         return dto;
     }
 

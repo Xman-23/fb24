@@ -25,6 +25,8 @@ public class AuthTokenResponseDTO {
 
 	private String refreshToken ;
 
+	private Long memberId;
+
 	// enum Role 타입 필드 추가
 	private Role role;
 

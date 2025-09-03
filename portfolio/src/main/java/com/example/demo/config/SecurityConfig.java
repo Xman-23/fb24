@@ -75,6 +75,10 @@ public class SecurityConfig {
             	"/main.html",
             	// 메인 게시글
             	"/main_post.html",
+            	"/post/post_parent.html",
+            	"/post/post_child.html",
+            	"/post/post_child_popular.html",
+            	"/post/post_notice.html",
 
             	// 로그인.html
             	"/member/member_signin.html",
@@ -175,7 +179,13 @@ public class SecurityConfig {
                 // 메인
                 "/",
                 // 메인 게시글
-                "/main_post/**",
+                "/main/{postId:\\d+}",
+                // 부모 게시글
+                "/board/{boardId:\\d+}/popular/{postId:\\d+}",
+                "/board/{boardId:\\d+}/normal/{postId:\\d+}",
+                "/board/{boardId:\\d+}/normal/popular/{postId:\\d+}",
+                // 공지 게시글
+                "/board/{boardId:\\d+}/notice/{postId:\\d+}",
 
                 // 로그인
                 "/signin",
