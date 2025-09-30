@@ -138,21 +138,8 @@ function executeSearch(page = 0) {
     	url = `/main/popular_posts/author/search/${encodeURIComponent(currentKeyword)}?page=${page}`;
     } else if(currentSearchType === "autocomplete") {
     	// 자동완성 검색 
-    	url = `/main/popular_posts/autocomplete/title/search?title=${encodeURIComponent(currentKeyword)}`;
+    	url = `/main/popular_posts/autocomplete/title/search?title=${encodeURIComponent(currentKeyword)}&page=${page}`;
     }
-	
-	/* 전체 통합 검색에 사용
-    if (currentSearchType === "keyword") {
-        // 키워드 검색 (쿼리스트링(/search?))
-    	url = `/posts/search?keyword=${encodeURIComponent(currentKeyword)}&page=${page}`;
-    } else if (currentSearchType === "author") {
-        // 작성자 검색 (PathVariable)
-    	url = `/posts/author/${encodeURIComponent(currentKeyword)}?page=${page}`;
-    } else if(currentSearchType === "autocomplete") {
-    	// 자동완성 검색 
-    	url = `/posts/autocomplete/search?keyword=${encodeURIComponent(currentKeyword)}`
-    }
-	*/
 
 	$("#popular-posts-container").empty();
 
@@ -173,10 +160,11 @@ function executeSearch(page = 0) {
 			}
 			
 		},
-		error: function(xhr) {
+		error: function(err) {
+			$("#popular-posts h2").text(`검색 결과: "${currentKeyword}"`);
 			$("#popular-posts-container").append(no_posts_tag(no_searchList));
 			post_renderPagination(errorPage);
-		    alert(xhr.responseText || "");
+		    alert(err.responseText || "");
 		}
 	})
 }
@@ -184,14 +172,16 @@ function executeSearch(page = 0) {
 // 실시간 검색 API 
 function RealTimeSearch() {
 
-	if(currentSearchType !== 'keyword'){
-		return; // 작성자 검색 시 자동완성 비활성화
-	}
-
 	// 자동완성 리스트 태그 
 	const list = $("#autocomplete-list");
 
-    $("#searchInput").on("input", function() {
+    $("#searchInput").off("input").on("input", function() {
+
+
+		if(currentSearchType !== 'keyword'){
+			return; // 작성자 검색 시 자동완성 비활성화
+		}
+
         clearTimeout(debounceTimer);
         // 제목+본문 input 태그 value 가져온 후 앞뒤 공백제거
         const keyword = $(this).val().trim();
@@ -266,25 +256,17 @@ function post_renderPagination(data) {
         
     }
 
-    // 1) 페이지 번호 버튼 'i(index)'를 기준으로 페이징
-    for (let i = startPage; i <= endPage; i++) {
-    	// 버튼 번호 만들기
-        let btn = $(`<button>${i + 1}</button>`);
-    	// 현재 페이지(inedex) 와 for문의 'i'와 같으면 버튼 비활성화
-        if (i === currentPage) {
-        	btn.prop("disabled", true);
-        }
-        btn.click(() => {
-        	// 메인 인기글 페이징
-            if(currentMode === 'post') {
-                getMain(i);
-            } else {
-            	// 검색 페이징
-                executeSearch(i);
-            }
-        });
-        pageButtonsContainer.append(btn);
-    }
+	// 1) 페이지 번호 버튼 'i(index)'를 기준으로 페이징
+	for (let i = startPage; i <= endPage; i++) {
+		// 버튼 번호 만들기
+	    let btn = $(`<button>${i + 1}</button>`);
+		// 현재 페이지(inedex) 와 for문의 'i'와 같으면 버튼 비활성화
+	    if (i === currentPage) {
+	    	btn.prop("disabled", true);
+	    }
+		btn.click(() => loadPage(i));
+	    pageButtonsContainer.append(btn);
+	}
 
 	// 이전 페이지 버튼
     $("#prev-page").prop("disabled", !data.hasPrevious) // 이전 페이지가 없으면 버튼 비활성화

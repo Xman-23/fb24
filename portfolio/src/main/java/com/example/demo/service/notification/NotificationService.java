@@ -47,9 +47,15 @@ import com.example.demo.dto.notification.NotificationResponseDTO;
 
     // 게시글 알림 갯수
     long countPostNotifications(Long receiverId);
+    
+    // 읽지 않은 게시글 알림 개수
+    long countUnreadPostNotifications(Long receiverId);
 
     // 댓글 알림 갯수
     long countCommentNotifications(Long receiverId);
+
+    // 익지 않은 댓글 알림 개수
+    long countUnreadCommentNotifications(Long receiverId);
 
     // 전체 알림 삭제
     void softDeleteAllNotifications(Long receiverId);

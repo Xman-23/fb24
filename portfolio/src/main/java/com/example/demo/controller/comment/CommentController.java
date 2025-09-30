@@ -1,6 +1,8 @@
 package com.example.demo.controller.comment;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 
@@ -23,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriUtils;
 
+import com.example.demo.dto.comment.CommentGoPageResponseDTO;
+import com.example.demo.dto.comment.CommentMyPageResponseDTO;
 import com.example.demo.dto.comment.CommentPageResponseDTO;
 import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
@@ -218,7 +222,7 @@ public class CommentController {
 		String reason = commentReportRequestDTO == null ? null : commentReportRequestDTO.getReason().trim();
 
 		// 신고이유가 10글자 미만, 비속어 포함되면 신고내용이 유효하지 않음.
-		if(reason.length() < 10 && !WordValidation.containsForbiddenWord(reason)) {
+		if(reason.length() < 10 && !WordValidation.containsReportForbiddenWord(reason)) {
 			logger.error("CommentController reportComment() reason : 신고 내용이 유효하지 않습니다.");
 			return ResponseEntity.badRequest().body("신고 내용이 유효하지 않습니다.");
 		}
@@ -240,6 +244,18 @@ public class CommentController {
 		return ResponseEntity.ok(response);
 	}
 
+	// 내 정보 댓글 보기
+	@GetMapping("/me")
+	public ResponseEntity<?> getMyComments(@AuthenticationPrincipal CustomUserDetails customUserDetails,
+	        							   @PageableDefault(size = 10) Pageable pageable) {
+	    logger.info("CommentController getMyComments() Start");
+
+	    CommentMyPageResponseDTO comments = commentService.getMyComments(customUserDetails.getMemberId(), pageable);
+
+	    logger.info("CommentController getMyComments() End");
+	    return ResponseEntity.ok(comments);
+	}
+	
 	// 5. 댓글 트리구조 조회 API엔드포인트
 	@GetMapping("/post/{postId}")
 	public ResponseEntity<?> getCommentsTreeByPost (@PathVariable(name = "postId") Long postId,
@@ -247,6 +263,7 @@ public class CommentController {
 			                                        @PageableDefault(size = 10) Pageable pageable) {
 
 		logger.info("CommentController getCommentsTreeByPost() Start");
+		
 
 		if(!PostValidation.isPostId(postId)) {
 			logger.error("CommentController getCommentsTreeByPost() IllegalArgumentException Error : 'postId'가 유효하지 않습니다.");
@@ -274,6 +291,32 @@ public class CommentController {
 
 		logger.info("CommentController getCommentsTreeByPost() End");
 		return ResponseEntity.ok(response);
+	}
+	
+	
+	// 댓글 바로가기 엔드포인트
+	@GetMapping("/{commentId}/goto-page")
+	public ResponseEntity<?> goToCommentPage(@PathVariable(name = "commentId") Long commentId,
+	        								 @RequestParam(name = "sortBy", defaultValue = "normal") String sortBy,
+	        								 @RequestParam(name = "pageSize", defaultValue = "10") int pageSize) {
+
+		logger.info("CommentController goToCommentPage() Start");
+
+	    CommentGoPageResponseDTO response = null;
+
+	    try {
+	    	response = commentService.getCommentPage(commentId, sortBy, pageSize);
+	    }catch (NoSuchElementException e) {
+			logger.error("CommentController goToCommentPage() NoSuchElementException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (IllegalStateException e) {
+			logger.error("CommentController goToCommentPage() IllegalStateException  : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		}
+
+	    logger.info("CommentController goToCommentPage() End");
+
+	    return ResponseEntity.ok(response);
 	}
 
     //*************************************************** API End ***************************************************//

@@ -25,6 +25,8 @@ public class PostImageResponseDTO {
 
 	private String imageUrl;
 
+    private String originalFileName;   // 원본 파일명 추가
+
 	private int orderNum;
 
 }

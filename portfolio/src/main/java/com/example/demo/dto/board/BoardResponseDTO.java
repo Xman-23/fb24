@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import com.example.demo.domain.board.Board;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
 */
 
 @Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BoardResponseDTO {
@@ -40,6 +42,8 @@ public class BoardResponseDTO {
     private String createdAt;
  
     private String updatedAt;
+
+    private Long parentBoard; 
     // 필드 End
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -49,15 +53,20 @@ public class BoardResponseDTO {
     	String formatCreatedAt = DATE_TIME_FORMATTER.format(board.getCreatedAt());
     	String formatUpdatedAt = DATE_TIME_FORMATTER.format(board.getUpdatedAt());
 
+        Long parentBoardId = null; // 부모가 없으면 null
+        if (board.getParentBoard() != null) {
+            parentBoardId = board.getParentBoard().getBoardId();
+        }
+
     	BoardResponseDTO boardResponseDTO = new BoardResponseDTO(board.getBoardId(), 
     															 board.getName(), 
     															 board.getDescription(), 
     															 board.isActive(), 
     															 board.getSortOrder(), 
     															 formatCreatedAt, 
-    															 formatUpdatedAt);
+    															 formatUpdatedAt,
+    															 parentBoardId);
 
     	return boardResponseDTO;
     }
-
 }

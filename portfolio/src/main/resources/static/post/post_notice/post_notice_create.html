@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log_공지글 작성</title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- js Setting -->
+<!-- 헤더 Start -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/member/member_signin_signup_button.js"></script>
+<script src="/js/common/board/board.js"></script>
+<!-- 헤더 End -->
+<!-- Main Start -->
+<script src="/js/post/post_notice/post_notice_create/post_notice_create.js"></script>
+<!-- Main Start -->
+<!-- 바텀 Start -->
+<script src="/js/common/visitor/visitor.js"></script>
+<!-- 바텀 Start -->
+<!-- js Setting -->
+<!-- CSS Setting -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
+<link rel="stylesheet" href="/css/post/post_notice/post_notice_create/post_notice_create.css">
+<link rel="stylesheet" href="/css/board/board_common_footer.css">
+</head>
+<body>
+	<header id="header">
+	    <div class="header-top">
+			<div id="logo">
+    			<a href="/">Log<span class="cursor">_</span></a>
+			</div>
+	        <div id="user-actions">
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
+	        </div>
+	    </div>
+	    <nav id="board-tabs">
+	        <ul id="parent-boards"></ul>
+	    </nav>
+	</header>
+
+	<main>
+		<form id="post_create_form" enctype="multipart/form-data" method="post">
+		    <h2>게시글 작성</h2>
+		
+		    <!-- 게시판 선택 -->
+		    <label for="board_select">게시판</label>
+		    <select id="board_select" name="boardId"></select>
+		
+		    <!-- 제목 -->
+		    <label for="title">제목</label>
+		    <input type="text" id="title" name="title" maxlength="100" required>
+		
+		    <!-- 내용 -->
+		    <label for="content">내용</label>
+		    <textarea id="content" name="content" rows="10" required></textarea>
+		
+			<div id="admin" style="display: none;">
+			    <!-- 공지 여부 -->
+			    <label class="checkbox-label">
+			        <input type="checkbox" id="notice" name="notice" checked="checked">
+			        공지글로 등록
+			    </label>
+	
+				<!-- 핀 설정 (관리자만 표시) -->
+				<div id="pin_container">
+				    <label>
+				        <input type="checkbox" id="pin_checkbox"> 게시글 핀 설정
+				    </label>
+				</div>
+			</div>
+
+			<!-- 이미지 업로드 -->
+			<label for="images">이미지 업로드</label>
+			<p class="image-help">
+			    1) 업로드 가능한 파일 확장자: jpg, jpeg, png, pdf<br>
+			    2) 파일 용량 최대 5MB<br>
+			    3) 최대 10개까지 업로드 가능<br>
+			    4) 중복 파일명은 업로드할 수 없습니다
+			</p>
+
+			<div id="file_upload_container">
+			    <input type="file" id="images" name="images" multiple accept="image/*">
+			    <button type="button" id="remove_all_images_btn" style="display: none;">이미지 모두 삭제</button>
+			</div>
+
+			<!-- 선택된 파일 이름 표시 -->
+			<div id="file_names_container"></div>
+
+			<!-- 이미지 미리보기 -->
+			<div id="image_preview_container"></div>
+
+		    <!-- 버튼 -->
+		    <button type="submit">게시글 등록</button>
+		</form>
+	</main>
+
+	<!-- 부모 상세게시글로 빼기 -->
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	    </div>
+	</footer>
+
+	    <!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
+</body>

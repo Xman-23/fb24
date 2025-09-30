@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class NotificationSummaryResponseDTO {
 
-	// 전체 알림 갯수 (게시글 + 댓글 + 읽지 않은것 포함)
+	//  (게시글(읽지 않은것) + 댓글(읽지 않은것) 읽지 않은것 포함)
 	private long totalCount;
 
 	// 게시글 관련 알림 갯수

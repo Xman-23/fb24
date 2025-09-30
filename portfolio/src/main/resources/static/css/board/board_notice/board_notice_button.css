@@ -1,0 +1,67 @@
+#pagination-wrapper {
+    display: flex;
+    justify-content: center;  /* 페이징 버튼이 중앙 */
+    align-items: center;
+    position: relative;       /* 글 작성 버튼를 오른쪽 끝으로 위치시키기 위해 */
+    margin: 16px 0;
+}
+
+/* 페이징 버튼 스타일 */
+#pagination-container {
+    display: flex;
+    gap: 6px;
+}
+
+/* 글 작성 버튼을 오른쪽 끝으로 */
+#create_post_button {
+    position: absolute;
+    right: 0;
+}
+
+#create_post_button button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #a3c4f3;
+    background-color: #fff;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#create_post_button button:hover {
+    background-color: #d0e7ff;
+}
+
+/* 페이징 버튼 공용 스타일 */
+#pagination-container button {
+    padding: 6px 12px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    border: 1px solid #a3c4f3;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#pagination-container button:hover:not(:disabled) {
+    background-color: #d0e7ff;
+    transform: translateY(-1px);
+}
+
+#pagination-container button:disabled {
+    border-color: #ccc;
+    color: #aaa;
+    cursor: default;
+    background-color: #f9f9f9;
+    transform: none;
+}
+
+#pagination-container button.current {
+    background-color: #ff6b6b;
+    color: #fff;
+    border-color: #a3c4f3;
+}
+#page-buttons{
+	margin-top: 3px;
+}

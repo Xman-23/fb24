@@ -17,31 +17,35 @@ import com.example.demo.domain.notification.notificationenums.NotificationType;
 @Repository // 'JPA'
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-	// 게시글 관련 알림 4개만 조회 (최신순)
+	// 읽지 않은 게시글 관련 알림 4개만 조회 (최신순)
 	@Query(
-			"SELECT n "
-		  + "  FROM Notification n "
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:postTypes) "
-		  + "   AND n.deleted = false "
-		  + " ORDER BY n.createdAt DESC "
-		  )
-	List<Notification> findTopPostNotifications(@Param("receiverId") Long receiverId,
-												@Param("postTypes") List<NotificationType> postTypes,
-												Pageable pageable);
+		    "SELECT n, p.board.boardId " +
+		    " FROM Notification n " +
+		    " JOIN Post p ON n.postId = p.postId " +
+		    " WHERE n.receiver.id = :receiverId " +
+		    "   AND n.notificationType IN (:postTypes) " +
+		    "   AND n.deleted = false " +
+		    "   AND n.read = false " +
+		    " ORDER BY n.createdAt DESC"
+		)
+	List<Object[]> findTopPostNotifications(@Param("receiverId") Long receiverId,
+	                                        @Param("postTypes") List<NotificationType> postTypes,
+	                                        Pageable pageable);
 
-	// 댓글 관련 알림 4개만 조회 (최신순)
+	// 읽지 않은 댓글 관련 알림 4개만 조회 (최신순)
 	@Query(
-			"SELECT n "
-		  + "  FROM Notification n "
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:commentTypes) "
-		  + "   AND n.deleted = false "
-		  + " ORDER BY n.createdAt DESC "
-		  )
-	List<Notification> findTopCommentNotifications(@Param("receiverId") Long receiverId,
-												   @Param("commentTypes") List<NotificationType> commentTypes,
-												   Pageable pageable);
+		    "SELECT n, p.board.boardId " +
+		    " FROM Notification n " +
+		    " JOIN Post p ON n.postId = p.postId " +
+		    " WHERE n.receiver.id = :receiverId " +
+		    "   AND n.notificationType IN (:commentTypes) " +
+		    "   AND n.deleted = false " +
+		    "   AND n.read = false " +
+		    " ORDER BY n.createdAt DESC"
+		)
+	List<Object[]> findTopCommentNotifications(@Param("receiverId") Long receiverId,
+	                                           @Param("commentTypes") List<NotificationType> commentTypes,
+	                                           Pageable pageable);
 
 	// 전체 알림 개수
 	@Query(
@@ -52,28 +56,52 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 		  )
 	long countAllByReceiver(@Param("receiverId") Long receiverId);
 
-	// 게시글 알림 개수
 	@Query(
-			"SELECT COUNT(n) "
-		  + "  FROM Notification n "
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:postTypes) "
-		  + "   AND n.deleted = false "
-		  )
+	        "SELECT COUNT(n) "
+	      + "  FROM Notification n "
+	      + " WHERE n.receiver.id = :receiverId "
+	      + "   AND n.notificationType IN (:postTypes) "
+	      + "   AND n.deleted = false "
+	)
 	long countPostNotifications(@Param("receiverId") Long receiverId,
-			                    @Param("postTypes") List<NotificationType> postTypes);
+	                               @Param("postTypes") List<NotificationType> postTypes);
 
-	// 댓글 알림 개수
 	@Query(
-			"SELECT COUNT(n) "
-		  + "  FROM Notification n "
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:commentTypes)"
-		  + "   AND n.deleted = false "
-		  )
-	long countCommentNotifications(@Param("receiverId") Long receiverId,
-			                       @Param("commentTypes") List<NotificationType> commentTypes);
+	        "SELECT COUNT(n) "
+	      + "  FROM Notification n "
+	      + " WHERE n.receiver.id = :receiverId "
+	      + "   AND n.notificationType IN (:postTypes) "
+	      + "   AND n.deleted = false "
+	      + "   AND n.read = false "
+	)
+	long countUnreadPostNotifications(@Param("receiverId") Long receiverId,
+	                                  @Param("postTypes") List<NotificationType> postTypes);
+    // 댓글 타입 알림 전체 개수
+    @Query(
+            "SELECT COUNT(n) "
+          + "  FROM Notification n "
+          + " WHERE n.receiver.id = :receiverId "
+          + "   AND n.notificationType IN (:commentTypes) "
+          + "   AND n.deleted = false "
+    )
+    long countCommentNotifications(@Param("receiverId") Long receiverId,
+                                    @Param("commentTypes") List<NotificationType> commentTypes);
 
+    // 읽지 않은 댓글 알림 개수
+    @Query(
+            "SELECT COUNT(n) "
+          + "  FROM Notification n "
+          + " WHERE n.receiver.id = :receiverId "
+          + "   AND n.notificationType IN (:commentTypes) "
+          + "   AND n.deleted = false "
+          + "   AND n.read = false "
+    )
+    long countUnreadCommentNotifications(@Param("receiverId") Long receiverId,
+                                         @Param("commentTypes") List<NotificationType> commentTypes);
+	
+	
+	
+	//----------------------------------------------------------------------------------------------------------------------
 	// 알림 전체 삭제(논리적) 
 	@Modifying(clearAutomatically = true) // 'UPDATE', 'DELETE'
 	@Transactional
@@ -124,27 +152,29 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
 	// 전체 게시글 알림 페이징 목록
 	@Query(
-			"SELECT n "
-		  + "  FROM Notification n "
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:postTypes) "
-		  + "   AND n.deleted = false "
-		  + " ORDER BY n.createdAt DESC" 
-		  )
-	Page<Notification> findAllPostNotifications(@Param("receiverId") Long receiverId,
-			                                    @Param("postTypes") List<NotificationType> postTypes,
-			                                    Pageable pageable);
+		    "SELECT n, p.board.boardId " +
+		    " FROM Notification n " +
+		    " JOIN Post p ON n.postId = p.postId " +
+		    " WHERE n.receiver.id = :receiverId " +
+		    "   AND n.notificationType IN (:postTypes) " +
+		    "   AND n.deleted = false " +
+		    " ORDER BY n.createdAt DESC"
+		)
+		Page<Object[]> findAllPostNotifications(@Param("receiverId") Long receiverId,
+		                                        @Param("postTypes") List<NotificationType> postTypes,
+		                                        Pageable pageable);
 
 	// 전체 댓글 알림 페이징 목록
 	@Query(
-			"SELECT n "
-		  + "  FROM Notification n"
-		  + " WHERE n.receiver.id = :receiverId "
-		  + "   AND n.notificationType IN (:commentTypes) "
-		  + "   AND n.deleted = false "
-		  + " ORDER BY n.createdAt DESC"
-		  )
-	Page<Notification> findAllCommentNotifications(@Param("receiverId") Long receiverId,
+		    "SELECT n, p.board.boardId " +
+		    " FROM Notification n " +
+		    " JOIN Post p ON n.postId = p.postId " +
+		    " WHERE n.receiver.id = :receiverId " +
+		    "   AND n.notificationType IN (:commentTypes) " +
+		    "   AND n.deleted = false " +
+		    " ORDER BY n.createdAt DESC"
+		)
+	Page<Object[]> findAllCommentNotifications(@Param("receiverId") Long receiverId,
 			                                       @Param("commentTypes") List<NotificationType> commentTypes,
 			                                       Pageable pageable);
 

@@ -8,6 +8,7 @@ import java.io.File;
 
 
 
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,7 @@ import com.example.demo.domain.post.postenums.PostStatus;
 import com.example.demo.domain.post.postimage.PostImage;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
 import com.example.demo.domain.post.postreport.PostReport;
+import com.example.demo.domain.post.postviews.PostViews;
 import com.example.demo.dto.post.PostNoticeBoardResponseDTO;
 import com.example.demo.dto.post.PostParentBoardPostPageResponseDTO;
 import com.example.demo.dto.post.PostBoardPostSearchPageResponseDTO;
@@ -63,6 +66,7 @@ import com.example.demo.repository.post.postimage.PostImageRepository;
 import com.example.demo.repository.post.postreaction.PostReactionRepository;
 import com.example.demo.repository.post.postreaction.PostReactionRepository.PostReactionCount;
 import com.example.demo.repository.post.postreport.PostReportRepository;
+import com.example.demo.repository.post.postviews.PostViewsRepository;
 import com.example.demo.service.notification.NotificationService;
 import com.example.demo.service.post.postimage.PostImageService;
 import com.example.demo.validation.post.PostValidation;
@@ -85,10 +89,11 @@ public class PostServiceImpl implements PostService {
 	private final CommentRepository commentRepository;
 	private final PostReportRepository postReportRepository;
 	private final PostReactionRepository postReactionRepository;
+	private final PostViewsRepository postViewsRepository;
 
 	private final PostImageService fileService;
 	private final NotificationService notificationService;
-
+	
 	// 공지게시판 BoardID = '1'로 고정
 	public static final Long NOTICE_BOARD_ID = 1L;
 	// 인기순 으로 정렬
@@ -137,17 +142,38 @@ public class PostServiceImpl implements PostService {
 
 
     // 키: "postId:userId" 또는 "postId:ip"
-    private final Cache<String, Long> viewCountCache = Caffeine.newBuilder()
-    														   .expireAfterWrite(10, TimeUnit.MINUTES) // 10분 후 자동만료
-    														   .maximumSize(10_000)	// 최대 1만개 저장
-    														   .build();
-
-    // 중복 방지 시간 간격 (밀리초), 예: 10분 = 600000ms
-    private final long VIEW_COUNT_EXPIRATION = 10 * 60 * 1000;
+    private final Cache<String, LocalDateTime> viewCountIpCache  = Caffeine.newBuilder()
+            													  .expireAfterWrite(1, TimeUnit.DAYS) // 하루 동안 유지
+    														      .maximumSize(100_000)	// 최대 10만개 저장
+    														      .build();
 
 	private static final Logger logger = LoggerFactory.getLogger(PostServiceImpl.class);
 
 	//*************************************************** Method START ***************************************************//
+
+	private void handleMemberView(Long postId, Long memberId, Post post) {
+	    boolean viewed = postViewsRepository.existsByPostAndMember(postId, memberId);
+
+	    if (!viewed) {
+	        postViewsRepository.save(PostViews.builder()
+	                .post(post)
+	                .member(Member.builder().id(memberId).build())
+	                .viewedAt(LocalDateTime.now())
+	                .build());
+
+	        postRepository.incrementViewCount(postId);
+	    }
+	}
+
+	private void handleGuestView(Long postId, String ip) {
+	    String key = postId + ":" + ip;
+
+	    if (viewCountIpCache.getIfPresent(key) == null) {
+	        postRepository.incrementViewCount(postId);
+	        viewCountIpCache.put(key, LocalDateTime.now());
+	    }
+	}
+
 
 	public String extractLocalPathFromUrl(String imageUrl) {
 
@@ -434,13 +460,19 @@ public class PostServiceImpl implements PostService {
 		                          });
 
 
+		List<PostImage> images = post.getImages();
+		if (images == null) {
+		    images = new ArrayList<>();
+		    post.setImages(images);
+		}
+		
 		// 이미지 정렬을 위한 변수
 		// 만약 이미지가 중간에 삭제되면은 orderNum이 중복될 수 있으므로,
 		// 이미지가 없을때는 '0'을 반환, 이미지가 있다면 다음 이미지의 'orderNum'을 위해 '+1'씩 증가
-		int order = post.getImages().stream() // -> post -> List<PostImage> -> Stream<PostImage>
-				                    .mapToInt(PostImage :: getOrderNum) // Stream<Intger>
-				                    .max() // Stream<Integer>중에 가장 큰 수 반환 후 '무조건 +1'
-				                    .orElse(-1) +1; // 만약 이미지가 없다면 '-1'을 반환후 '무조건 +1'
+		int order = images.stream() // -> post -> List<PostImage> -> Stream<PostImage>
+				          .mapToInt(PostImage :: getOrderNum) // Stream<Intger>
+				          .max() // Stream<Integer>중에 가장 큰 수 반환 후 '무조건 +1'
+				          .orElse(-1) +1; // 만약 이미지가 없다면 '-1'을 반환후 '무조건 +1'
 
 			/**
 			 *	DB 원자성(한번에 트랜잭션이 되는지 안되는지),
@@ -454,6 +486,12 @@ public class PostServiceImpl implements PostService {
 				}
 
 				String url = null;
+				
+				String originalFileName = file.getOriginalFilename();
+				if (originalFileName == null || originalFileName.isBlank()) {
+				    // null이거나 빈 문자열이면 예외 처리
+				    throw new IllegalArgumentException("파일명이 비어있습니다.");
+				}
 
 				try {
 					url = fileService.uploadToLocal(file);
@@ -487,6 +525,7 @@ public class PostServiceImpl implements PostService {
 				image.setImageUrl(url);
 				// 여러장 이미지 업로드시 다음 orderNum을 위한 '후위증감연산자'
 				image.setOrderNum(order++);
+				image.setOriginalFileName(originalFileName);
 				image.setCreatedAt(LocalDateTime.now());
 
 				// JPA 양방향 관계 연결
@@ -496,7 +535,7 @@ public class PostServiceImpl implements PostService {
 		logger.info("PostServiceImpl savePostImages() Success End");
 	}
 
-	// 게시판 수정 Service
+	// 게시판 수정 Service (Service 수정 API)
 	@Override
 	@Transactional
 	public PostResponseDTO updatePost(Long postId, PostUpdateRequestDTO postUpdateRequestDTO, Long authorId, String userNickname) {
@@ -512,16 +551,9 @@ public class PostServiceImpl implements PostService {
 		boolean dtoIsNotice = postUpdateRequestDTO.isNotice();
 		LocalDateTime updatedAt = LocalDateTime.now();
 		List<MultipartFile> images = postUpdateRequestDTO.getImages();
+		Long dtoBoardId = postUpdateRequestDTO.getBoardId(); // DTO에서 boardId 가져오기
 
-		if(!WordValidation.containsForbiddenWord(dtoTitle)) {
-			logger.error("PostServiceImpl updatePost() IllegalArgumentException : 게시글 제목에 비속어가 포함되어있습니다.");
-			throw new IllegalArgumentException("게시글 제목에 비속어가 포함되어있습니다.");
-		}		
 
-		if(!WordValidation.containsForbiddenWord(dtoContent)) {
-			logger.error("PostServiceImpl updatePost() IllegalArgumentException : 게시글 내용에 비속어가 포함되어있습니다.");
-			throw new IllegalArgumentException("게시글 내용에 비속어가 포함되어있습니다.");
-		}		
 
 		// 'JPA'가 '게시글 조회(findBy)'를 시작으로 '게시글 엔티티' 영속성을 유지
 		Post post= postRepository.findById(postId)
@@ -545,13 +577,20 @@ public class PostServiceImpl implements PostService {
 		Role role =member.getRole();
 
 		// 만약 수정하려는 게시판ID가 공지 게시판ID라면
-		if (boardId.equals(NOTICE_BOARD_ID)) {
+		if(dtoBoardId != null && dtoBoardId.equals(NOTICE_BOARD_ID)) {
 		    if (!role.equals(Role.ROLE_ADMIN)) {
 		        logger.error("PostController PostServiceImpl updatePost() : 공지게시글은 관리자만 작성 가능합니다.");
 		        throw new SecurityException("공지게시판은 관리자만 수정할 수 있습니다.");
 		    }
 		}
 
+		
+		if(dtoBoardId != null && !dtoBoardId.equals(boardId)) {
+		    Board newBoard = boardRepository.findById(dtoBoardId)
+		                        .orElseThrow(() -> new NoSuchElementException("변경할 게시판이 존재하지 않습니다."));
+		    post.setBoard(newBoard);
+		    dbSetting = true;
+		}
 
 		// 'DB 게시글 작성자ID'
 		Long postAuthorId =post.getAuthor().getId();
@@ -649,7 +688,7 @@ public class PostServiceImpl implements PostService {
 	// 게시글 삭제 Service
 	@Override
 	@Transactional
-	public void deletePost(Long postId, Long authorId, boolean isDeleteImages) {
+	public void deletePost(Long postId, Long authorId) {
 
 		logger.info("PostServiceImpl deletePost() Start");
 
@@ -699,15 +738,13 @@ public class PostServiceImpl implements PostService {
 		// 게시글 리액션 DB 모두 삭제
 		postReactionRepository.deleteByPost(post);
 
-		if(isDeleteImages) {
-			try {
-				this.deletePostImages(postId);
-			} catch (RuntimeException e) {
-				logger.error("PostServiceImpl deletePost RuntimeException : ",e.getMessage(),e);
-				throw e;
-			}
-			
+		try {
+			this.deletePostImages(postId);
+		} catch (RuntimeException e) {
+			logger.error("PostServiceImpl deletePost RuntimeException : ",e.getMessage(),e);
+			throw e;
 		}
+			
 
 		logger.info("PostServiceImpl deletePost() Success End");
 	}
@@ -824,7 +861,7 @@ public class PostServiceImpl implements PostService {
 		return "게시글 신고가 접수되었습니다.";
 	}
 
-	// 이미지 목록 조회 Service
+	// 이미지 목록 조회 Service (Service 수정 API)
 	@Override
 	public List<PostImageResponseDTO> getPostImages(Long postId) {
 
@@ -843,11 +880,12 @@ public class PostServiceImpl implements PostService {
 		return images.stream()
 				     .map(image -> new PostImageResponseDTO(image.getImageId(), 
 				    		 								image.getImageUrl(), 
+				    		 								image.getOriginalFileName(),
 				    		 								image.getOrderNum()))
 				     .collect(Collectors.toList());
 	}
 
-	// 이미지 정렬 순서 조정 Service
+	// 이미지 정렬 순서 조정 Service (Service 수정 API)
 	@Override
 	@Transactional
 	public List<PostImageResponseDTO> updateImageOrder(Long postId, List<ImageOrderDTO> orderList, Long requestAuthorId) {
@@ -893,8 +931,7 @@ public class PostServiceImpl implements PostService {
 	    		                                       
 	}
 
-
-	// 이미지 단건 삭제 Service
+	// 이미지 단건 삭제 Service (Service 수정 API)
 	@Override
 	@Transactional
 	public void deleteSingleImage(Long postId, Long imageId, Long requestAuthorId) {
@@ -938,7 +975,7 @@ public class PostServiceImpl implements PostService {
 	    logger.info("PostServiceImpl deleteSingleImage() Success End");
 	}
 
-	// 이미지 모두 삭제 Service
+	// 이미지 모두 삭제 Service (Service 수정 API)
 	@Override
 	@Transactional
 	public void deleteAllImages(Long postId, Long requestAuthorId) {
@@ -972,27 +1009,21 @@ public class PostServiceImpl implements PostService {
 	// 조회수 증가 중복 방지 Service
 	@Override
 	@Transactional
-	public void increaseViewCount(Long postId, String userIdentifier) {
+	public void increaseViewCount(Long postId, Long memberId, String ip) {
 	    logger.info("PostServiceImpl increaseViewCount() Start");
 
-	    String key = postId + ":" + userIdentifier;
-	    long now = System.currentTimeMillis();
+	    Post post = postRepository.findById(postId)
+	            .orElseThrow(() -> new NoSuchElementException("게시글이 존재하지 않습니다."));
 
-	    viewCountCache.asMap().compute(key, (k, lastAccess) -> {
-	        if (lastAccess == null || now - lastAccess > VIEW_COUNT_EXPIRATION) {
-	            int updatedRows = postRepository.incrementViewCount(postId);
-	            if (updatedRows == 0) {
-	            	logger.error("PostServiceImpl increaseViewCount() NoSuchElementException : 게시글이 존재하지 않습니다.");
-	                throw new NoSuchElementException("게시글이 존재하지 않습니다.");
-	            }
-	            return now; // 캐시 최신화
-	        }
-	        return lastAccess; // 유효기간 안 됐으면 기존 시간 유지
-	    });
+	    if (memberId != null) {
+	        handleMemberView(postId, memberId, post);
+
+	    } else if (ip != null) {
+	        handleGuestView(postId, ip);
+	    }
 
 	    logger.info("PostServiceImpl increaseViewCount() End");
-	}
-
+    }
 
 	// 핀 설정/해제 Service
 	@Override
@@ -1365,7 +1396,7 @@ public class PostServiceImpl implements PostService {
 
 	// 통합검색 실시간 자동완성
 	public List<String> getPostTitlesByKeyword(String keyword) {
-	    return postRepository.searchTitlesByKeyword(keyword, SEARCH_SIZE);
+	    return postRepository.searchTitlesByKeyword(keyword, SEARCH_SIZE).getContent();
 	}
 	
 	// 통합검색 실시간 게시글만 조회
@@ -1834,7 +1865,7 @@ public class PostServiceImpl implements PostService {
 	public int deleteDeadPost (LocalDateTime cutDate, int maxViewCount) {
 
 		logger.info("PostServiceImpl deleteDeadPost() Start");
-		logger.info("PostServiceImpl deleteDeadPost() Success End");
+		logger.info("PostServiceImpl deleteDeadPost() End");
 		return postRepository.deleteDeadPost(cutDate, maxViewCount);
 	}
 
@@ -1845,10 +1876,47 @@ public class PostServiceImpl implements PostService {
 	public int deleteDeadNoticePost (LocalDateTime cutDate) {
 
 		logger.info("PostServiceImpl deleteDeadPost() Start");
-		logger.info("PostServiceImpl deleteDeadPost() Success End");
+		logger.info("PostServiceImpl deleteDeadPost() End");
 		return postRepository.deleteDeadNoticePost(cutDate);
 	}
 
+	// 내정보 게시글용
+	@Override
+	public PostPageResponseDTO getPostsByAuthor(Long memberId, Pageable pageable) {
+	    logger.info("PostServiceImpl getPostsByAuthor() Start");
+
+	    // 1. 게시글 조회 (활성 상태)
+	    Page<Post> pagePost = postRepository.findByAuthor(memberId, PostStatus.ACTIVE, pageable);
+
+	    
+	    // Map 생성
+	    List<Long> postIds = pagePost.stream()
+	    		                       .map(Post::getPostId)
+	    		                       .toList();
+	    Map<Long, Long> likeMap = getLikeCountMap(postIds);
+	    
+	    // 2. DTO 변환
+	    List<PostListResponseDTO> dtoList = pagePost.getContent()
+	    											.stream()
+	    											.map(post -> PostListResponseDTO.fromEntity(post,
+	    													                                    likeMap.getOrDefault(post.getPostId(), 0L).intValue()))
+	    											.collect(Collectors.toList());
+
+
+	    // 3. No 계산 (최신 글이 가장 높은 No, 최소값 1)
+	    long startNo = Math.max(pagePost.getTotalElements() - (long)pageable.getPageNumber() * pageable.getPageSize(), 1);
+	    for (int i = 0; i < dtoList.size(); i++) {
+	        long no = startNo - i;
+	        dtoList.get(i).setNo(Math.max(no, 1));
+	    }
+
+	    // 4. 페이지 DTO로 포장
+	    Page<PostListResponseDTO> dtoPage = new PageImpl<>(dtoList, pageable, pagePost.getTotalElements());
+	    PostPageResponseDTO responseDTO = PostPageResponseDTO.fromPage(dtoPage);
+
+	    logger.info("PostServiceImpl getPostsByAuthor() End");
+	    return responseDTO;
+	}
 
 	//*************************************************** Service END ***************************************************
 

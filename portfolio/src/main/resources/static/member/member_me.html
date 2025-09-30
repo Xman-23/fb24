@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>회원정보 조회</title>
+<title>Log_회원정보 조회</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -10,10 +10,12 @@
 <!-- Common -->
 <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
 <script src="/js/common/board/board.js"></script>
+<script src="/js/member/member_me/member_me.js"></script>
 <script src="/js/common/visitor/visitor.js"></script>
 <!-- Common -->
 <!-- CSS -->
 <link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
 <link rel="stylesheet" href="/css/member/member_me/member_me.css">
 <link rel="stylesheet" href="/css/member/member_footer.css">
 <!-- CSS -->
@@ -23,11 +25,11 @@
     <header id="header">
         <div class="header-top">
             <div id="logo">
-                <a href="/">Log</a>
+                <a href="/">Log<span class="cursor">_</span></a>
             </div>
             <div id="user-actions">
-                <button id="login-btn">로그인</button>
-                <button id="register-btn">회원가입</button>
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
             </div>
         </div>
         <nav id="board-tabs">
@@ -37,22 +39,97 @@
     
     <!-- 메인 바디 -->
 	<main>
-	    <h2>회원정보</h2>
-	    <div id="member-info">
-	        <p>사용자 이름: <span id="username"></span></p>
-	        <p>닉네임: <span id="nickname"></span></p>
-	        <p>핸드폰 번호: <span id="phoneNumber"></span></p>
-	        <p>주소: <span id="address"></span></p>
-	        <p>회원 등급: <span id="memberGradeLevel"></span></p>
-	        <p>게시글 알림: <span id="postNotification"></span></p>
-	        <p>댓글 알림: <span id="commentNotification"></span></p>
-	        <p id="adminSection" style="display:none;">관리자 전용 정보: 
-	        	<span id="adminSectionSpan">여기에 필요한 내용</span>
-	        	<button class="boardBtn" id="createBoardBtn">부모 게시판 만들기</button>
-	        </p>
+    	<div id="log_me_header">
+	    	<h2>Log_Me</h2>
+		</div>
+	    <!-- 탭 메뉴 -->
+	    <div class="member-tabs">
+	        <button class="tab-btn active" data-tab="info-tab">회원정보</button>
+	        <button class="tab-btn" data-tab="my-posts-tab">내 게시글</button>
+	        <button class="tab-btn" data-tab="comments-tab">내 댓글</button>
 	    </div>
-	    <button type="button" id="update_info_btn">회원정보 변경</button>
-		<button type="button" id="withdraw-btn">회원 탈퇴</button>
+	
+	    <!-- 탭 컨텐츠 영역 -->
+	    <div class="tab-contents">
+	        <!-- 회원정보 탭 -->
+	        <div id="info-tab" class="tab-content active">
+	            <div id="member-info">
+	                <p>사용자 이름: <span id="username"></span></p>
+	                <p>닉네임: <span id="nickname"></span></p>
+	                <p>핸드폰 번호: <span id="phoneNumber"></span></p>
+	                <p>주소: <span id="address"></span></p>
+	                <p>회원 등급: <span id="memberGradeLevel"></span></p>
+	                <p>게시글 알림: <span id="postNotification"></span></p>
+	                <p>댓글 알림: <span id="commentNotification"></span></p>
+	                <p id="adminSection" style="display:none;">
+	                    관리자 전용 정보: <span id="adminSectionSpan"></span>
+	                    <button class="boardBtn" id="createBoardBtn">부모 게시판 만들기</button>
+	                </p>
+	            </div>
+	            <div id="member-button-info">
+		            <button type="button" id="update_info_btn">회원정보 변경</button>
+		            <button type="button" id="withdraw-btn">회원 탈퇴</button>
+	            </div>
+	        </div>
+
+	        <!-- 내 게시글 탭 -->
+			<div id="my-posts-tab" class="tab-content">
+			    <table id="my-posts-table" border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+			        <thead>
+			            <tr>
+			                <th>No</th>
+			                <th>제목</th>
+			                <th>게시판</th>
+			                <th>작성일</th>
+			                <th>좋아요</th>
+			                <th>조회수</th>
+			            </tr>
+			        </thead>
+			        <tbody id="my-posts-table-tbody">
+			            <!-- JS로 채워짐 -->
+			        </tbody>
+			    </table>
+			
+			    <!-- 페이지네이션 -->
+				<div id="my-posts-pagination">
+				    <button id="my-posts-first-page">처음</button>
+				    <button id="my-posts-jump-backward">&lt;&lt;</button>
+				    <button id="my-posts-prev-page">이전</button>
+				    <span id="my-posts-page-buttons"></span>
+				    <button id="my-posts-next-page">다음</button>
+				    <button id="my-posts-jump-forward">&gt;&gt;</button>
+				    <button id="my-posts-last-page">마지막</button>
+				</div>
+			</div>
+	
+			<!-- 내 댓글 탭 -->
+			<div id="comments-tab" class="tab-content">
+			    <table id="my-comments-table" border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+			        <thead>
+			            <tr>
+			                <th>No</th>
+			                <th>내용</th>
+			                <th>게시판</th>
+			                <th>작성일</th>
+			                <th>좋아요</th>
+			            </tr>
+			        </thead>
+			        <tbody id="my-comments-table-tbody">
+			            <!-- JS로 채워짐 -->
+			        </tbody>
+			    </table>
+			
+			    <div id="my-comments-pagination">
+			        <button id="my-comments-first-page">처음</button>
+			        <button id="my-comments-jump-backward">&lt;&lt;</button>
+			        <button id="my-comments-prev-page">이전</button>
+			        <span id="my-comments-page-buttons"></span>
+			        <button id="my-comments-next-page">다음</button>
+			        <button id="my-comments-jump-forward">&gt;&gt;</button>
+			        <button id="my-comments-last-page">마지막</button>
+			    </div>
+			</div>
+	    </div>
 	</main>
 
     <!-- 푸터 -->
@@ -63,118 +140,33 @@
         </div>
         <div class="footer-spacer"></div>
     </footer>
+    
+   	<!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
 </body>
 </html>
-<script>
-
-	//*************************************************** 페이지 초기화  Start ***************************************************/
-	// 기존 회원정보 조회 API;
-	load_member_info_api();
-
-	// 회원정보 변경 페이지 이동
-	update_info();
-	
-	// 회원탈퇴 API
-	member_withdraw_api();
-	
-	//*************************************************** 페이지 초기화  End ***************************************************/
-
-	//*************************************************** Function  Start ***************************************************/
-
-	function logoutAndRedirect() {
-        // 토큰 삭제 등 로그아웃 처리
-        sessionStorage.removeItem("accessToken");
-        sessionStorage.removeItem("refreshToken");
-        window.location.href = "/"; // 메인 페이지 이동
-    }
-
-	// 관리자 전용 섹션 표시
-	function showAdminSection() {
-	    var role = localStorage.getItem('role'); // ROLE_USER, ROLE_ADMIN
-	    if (role === 'ROLE_ADMIN') {
-	    	$('#adminSectionSpan').text(role);
-	        $('#adminSection').show();
-	    } else {
-	        $('#adminSection').hide(); // 혹시 안전하게
-	    }
-	}
-
-
-	$("#createBoardBtn").off("click").click(() => {
-		window.location.href = "/board_parent_create"; // 부모게시판 생성
-	})
-	//*************************************************** Function End***************************************************/
-
-	//*************************************************** API START ***************************************************//
-
-	// 기존 회원정보 조회
-	function load_member_info_api() {
-	    ajaxWithToken({
-	        url: '/members/me',
-	        type: 'GET',
-	        success: function(res) {
-	        	console.log(res);
-	            $('#username').text(res.username);
-	            $('#nickname').text(res.nickname);
-	            $('#phoneNumber').text(res.phoneNumber);
-	            $('#address').text(res.address);
-	            $('#memberGradeLevel').text(res.memberGradeLevel);
-	            // 게시글 알림 색상입히기 (활성(notification-active) : 파란색), (비활성(notification-inactive) : 빨간색) 
-	            $('#postNotification')
-	            	.text(res.postNotificationEnabled ? '활성' : '비활성')
-	            	.removeClass('notification-active notification-inactive')
-	            	.addClass(res.postNotificationEnabled ? 'notification-active' : 'notification-inactive');
-	            $('#commentNotification')
-	            	.text(res.commentNotificationEnabled ? '활성' : '비활성')
-	            	.removeClass('notification-active notification-inactive')
-	            	.addClass(res.commentNotificationEnabled ? 'notification-active' : 'notification-inactive');
-	            showAdminSection();
-	        },
-	        error: function(xhr) {
-	            $('#member-info').html(`<p style="color:red;">${xhr.responseText || '회원정보를 가져오는데 실패했습니다.'}</p>`);
-	        }
-	    });
-	}
-
-	function update_info() {
-		$("#update_info_btn").off('click').on('click',function () {
-			ajaxWithToken({
-				url: '/members/me',
-	        	type: 'GET',
-	        	success : function(res) {
-	        		sessionStorage.setItem("editMemberPrefill",  JSON.stringify(res));
-	        		 window.location.href = '/member_me_update';
-	        	},
-	            error: function (xhr) {
-	                alert(xhr.responseText || '회원정보를 불러오지 못했습니다.');
-	              }
-			})
-		})
-	}
-
-	function member_withdraw_api() {
-
-	    $("#withdraw-btn").on("click", function() {
-	        if (!confirm("정말 탈퇴하시겠습니까? 탈퇴 후 복구가 불가능합니다.")) {
-	            return;
-	        }
-
-	        // AJAX PATCH 요청
-	        ajaxWithToken({
-	            url: "/members/me/withdraw",
-	            type: "PATCH",
-	            success: function(res) {
-	                alert(res); // "회원 탈퇴가 정상 처리되었습니다."
-	                // 로그아웃 처리 후 메인 페이지 이동
-	                logoutAndRedirect();
-	            },
-	            error: function(xhr) {
-	                alert(xhr.responseText || "회원 탈퇴에 실패했습니다.");
-	            }
-	        });
-	    });
-	}
-
-	//*************************************************** API START ***************************************************//
-
-</script>

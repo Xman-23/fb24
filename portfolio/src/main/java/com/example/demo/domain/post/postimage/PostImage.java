@@ -64,6 +64,10 @@ public class PostImage {
 	@Column(name = "image_url", nullable = false, length = 255)
 	private String imageUrl;
 
+	// 나중에 nullable = false) 처리
+	@Column(name = "original_file_name", nullable = true, length = 255)
+	private String originalFileName;
+	
 	@Column(name = "order_num", nullable = false)
 	private int orderNum;
 

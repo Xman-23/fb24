@@ -1,5 +1,7 @@
 package com.example.demo.service.comment;
 
+import com.example.demo.dto.comment.CommentGoPageResponseDTO;
+import com.example.demo.dto.comment.CommentMyPageResponseDTO;
 import com.example.demo.dto.comment.CommentPageResponseDTO;
 
 import com.example.demo.dto.comment.CommentRequestDTO;
@@ -24,5 +26,13 @@ public interface CommentService {
 
     // 트리구조 조회 
     CommentPageResponseDTO getCommentsTreeByPost(Long postId, String sortBy, Pageable pageable);
+    
+    // 내 정보 댓글보기
+    CommentMyPageResponseDTO getMyComments (Long memberId, Pageable pageable);
+
+    // 댓글 바로가기
+    CommentGoPageResponseDTO getCommentPage(Long commentId, String sortBy, int pageSize);
+    
+    
 
 }

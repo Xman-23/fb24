@@ -7,25 +7,17 @@ var errorPage = {
 				};
 
 function post_renderPagination(data) {
-	console.log("data :", data);
     var currentPage = data.pageNumber; //현재 페이지
     var totalPages = data.totalPages; // 총데이터/Size = 총 페이지
     var lastPage = totalPages - 1; // 마지막페이지(인덱스 기준)
 
     const pageButtonsContainer = $("#page-buttons");
     pageButtonsContainer.empty();
-
-	if (totalPages === 0) {
-	    pageButtonsContainer.empty();
-	    // 버튼 1개만 보여주고 비활성화
-	    var btn = $(`<button>1</button>`);
-	    btn.prop("disabled", true);
-	    pageButtonsContainer.append(btn);
-
-		$("#pagination-container button").prop("disabled", true);
-
-	    return;
-	}
+	
+	const maxPageButtons = 10;
+	const group = Math.floor(currentPage / maxPageButtons);
+	const startPage = group * maxPageButtons;
+	const endPage = Math.min(startPage + maxPageButtons - 1, lastPage);
 
     // 현재 모드에 따라 페이지 이동 함수 선택
     function loadPage(targetPage) {
@@ -38,22 +30,14 @@ function post_renderPagination(data) {
     }
 
     // 1) 페이지 번호 버튼 'i(index)'를 기준으로 페이징
-    for (let i = 0; i < totalPages; i++) {
+    for (let i = startPage; i <= endPage; i++) {
     	// 버튼 번호 만들기
         let btn = $(`<button>${i + 1}</button>`);
     	// 현재 페이지(inedex) 와 for문의 'i'와 같으면 버튼 비활성화
         if (i === currentPage) {
         	btn.prop("disabled", true);
         }
-        btn.click(() => {
-        	// 메인 인기글 페이징
-            if(currentMode === 'post') {
-                getMain(i);
-            } else {
-            	// 검색 페이징
-                executeSearch(i);
-            }
-        });
+		btn.click(() => loadPage(i));
         pageButtonsContainer.append(btn);
     }
 

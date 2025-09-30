@@ -5,6 +5,7 @@ var currentMode = 'post'; // 'post' | 'search'
 var currentKeyword = '';     
 var currentSearchType = 'keyword';
 
+var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가져오기
 
 //*****************************************Board ID Start*************************************************************
 // 도메인에서 '/'기준으로 배열화 
@@ -47,7 +48,6 @@ function check_posts(posts) {
 
 //*************************************************** Function Start ***************************************************//
 function check_parent_board_number(parentBoardIds) {
-	console.log("와이러아왜이렁료");
     if (parentBoardIds.includes(boardId) && !noticeBoard.includes(boardId)) {
         get_board_api(boardId);
         getMain(0);
@@ -79,7 +79,7 @@ function adminButton() {
 	            ajaxWithToken({
 	                url: `/boards/admin/${boardId}`,
 	                type: 'DELETE',
-	                success: function(res) {
+	                success: function() {
 	                    alert("삭제 완료");
 	                    window.location.href = '/'; // 메인으로 이동
 	                },
@@ -163,7 +163,7 @@ function get_board_api(boardId) {
     }
 	// 현재 게시판 정보 조회 API
     $.getJSON(`/boards/${boardId}`, function(board) {
-    	document.title = "Log | " + board.name;
+    	document.title = "Log_" + board.name;
         $('#parent-name').text(board.name);
         $('#board-description').text("(" + board.description + ")");
 
@@ -204,7 +204,7 @@ function getMain(page = 0) {
         url: `/posts/boards/${boardId}/posts?page=${page}`,
         method: "GET",
         success: function(response) {
-        	console.log(response);
+        	(response);
         	// '0페이지' 일때만 공지 페이지 보여주기
         	if(page === 0) {
         		const noticePosts = [...response.topNotices || [] ]
@@ -278,6 +278,8 @@ function executeSearch(page = 0) {
 			}
 		},
 		error: function(xhr) {
+			$("#parent-name").text(`검색 결과: "${currentKeyword}"`);
+			$("#board-description").text("");
 			$("#post_popluar_list").append(no_posts_tag(no_searchList));
 			post_renderPagination(errorPage);
 		    alert(xhr.responseText || "");
@@ -330,8 +332,23 @@ function auto_search() {
     });
 }
 
+function create_post() {
+	$("#create_post_button").off("click").on("click", function() {
+		if(!token) {
+			if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+				localStorage.setItem("redirectAfterLogin", window.location.href);
+				window.location.href = "/signin"; // 로그인 페이지 이동
+			}
+			return;	
+		}
+
+		window.location.href=`/board/${boardId}/popular/post`;
+	})
+}
+
 //*************************************************** API End ***************************************************//
 
 $(document).ready(function() {
 	check_parent_board_number(parentBoardIds);
+	create_post();
 });

@@ -164,10 +164,36 @@ public class MemberController {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용 중인 이메일입니다.");
 		}
 
+		// 이메일과 비밀번호 동일 여부 검사
+		if (trimEmail.equals(trimPassword)) {
+		    return ResponseEntity.badRequest().body("이메일과 비밀번호는 동일할 수 없습니다.");
+		}
+		
 		// 비밀번호 유효성 검사
 		if(!PasswordValidation.isValidPassword(trimPassword)) {
 			return ResponseEntity.badRequest().body("비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.");
-		}		
+		}
+
+		List<Member> memberList = memberRepository.findByUsername(safeTrim(memberSignupDto.getUsername()));
+
+		for(Member member : memberList) {
+			
+			String memberResidentNumber = member.getResidentNumber().trim(); 
+
+			String decryptResidentNumber = "";
+			// 'memberRepository'가 DB에 접근하여 주민번호를 가져올 경우 주민번호는 암호화 처리가 되어있어,
+			// 암호화된 주민번호를 복호화 진행.
+			try {
+				decryptResidentNumber = AES256Util.decrypt(memberResidentNumber);
+			} catch (RuntimeException e) {
+				logger.error("MemberService RuntimeException 발생   : {}" , e.getMessage() , e);
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			}
+			// 'DB'에 기존에 있는 주민번호와 요청 주민번호와 같다면은 badRequest(400)반환
+			if(decryptResidentNumber.equals(trimResidentNumber)) {
+				return ResponseEntity.badRequest().body("가입된 회원이 존재합니다.");
+			}
+		}
 
 		// 주민번호 유효성 검사
 		if(!ResidentNumberValidation.isValidResidentNumberWithChecksum(trimResidentNumber)) {
@@ -208,12 +234,12 @@ public class MemberController {
 			memberService.signup(memberSignupDto.toEntity(),consentTypes,ipAddress);
 		} catch (DuplicateKeyException e) {
 			//이메일(Unique)제약이 걸려있으므로, 이메일 중복일시 발생하는 예외
-			logger.error("MemberService DuplicateKeyException 발생   :     "+ e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용 중인 이메일입니다.");
+			logger.error("MemberService DuplicateKeyException 발생   : {}", e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
 		}  catch (Exception e) {
 			//서버 에러 500번대 : INTERNAL_SERVER_ERROR
-			logger.error("MemberService RuntimeException 발생   :     " + e.getMessage() , e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러가 발생했습니다.");
+			logger.error("MemberService RuntimeException 발생   : {}" , e.getMessage() , e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
 
 		logger.info("MemberController registerMember() Success End");
@@ -364,6 +390,7 @@ public class MemberController {
 		String newPassword = resetPasswordDto.getNewPassword();
 		String confirmNewPassword = resetPasswordDto.getConfirmNewPassword();
 
+		
 		if (!PasswordValidation.isValidPassword(newPassword)) {
 		    return ResponseEntity.badRequest().body("비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.");
 		}
@@ -375,7 +402,6 @@ public class MemberController {
 
 		// 비밀번호 재설정 임시토큰에 저장된 정보를 추출하기 위한 Claims Class
 		Claims claims = jwtUtil.getClaimsFromToken(token);
-		logger.info("MemberController resetPassword claims :" + claims);
 
 		// 비밀번호 임시토큰 주체 비교
 		if(!"RESET".equals(claims.getSubject())) {
@@ -389,6 +415,11 @@ public class MemberController {
 
 		// 임시 토큰에 들어있는 '이메일' 추출
 		String emailClaims = claims.get("email", String.class);
+		
+		// 이메일과 비밀번호 동일 여부 검사
+		if (emailClaims.equals(newPassword)) {
+		    return ResponseEntity.badRequest().body("이메일과 비밀번호는 동일할 수 없습니다.");
+		}
 
 		try {
 			memberService.resetPasswordByEmail(emailClaims, newPassword);

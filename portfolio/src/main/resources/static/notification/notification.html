@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Log_알림</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/notification/notification.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
+<link rel="stylesheet" href="/css/notification/notification.css">
+<link rel="stylesheet" href="/css/member/member_footer.css">
+</head>
+<body>
+	<!-- 헤더 -->
+    <header id="header">
+        <div class="header-top">
+            <div id="logo">
+                <a href="/">Log<span class="cursor">_</span></a>
+            </div>
+            <div id="user-actions">
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
+            </div>
+        </div>
+        <nav id="board-tabs">
+            <ul id="parent-boards"></ul>
+        </nav>
+    </header>
+    
+    <main>
+    	<div id="log_notification_header">
+    		<h2 id="log_notification_header_h2">Log_Notification</h2>
+    		<div id="log_notification_hader_button_collection">
+    			<button id="notification_hader_delete_all_button">알림 전체 삭제</button>
+	        	<button id="notification_hader_mark_all_read">모두 읽기</button>
+    		</div>
+    	</div>
+
+	
+	    <!-- 탭 메뉴 -->
+	    <div class="notification-tabs">
+	        <button class="tab-btn" data-tab="post-notification-tab">게시글 알림(<span id="page-posts-unread-count"></span> / <span id="page-posts-total-count"></span>)</button>
+	        <button class="tab-btn" data-tab="comment-notification-tab">댓글 알림(<span id="page-comments-unread-count"></span> / <span id="page-comments-total-count"></span>)</button>
+	    </div>
+	
+	    <!-- 탭 컨텐츠 영역 -->
+	    <div class="tab-contents">
+
+	        <!-- 내 게시글 탭 -->
+			<div id="post-notification-tab" class="tab-content active">
+			    <table id="my-posts-notification-table" border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+			        <thead>
+			            <tr>
+			                <th>알림</th>
+			                <th>읽음 처리</th>
+			                <th><!-- 단건 삭제 버튼 --></th>
+			            </tr>
+			        </thead>
+			        <tbody id="my-posts-notification-table-tbody">
+			            <!-- JS로 채워짐 -->
+			        </tbody>
+			    </table>
+			
+			    <!-- 페이지네이션 -->
+				<div id="my-posts-notification-pagination">
+				    <button id="my-posts-notification-first-page">처음</button>
+				    <button id="my-posts-notification-jump-backward">&lt;&lt;</button>
+				    <button id="my-posts-notification-prev-page">이전</button>
+				    <span id="my-posts-notification-page-buttons"></span>
+				    <button id="my-posts-notification-next-page">다음</button>
+				    <button id="my-posts-notification-jump-forward">&gt;&gt;</button>
+				    <button id="my-posts-notification-last-page">마지막</button>
+				</div>
+			</div>
+	
+			<!-- 내 댓글 탭 -->
+			<div id="comment-notification-tab" class="tab-content">
+			    <h3>내 댓글</h3>
+			    <table id="my-comments-notification-table" border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+			        <thead>
+			            <tr>
+			                <th>알림</th>
+			                <th>읽음 처리</th>
+			                <th><!-- 단건 삭제 버튼 --></th>
+			            </tr>
+			        </thead>
+			        <tbody id="my-comments-notification-table-tbody">
+			            <!-- JS로 채워짐 -->
+			        </tbody>
+			    </table>
+			
+			    <div id="my-comments-notification-pagination">
+			        <button id="my-comments-notification-first-page">처음</button>
+			        <button id="my-comments-notification-jump-backward">&lt;&lt;</button>
+			        <button id="my-comments-notification-prev-page">이전</button>
+			        <span id="my-comments-notification-page-buttons"></span>
+			        <button id="my-comments-notification-next-page">다음</button>
+			        <button id="my-comments-notification-jump-forward">&gt;&gt;</button>
+			        <button id="my-comments-notification-last-page">마지막</button>
+			    </div>
+			</div>
+	    </div>
+	</main>
+
+	<!-- 푸터 -->
+    <footer id="main-footer">
+        <div class="footer-stats">
+            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+        </div>
+        <div class="footer-spacer"></div>
+    </footer>
+    
+    <!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
+</body>
+</html>

@@ -37,9 +37,11 @@ public class CommentPageResponseDTO {
     private boolean hasFirst;
     private boolean hasLast;
 
-    //private int jumpBackwardPage;
-    //private int jumpForwardPage;
-    // 버튼 설정 End
+    /* 절대로 지우지 말것 후에 사용 수도 있음
+	    //private int jumpBackwardPage;
+	    //private int jumpForwardPage;
+	    // 버튼 설정 End
+     */
 
     // 전체 댓글 리스트와 Pageable 받아서 DTO 생성
     public static CommentPageResponseDTO fromEntityToPage(List<CommentResponseDTO> topPinned,
@@ -96,15 +98,17 @@ public class CommentPageResponseDTO {
         // ex) 현재 5페이지(index=4)이면, 총 페이지 20페이지(index = totalPages(20)-1) 'true', 현재 20페이지(index=19) 'false'
         boolean hasLast = hasNext;
 
-	    // 10 페이지 앞으로 버튼
-	    // ex) 현재 4페이지(index=3)이면, 10페이지 앞으로 버튼 누를시,
-	    // '3(currnetPage)-10'의해 '음수', 그러므로 페이지가 벗어나는걸 방지하기 위해 '첫페이지(index=0)' 설정
-        //int jumpBackwardPage = Math.max(currentPage - 10, 0);
-
-        // 10 페이지 뒤로 버튼
-	    // ex) 현재 11페이지(index=10)이면, 10페이지 뒤로 버튼 눌르시,
-	    // '10(currentPage)+10'의해 index = 20이므로, 총페이지 20페이지(index = 19) 범위를 벗어나는것을 방지하기 위한 '맨뒤 페이지(totalPages-1)'설정
-        //int jumpForwardPage = totalPages == 0 ? 0 : Math.min(currentPage + 10, totalPages - 1);
+        /* 절대로 지우지 말것 후에 사용 수도 있음
+		    // 10 페이지 앞으로 버튼
+		    // ex) 현재 4페이지(index=3)이면, 10페이지 앞으로 버튼 누를시,
+		    // '3(currnetPage)-10'의해 '음수', 그러므로 페이지가 벗어나는걸 방지하기 위해 '첫페이지(index=0)' 설정
+	        //int jumpBackwardPage = Math.max(currentPage - 10, 0);
+	
+	        // 10 페이지 뒤로 버튼
+		    // ex) 현재 11페이지(index=10)이면, 10페이지 뒤로 버튼 눌르시,
+		    // '10(currentPage)+10'의해 index = 20이므로, 총페이지 20페이지(index = 19) 범위를 벗어나는것을 방지하기 위한 '맨뒤 페이지(totalPages-1)'설정
+	        //int jumpForwardPage = totalPages == 0 ? 0 : Math.min(currentPage + 10, totalPages - 1);
+        */
 
         return CommentPageResponseDTO.builder()
         							 .popularComments(topPinned)

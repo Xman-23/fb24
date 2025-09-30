@@ -75,10 +75,33 @@ public class SecurityConfig {
             	"/main.html",
             	// 메인 게시글
             	"/main_post.html",
-            	"/post/post_parent.html",
-            	"/post/post_child.html",
-            	"/post/post_child_popular.html",
-            	"/post/post_notice.html",
+            	// 메인 게시글 업데이트
+            	"/main_post_update.html",
+
+            	// 통합검색
+            	"/total/total_search.html",
+
+            	// 부모 상세 게시글
+            	"/post/post_parent/post_parent.html", 
+            	// 부모 게시판 게시글 생성 (로그인)
+            	"/post/post_parent/post_parent_create.html",
+            	// 부모 게시판 게시글 수정 (로그인)
+            	"/post/post_parent/post_parent_update.html",
+
+            	// 자식 상세 게시글
+            	"/post/post_child/post_child.html",
+            	// 자식 인기 상세 게시글
+            	"/post/post_child/post_child_popular.html",
+            	// 자식 게시글 작성 (로그인)
+            	"/post/post_child/post_child_create.html",
+            	// 자식 게시글 수정 (로그인)
+            	"/post/post_child/post_child_update.html",
+
+            	// 공지 게시판
+            	"/post/post_notice/post_notice.html",
+            	// 공지 상세 게시글
+            	"/post/post_notice/post_notice_create.html",
+            	"/post/post_notice/post_notice_update.html",
 
             	// 로그인.html
             	"/member/member_signin.html",
@@ -99,19 +122,21 @@ public class SecurityConfig {
 
             	// 게시판
             	// 공지 게시판
-            	"/board/board_notice.html",
+            	"/board/board_notice/board_notice.html",
             	// 부모 게시판
-            	"/board/board_parent.html",
+            	"/board/board_parent/board_parent.html",
             	// 자식 게시판
-            	"/board/board_child.html",
-            	// 부모 게시판 생성
-            	"/board/board_parent_create.html",
-            	// 부모 게시판 수정
-            	"/board/board_parent_update.html",
-            	// 자식 게시판 생성
-            	"/board/board_child_create.html",
-            	// 자식 게시판 수정
-            	"/board/board_child_update.html",
+            	"/board/board_child/board_child.html",
+            	// 부모 게시판 생성 (관리자)
+            	"/board/board_parent/board_parent_create.html",
+            	// 부모 게시판 수정 (관리자)
+            	"/board/board_parent/board_parent_update.html",
+            	// 자식 게시판 생성 (관리자)
+            	"/board/board_child/board_child_create.html",
+            	// 자식 게시판 수정 (관리자)
+            	"/board/board_child/board_child_update.html",
+
+            	"/notification/notification.html",
 
             	"/favicon.ico",
 
@@ -123,6 +148,10 @@ public class SecurityConfig {
 
             // 비로그인도 접근 가능
             .requestMatchers(
+
+            	"/search",
+
+            	// 회원
                 "/auth/login",
                 "/members/signup",
                 "/members/check-email",
@@ -136,14 +165,28 @@ public class SecurityConfig {
                 "/boards/hierarchy",
                 // 공지 게시판
                 "/board_notice/**",
+                //부모 게시판
                 "/board_popular/**",
+                // 자식 게시판
                 "/board_normal/**",
+
+                // 관리자
+                //부모게시판 생성
                 "/board_parent_create",
                 // 부모게시판 수정
                 "/board_parent_update/**",
+                // 부모게시판 게시글 생성
+                "/board/{boardId:\\d+}/popular/post",
+                "/board/{boardId:\\d+}/popular/post/{postId:\\d+}",
                 // 자식게시판 생성
                 "/board_child_create/**",
+                // 자식게시판 수정
                 "/board_child_update/**",
+                // 자식 게시판 게시글 생성(로그인)
+                "/board/{boardId:\\d+}/normal/post",
+                // 자식 게시판 게시글 수정(로그인)
+                "/board/{boardId:\\d+}/normal/post/{postId:\\d+}",
+
                 "/boards/{boardId:[\\d]+}", // 게시판 단건 조회
                 "/boards/{boardId:[\\d]+}/hierarchy", // 자식 게시판 계층구조
 
@@ -172,6 +215,7 @@ public class SecurityConfig {
  
                 // 댓글
                 "/comments/**",		  // 댓글 트리구조(정렬) 조회
+                "/comments/{commentId:[\\d]+}/goto-page",
 
                 // 접속자 수 보기
                 "/visitors/**",						      // 회원 접속자 수 보기
@@ -180,12 +224,17 @@ public class SecurityConfig {
                 "/",
                 // 메인 게시글
                 "/main/{postId:\\d+}",
+                // 메인 게시글 수정
+                "/main/post/{postId:\\d+}",
                 // 부모 게시글
                 "/board/{boardId:\\d+}/popular/{postId:\\d+}",
+                // 자식 게시글
                 "/board/{boardId:\\d+}/normal/{postId:\\d+}",
                 "/board/{boardId:\\d+}/normal/popular/{postId:\\d+}",
                 // 공지 게시글
                 "/board/{boardId:\\d+}/notice/{postId:\\d+}",
+                "/{boardId:\\d+}/notice/post",
+                "/{boardId:\\d+}/notice/post/{postId:\\d+}",
 
                 // 로그인
                 "/signin",
@@ -207,7 +256,11 @@ public class SecurityConfig {
                 // 메인 인기글
                 "/main/**",								  // 메인 인기글
 
-                "/images/**"
+                "/notification",
+
+                "/images/**",
+                "/board/**"
+  
 
             ).permitAll()
 
@@ -233,6 +286,7 @@ public class SecurityConfig {
                 "/comments",							// 댓글 생성
                 "/comments/{commentId:[\\d]+}",			// 댓글 수정, 삭제
                 "/comments/{commentId:[\\d]+}/report",	// 댓글 신고
+                "/comments/me",
 
                 // 알림
                 "/notifications/**",					// 알림

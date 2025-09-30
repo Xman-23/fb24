@@ -33,6 +33,9 @@ public class NotificationResponseDTO {
 	// 작성자가 작성한 댓글ID
 	private Long commentId;
 
+	// 작성자가 작성한 게시글의 게시판 ID
+	private Long boardId;
+
 	// 읽음 여부
 	private boolean read;
 
@@ -42,13 +45,14 @@ public class NotificationResponseDTO {
 	// 알림을 보낸 회원의 닉네임
 	private String senderNickname;
 
-	public static NotificationResponseDTO fromDto(Notification notification) {
+	public static NotificationResponseDTO fromDto(Notification notification,Long boardId) {
 	    return NotificationResponseDTO.builder()
 	                                  .notificationId(notification.getNotificationId())
 	                                  .notificationType(notification.getNotificationType())
 	                                  .notificationMessage(notification.getNotificationMessage())
 	                                  .postId(notification.getPostId() != null ? notification.getPostId() : 0L) // 또는 Optional<Long> 처리
 	                                  .commentId(notification.getCommentId() != null ? notification.getCommentId() : 0L)
+	                                  .boardId(boardId)
 	                                  .read(notification.isRead())
 	                                  .createdAt(notification.getCreatedAt())
 	                                  .senderNickname(notification.getSenderNickname())

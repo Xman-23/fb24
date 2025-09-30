@@ -1,0 +1,568 @@
+@charset "UTF-8";
+
+main {
+    max-width: 1000px;
+    margin: 50px auto;
+    padding: 20px 30px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
+
+/* ============================== 알림 헤더 ============================== */
+#log_notification_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 2px solid #eee;
+    background-color: #fafafa;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+#log_notification_header_h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+#log_notification_hader_button_collection {
+    display: flex;
+    gap: 10px;
+}
+
+#log_notification_hader_button_collection button {
+    padding: 6px 12px;
+    font-size: 0.9em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+#notification_hader_delete_all_button {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+#notification_hader_delete_all_button:hover {
+    background-color: #c0392b;
+}
+
+#notification_hader_mark_all_read {
+    background-color: #007bff;
+    color: #fff;
+}
+
+#notification_hader_mark_all_read:hover {
+    background-color: #0056b3;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    #log_notification_header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    #log_notification_hader_button_collection {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    #log_notification_header_h2 {
+        font-size: 1.3em;
+    }
+
+    #log_notification_hader_button_collection button {
+        padding: 5px 10px;
+        font-size: 0.85em;
+    }
+}
+
+
+/* ============================== 고급 탭 메뉴 ============================== */
+.notification-tabs {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 2px solid #eee;
+    background-color: #fafafa;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 14px 0;
+    background: transparent;
+    border: none;
+    font-size: 1em;
+    font-weight: 500;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tab-btn:hover {
+    background-color: #f5f5f5;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.tab-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    border-radius: 2px 2px 0 0;
+    transition: width 0.3s ease;
+}
+
+/* ============================== 탭 컨텐츠 ============================== */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+    padding: 20px 10px;
+    background-color: #fff;
+    border-radius: 0 0 8px 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tab-content.active {
+    display: block;
+}
+/* ============================== 애니메이션 ============================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================== 내 게시글 탭 ============================== */
+#post-notification-tab {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 테이블 기본 스타일 */
+#my-posts-notification-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    font-size: 0.95em;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* 헤더 스타일 (표준) */
+#my-posts-notification-table th {
+    background-color: #f1f1f1;
+    color: #333;
+    font-weight: 600;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 1em;
+    border-bottom: 2px solid #ddd;
+}
+/* 데이터 셀 스타일 */
+#my-posts-notification-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    background-color: #fff;
+    transition: background-color 0.3s ease;
+}
+
+/* 행 홀수/짝수 구분 색상 */
+#my-posts-notification-table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+}
+
+/* 행 호버 효과 */
+#my-posts-notification-table tr:hover td {
+    background-color: #eaf4ff;
+}
+
+/* 제목 컬럼 강조 */
+#my-posts-notification-table td:nth-child(1) {
+    text-align: left;
+    font-weight: 500;
+    color: #007bff;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+#my-posts-notification-table td:nth-child(1):hover {
+    color: #0056b3;
+    transform: translateX(4px);
+}
+
+/* ================= 게시글 알림 테이블 행 스타일 ================= */
+
+/* 기본 행 */
+#my-posts-notification-table-tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+/* 읽은 알림 → 흐리게 */
+.read-row {
+    background-color: #f9f9f9;  /* 옅은 회색 */
+    color: #666;                /* 글자 흐리게 */
+}
+
+/* 읽은 알림 링크 → 흐리게 */
+#my-posts-notification-table-tbody tr.read-row td:first-child a.notification-link {
+    color: #888;              /* 회색 */
+    font-weight: normal;      /* 강조 제거 */
+    text-decoration: none;
+}
+
+/* 읽은 알림 링크 호버 효과 (살짝 색 변화) */
+#my-posts-notification-table-tbody tr.read-row td:first-child a.notification-link:hover {
+    text-decoration: underline;
+    color: #666;
+}
+
+
+/* 경고 삭제 알림 → 빨간색 강조 */
+.warned-row {
+    background-color: #ffe5e5;  /* 연한 빨간 배경 */
+    color: #d9534f;             /* 진한 빨간 글씨 */
+    font-weight: bold;
+}
+
+/* 마우스 hover 효과 */
+#my-posts-notification-table-tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* 링크 스타일 (안 읽은 알림만 링크니까 구분 가능) */
+#my-posts-notification-table-tbody a.notification-link {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+
+#my-posts-notification-table-tbody a.notification-link:hover {
+    text-decoration: underline;
+}
+
+/* 삭제 버튼 */
+.post-delete-notification-btn {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.post-delete-notification-btn:hover {
+    background: #c0392b;
+}
+
+/* 게시글 알림 없을 때 중앙 정렬 */
+#my-posts-notification-table-tbody td.no-data {
+    text-align: center;
+    color: #888;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+/* ============================== 게시글 페이지네이션 ============================== */
+#my-posts-notification-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+#my-posts-notification-pagination button {
+    padding: 6px 12px;
+    background-color: #fff;
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+#my-posts-notification-pagination button:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+#my-posts-notification-pagination span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 페이지 버튼 강조 */
+#my-posts-notification-page-buttons button {
+    padding: 6px 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#my-posts-notification-page-buttons button.active {
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    #my-posts-notification-table th, #my-posts-table td {
+        padding: 8px 5px;
+        font-size: 0.9em;
+    }
+    #my-posts-notification-pagination {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    #my-posts-notification-table th, #my-posts-notification-table td {
+        padding: 6px 4px;
+        font-size: 0.85em;
+    }
+
+    #my-posts-notification-table td:nth-child(2) {
+        font-size: 0.9em;
+    }
+
+    #my-posts-notification-pagination {
+        flex-direction: column;
+    }
+}
+
+#my-posts-notification-pagination button:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ============================== 내 댓글 탭 ============================== */
+#comment-notification-tab {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 테이블 기본 스타일 */
+#my-comments-notification-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    font-size: 0.95em;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* 헤더 스타일 (표준) */
+#my-comments-notification-table th {
+    background-color: #f1f1f1;
+    color: #333;
+    font-weight: 600;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 1em;
+    border-bottom: 2px solid #ddd;
+}
+/* 데이터 셀 스타일 */
+#my-comments-notification-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    background-color: #fff;
+    transition: background-color 0.3s ease;
+}
+
+/* 행 홀수/짝수 구분 색상 */
+#my-comments-notification-table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+}
+
+/* 행 호버 효과 */
+#my-comments-notification-table tr:hover td {
+    background-color: #eaf4ff;
+}
+
+/* 제목 컬럼 강조 */
+#my-comments-notification-table td:nth-child(1) {
+    text-align: left;
+    font-weight: 500;
+    color: #007bff;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+#my-comments-notification-table td:nth-child(1):hover {
+    color: #0056b3;
+    transform: translateX(4px);
+}
+
+/* ================= 댓글 알림 테이블 행 스타일 ================= */
+
+/* 기본 행 */
+#my-comments-notification-table-tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+/* 읽은 알림 링크 → 흐리게 */
+#my-comments-notification-table-tbody tr.read-row td:first-child a.notification-link {
+    color: #888;              /* 회색 */
+    font-weight: normal;      /* 강조 제거 */
+    text-decoration: none;
+}
+
+/* 읽은 알림 링크 호버 효과 (살짝 색 변화) */
+#my-comments-notification-table-tbody tr.read-row td:first-child a.notification-link:hover {
+    text-decoration: underline;
+    color: #666;
+}
+
+/* 마우스 hover 효과 */
+#my-comments-notification-table-tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* 링크 스타일 (안 읽은 알림만 링크니까 구분 가능) */
+#my-comments-notification-table-tbody a.notification-link {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+
+#my-comments-notification-table-tbody a.notification-link:hover {
+    text-decoration: underline;
+}
+
+/* 삭제 버튼 */
+.comment-delete-notification-btn {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.comment-delete-notification-btn:hover {
+    background: #c0392b;
+}
+
+/* 게시글 알림 없을 때 중앙 정렬 */
+#my-comments-notification-table-tbody td.no-data {
+    text-align: center;
+    color: #888;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+/* ============================== 댓글 페이지네이션 ============================== */
+#my-comments-notification-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+#my-comments-notification-pagination button  {
+    padding: 6px 12px;
+    background-color: #fff;
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+#my-comments-notification-pagination button:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+#my-comments-notification-pagination span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 페이지 버튼 강조 */
+#my-comments-notification-page-buttons button {
+    padding: 6px 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#my-comments-notification-page-buttons button.active {
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    #my-comments-notification-table th, #my-comments-notification-table td {
+        padding: 8px 5px;
+        font-size: 0.9em;
+    }
+    #my-comments-notification-pagination {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    #my-comments-notification-table th, #my-comments-notification-table td {
+        padding: 6px 4px;
+        font-size: 0.85em;
+    }
+
+    #my-comments-notification-table td:nth-child(2) {
+        font-size: 0.9em;
+    }
+
+    #my-comments-notification-pagination {
+        flex-direction: column;
+    }
+}
+
+#my-comments-notification-pagination button:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}

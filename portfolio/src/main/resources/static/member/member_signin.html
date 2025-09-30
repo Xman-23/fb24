@@ -4,13 +4,16 @@
 <meta charset="UTF-8">
 <!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로그인</title>
+<title>Log_로그인</title>
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- JS -->
+<!-- <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script> -->
+<script src="/js/common/member/member_signin_signup_button.js"></script>
 <script src="/js/common/board/board.js"></script>
 <script src="/js/common/visitor/visitor.js"></script>
 <script src="/js/member/get_member.js"></script>
+<script src="/js/member/member_signin/member_signin.js"></script>
 <!-- CSS -->
 <link rel="stylesheet" href="/css/common/common_header.css">
 <link rel="stylesheet" href="/css/member/member_login_body/member_login_body.css">
@@ -21,8 +24,12 @@
 	<header id="header">
 		<div class="header-top">
 			<div id="logo">
-    			<a href="/">Log</a>
+    			<a href="/">Log<span class="cursor">_</span></a>
 			</div>
+			<div id="user-actions">
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
+	        </div>
 		</div>
 
 		<nav id="board-tabs">
@@ -78,97 +85,8 @@
 </body>
 
 <script>
-	//*************************************************** 페이지 초기화  Start ***************************************************//
 
-	form_email_chang();
-	form_signup();
-	form_find_id();
-	form_find_password();
 
-	memberLoginApi();
 
-	//*************************************************** 페이지 초기화  End ***************************************************//
-
-	//*************************************************** Function START ***************************************************//
-
-	// 이메일 셀렉트 박스 클릭 
-	function form_email_chang() {
-		$("#email2").val("").prop("disabled", true);
-		// select 박스 변경 시 
-		$("#email-select").on("change", function() {
-			// 해당 태그(email-select)의 value가져오기
-		    var domain = $(this).val();
-
-			// 직접 입력 옵션일 때
-			if(domain ==="direct") {
-				$("#email2").val("").prop("disabled", false).focus();
-			} else {
-				// 다른 옵션 선택 시
-				// 'email-domain2' input value에 domain 값 덮어쓰기 
-			    $("#email2").val(domain).prop("disabled", true);
-			}
-		});
-	}
-
-	// 회원가입 버튼 클릭 시
-	function form_signup() {
-		$("#signup").on("click", function() {
-			window.location.href = "/signup_consent";
-		});
-	}
-
-	// 아이디 찾기 버튼 클릭 시
-	function form_find_id() {
-		$("#find_id").on("click", function() {
-			window.location.href = "/find_id_one";
-		});
-	}
-
-	// 비밀번호 찾기 버튼 클릭 시
-	function form_find_password() {
-		$("#find_password").on("click", function() {
-			window.location.href = "/reset_password_one";
-		});
-	}
-	//*************************************************** Function End ***************************************************//
-
-	//*************************************************** API START ***************************************************//
-
-	// 로그인 API
-	function memberLoginApi() {
-		$('#auth-form').on('submit', function(e) {
-		    e.preventDefault();
-	
-		    // 이메일 합치기
-		    var email = getEmail();
-		    var password = passwordTrim();
-	
-		    if(!email || !password){
-		        alert("이메일과 비밀번호를 모두 입력해주세요.");
-		        return;
-		    }
-	
-		    var loginData = { email: email, password: password };
-	
-		    $.ajax({
-		        url: '/auth/login',
-		        type: 'POST',
-		        contentType: 'application/json',
-		        data: JSON.stringify(loginData),
-		        success: function(res) {
-		            localStorage.setItem('accessToken', res.accessToken);
-		            localStorage.setItem('refreshToken', res.refreshToken);
-		            localStorage.setItem('role', res.role);
-		            localStorage.setItem('memberId', res.memberId);
-		            alert('로그인 성공!');
-		            window.location.href = '/';
-		        },
-		        error: function(xhr) {
-		            alert(xhr.responseText);
-		        }
-		    });
-		});
-	}
-	//*************************************************** API End ***************************************************//
 </script>
 </html>

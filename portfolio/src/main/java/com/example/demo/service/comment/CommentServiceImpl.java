@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,11 +15,15 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +35,16 @@ import com.example.demo.domain.comment.commentreport.CommentReport;
 import com.example.demo.domain.member.Member;
 import com.example.demo.domain.post.Post;
 import com.example.demo.domain.post.postreaction.postreactionenums.PostReactionType;
+import com.example.demo.dto.comment.CommentGoPageResponseDTO;
+import com.example.demo.dto.comment.CommentListResponseDTO;
+import com.example.demo.dto.comment.CommentMyPageResponseDTO;
 import com.example.demo.dto.comment.CommentPageResponseDTO;
 import com.example.demo.dto.comment.CommentRequestDTO;
 import com.example.demo.dto.comment.CommentResponseDTO;
 import com.example.demo.dto.comment.commentreport.CommentReportResponseDTO;
 import com.example.demo.repository.comment.CommentRepository;
 import com.example.demo.repository.comment.commentreaction.CommentReactionRepository;
+import com.example.demo.repository.comment.commentreaction.CommentReactionRepository.ReactionCountProjection;
 import com.example.demo.repository.comment.commentreport.CommentReportRepository;
 import com.example.demo.repository.member.MemberRepository;
 import com.example.demo.repository.post.PostRepository;
@@ -56,6 +65,10 @@ public class CommentServiceImpl implements CommentService {
     private final CommentReactionRepository commentReactionRepository;
 
     private final NotificationService notificationServiceImpl;
+    
+
+    // 게시글별 top3 인기댓글 ID 캐시 (전역처럼 사용)
+    private static final Map<Long, Set<Long>> postTop3IdsCache = new ConcurrentHashMap<>();
 
 
     // 좋아요 기준
@@ -76,6 +89,8 @@ public class CommentServiceImpl implements CommentService {
 
     private static final Logger logger = LoggerFactory.getLogger(CommentServiceImpl.class);
 
+
+    
     // DFS(재귀함수) : 자식 댓글 최신순 정렬
     private void sortChildComments(List<CommentResponseDTO> comments, boolean isRoot, String sortBy) {
 
@@ -127,9 +142,9 @@ public class CommentServiceImpl implements CommentService {
     	}
     }
 
+  //*************************************************** Helper Method START ***************************************************//
     private CommentResponseDTO convertCommentToDtoRecursive(Comment comment, Map<Long, Map<PostReactionType, Long>> reactionCountMap) {
 
-    	
     	logger.info("CommentServiceImpl convertCommentToDtoRecursive() Start");
     	// 리액션(좋아요, 싫어요) 꺼내기
     	Map<PostReactionType, Long> counts = reactionCountMap.getOrDefault(comment.getCommentId(), Collections.emptyMap());
@@ -183,6 +198,16 @@ public class CommentServiceImpl implements CommentService {
             }
         }
     }
+
+    // 최상위 댓글 재귀로 찾기
+    private Comment findRootComment(Comment comment) {
+        while (comment.getParentComment() != null) {
+            comment = comment.getParentComment();
+        }
+        return comment;
+    }
+
+    //*************************************************** Helper Method End ***************************************************//
 
     //*************************************************** Service START ***************************************************//
 
@@ -497,7 +522,7 @@ public class CommentServiceImpl implements CommentService {
 		// 모든 댓글 상태 리스트(삭제됨, 숨김, 대댓글포함)
 		List<Comment> allComments = commentRepository.findByPostWithStatusesDesc(post, statuses);
 		
-		// ACTIVE 상태 댓글만 조회
+		// ACTIVE 상태 댓글만 조회 (CommentStatus.ACTIVE를 'List'로 변경)
 		List<Comment> activeComments = commentRepository.findByPostWithStatusesDesc(post, Collections.singletonList(CommentStatus.ACTIVE));
 		long totalActiveComments = activeComments.size();
 
@@ -593,6 +618,12 @@ public class CommentServiceImpl implements CommentService {
 		                        .map(commentResponseDto -> commentResponseDto.getCommentId())
 		                        // 내림차순 순서유지를 위한 LinkedHashSet 변환
 		                        .collect(Collectors.toCollection(() -> new LinkedHashSet<>()));
+			// 첫 페이지 처리 후 저장
+			if (top3Ids != null && !top3Ids.isEmpty()) {
+			    postTop3IdsCache.put(postId, top3Ids);
+			} else {
+			    postTop3IdsCache.put(postId, Collections.emptySet());
+			}
 
 			// 상단 고정 댓글 'Pinned(true)' 작업
 			for(CommentResponseDTO dto : dtoMap.values()) {
@@ -603,7 +634,6 @@ public class CommentServiceImpl implements CommentService {
 				}
 			}
 		}
-
 		// 나머지 댓글을 위한 변수
 		Map<Long, CommentResponseDTO> normalDtoMap = new HashMap<>();
 		// 나머지 댓글 자식 댓글 셋팅
@@ -612,8 +642,6 @@ public class CommentServiceImpl implements CommentService {
 		    normalDtoMap.put(comment.getCommentId(), normalDto);
 		}
 
-
-
 		List<CommentResponseDTO> rootComments = normalDtoMap.values()
 				                                            .stream()
 				                                            .filter(Objects::nonNull)
@@ -621,8 +649,6 @@ public class CommentServiceImpl implements CommentService {
 				                                            .filter(dto -> dto.getParentCommentId() == null)
 				                                            // 리스트로 수집
 				                                            .collect(Collectors.toList());
-
-
 
 		// 나머지 댓글은 최신순
 		// 상단 3개 좋아요 먼저 처리 ('List'는 순서 유지 때문에 먼저 상단 3개 댓글 부터 넣어줘야함)
@@ -650,20 +676,13 @@ public class CommentServiceImpl implements CommentService {
 				                                            })
 				                                            .collect(Collectors.toList());
 
-		logger.info("CommentServiceImpl getCommentsTreeByPost top3Ids : {} ", top3Ids);
-		logger.info("CommentServiceImpl getCommentsTreeByPost restComments : {} ", restComments);
-
-		
-		if(top3Ids != null) {
-			// 나머지 댓글에 'pin'작업
-			for(CommentResponseDTO dto : restComments) {
-				applyPinnedRecursive(dto,top3Ids);
-					logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 Start");
-					logger.info("CommentServiceImpl getCommentsTreeByPost dto.getCommentId() : {} ", dto.getCommentId());
-					// '내림차순'으로 정렬된 'top3Pinned'의 'top3Ids'에 포함된,
-					// '댓글ID'라면 상단 고정을 위한 setPinned(true)
-					logger.info("CommentServiceImpl getCommentsTreeByPost 나머지 댓글 pinned 작업 End");
-			}
+		// 상단이 아닌 인기 댓글 처리
+		Set<Long> cachedTop3Ids = postTop3IdsCache.getOrDefault(postId, Collections.emptySet());
+		if (!cachedTop3Ids.isEmpty()) {
+		    // pinned 처리
+		    for (CommentResponseDTO dto : restComments) {
+		        applyPinnedRecursive(dto, cachedTop3Ids);
+		    }
 		}
 
 		// 현재 상단 3개 좋아요순 댓글과 부모 댓글 최신순으로 정렬된 'List'
@@ -675,6 +694,104 @@ public class CommentServiceImpl implements CommentService {
 
 		logger.info("CommentServiceImpl getCommentsTreeByPost() End");
 		return response;
+	}
+
+	// 내정보 댓글 보기
+	@Override
+	@Transactional(readOnly =  true)
+	public CommentMyPageResponseDTO getMyComments(Long memberId, Pageable pageable) {
+	    logger.info("CommentServiceImpl getMyComments() Start");
+
+	    // 1. 내 댓글 조회 (작성자 + 상태 ACTIVE)
+	    Page<Comment> commentPage = commentRepository.findByAuthor(memberId, CommentStatus.ACTIVE, pageable);
+
+		// 내 댓글 ID(Long) 추출
+		List<Long> allCommentIds = commentPage.stream()
+				                              .map(comment -> comment.getCommentId())
+				                              .collect(Collectors.toList());
+		
+		// 댓글 ID 리스트로 한번에 좋아요/싫어요 집계조회
+		// ex) commentId | reactionType | Count
+		// 		1			LIKE			3
+		//		1			DISLIKe			1
+		List<CommentReactionRepository.ReactionCountProjection> reactionCounts = commentReactionRepository.countReactionsByCommentIds(allCommentIds);
+	    
+		// commentId -> likeCount 맵으로 변환
+		Map<Long, Integer> likeCountMap = reactionCounts.stream()
+			                                            .filter(r -> r.getReactionType() == PostReactionType.LIKE)
+			                                            .collect(Collectors.toMap(
+			                                            			ReactionCountProjection::getCommentId,
+			                                            			r -> r.getCount().intValue(),  // Long -> int
+			                                            			Integer::sum
+			                                            ));
+
+		// DTO 변환
+		List<CommentListResponseDTO> dtoList = commentPage.getContent()
+				                                          .stream()
+				                                          .map(comment -> {
+				                                        	  	int likeCount = likeCountMap.getOrDefault(comment.getCommentId(), 0);
+				                                        	  	return CommentListResponseDTO.fromEntity(comment, likeCount);
+				                                          })
+				                                          .toList();
+
+	    // 3. No 계산 (최신 댓글이 가장 높은 No, 최소값 1)
+	    long startNo = Math.max(commentPage.getTotalElements() - (long)pageable.getPageNumber() * pageable.getPageSize(), 1);
+	    for (int i = 0; i < dtoList.size(); i++) {
+	        long no = startNo - i;
+	        dtoList.get(i).setNo(Math.max(no, 1));
+	    }
+
+	    // 4. Page -> DTO 변환
+	    Page<CommentListResponseDTO> dtoPage = new PageImpl<>(dtoList, pageable, commentPage.getTotalElements());
+	    CommentMyPageResponseDTO responseDTO = CommentMyPageResponseDTO.fromPage(dtoPage);
+
+	    logger.info("CommentServiceImpl getMyComments() End");
+	    return responseDTO;
+	}
+
+	// 댓글 바로가기 서비스
+	public CommentGoPageResponseDTO getCommentPage(Long commentId, String sortBy, int pageSize) {
+
+		logger.info("CommentServiceImpl getCommentPage() Start");
+	    // 1. 댓글 조회
+	    Comment comment = commentRepository.findById(commentId)
+	                                       .orElseThrow(() -> new NoSuchElementException("댓글이 존재하지 않습니다."));
+
+	    Long postId = comment.getPost().getPostId();
+	    
+	    // 2. 루트 댓글 찾기
+	    Comment rootComment = findRootComment(comment);
+
+	    // 3. 모든 댓글 가져오기(getCommentsTreeByPost 서비스 사용)
+	    CommentPageResponseDTO commentPage = this.getCommentsTreeByPost(postId, sortBy, PageRequest.of(0, Integer.MAX_VALUE));
+
+	    // 4. 루트 댓글 목록 가져오기
+	    List<CommentResponseDTO> rootComments = commentPage.getComments() //Page -> List 로 변경
+	    												   .stream()// List -> Stream( 데이터 가공준비 )
+	    												   .filter(c -> c.getParentCommentId() == null) // 루트 댓글만
+	    												   .toList();
+
+	    // 5. 해당 루트 댓글의 인덱스 찾기
+	    int index = -1;
+	    for (int i = 0; i < rootComments.size(); i++) {
+	    	// 댓글 페이지, 위치를 반환하기위한 index 찾기 
+	        if (rootComments.get(i).getCommentId().equals(rootComment.getCommentId())) {
+	            index = i;
+	            break;
+	        }
+	    }
+	    if (index == -1) {
+	    	throw new IllegalStateException("부모 댓글을 찾을 수 없습니다.");
+	    }
+
+	    // 6. 페이지 번호, 위치 계산
+	    int pageNumber = (index / pageSize);       // 페이지 번호
+	    int positionInPage = (index % pageSize) + 1;   // 페이지 내 위치
+	    int totalPages = (int) Math.ceil((double) rootComments.size() / pageSize); // 총페이지
+
+	    logger.info("CommentServiceImpl getCommentPage() End");
+	    // 7. 결과 반환
+	    return new CommentGoPageResponseDTO(commentId, pageNumber, totalPages, positionInPage);
 	}
 
 	//*************************************************** Service End ***************************************************//

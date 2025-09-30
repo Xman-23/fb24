@@ -41,7 +41,7 @@ public interface PostService {
 							   String userNickname);
 
 	// 게시글 삭제
-	void deletePost(Long postId, Long authorId, boolean isDeleteImages);
+	void deletePost(Long postId, Long authorId);
 
 	// 게시글 신고
 	String reportPost(Long postId, Long reporterId, String reason);
@@ -87,7 +87,7 @@ public interface PostService {
 	MainPostPageResponseDTO getSearchPostsByAuthorNickname(String title, Pageable pageable);
 
 	// 조회수 중복 방지
-	void increaseViewCount(Long postId, String userIdentifier);
+	void increaseViewCount(Long postId, Long memberId, String ip);
 
 	// 핀 게시글 설정/해제
 	void togglePinPost(Long postId, boolean pin);
@@ -131,5 +131,8 @@ public interface PostService {
 	
 	// 검색어 자동완성
 	List<String> getPostTitlesByKeyword(String keyword);
+
+	// 내정보 게시글 보기용
+	PostPageResponseDTO getPostsByAuthor(Long memberId, Pageable pageable);
 
 }

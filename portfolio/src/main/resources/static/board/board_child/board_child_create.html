@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log_자식 게시판 만들기</title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- jQuery Setting -->
+<!-- js Setting -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/board/board.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/board/board_common.js"></script>
+<script src="/js/board/board_child/board_child_create/board_child_create.js"></script>
+<!-- js Setting -->
+<!-- CSS Setting -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
+<link rel="stylesheet" href="/css/board/board_create.css">
+<link rel="stylesheet" href="/css/common/common_footer.css">
+<!-- CSS Setting -->
+</head>
+<body>
+	<header id="header">
+	    <div class="header-top">
+			<div id="logo">
+    			<a href="/">Log<span class="cursor">_</span></a>
+			</div>
+	        <div id="user-actions">
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
+	        </div>
+	    </div>
+	    <nav id="board-tabs">
+	        <ul id="parent-boards"></ul>
+	    </nav>
+	</header>
+
+	<!-- 자식 게시판 만들기 -->
+	<main>
+		<h2>자식 게시판 생성</h2>
+	
+	    <form id="create-board-form">
+	        <label for="board-name">게시판 이름:</label><br>
+	        <input type="text" id="board-name" name="name" placeholder="게시판 이름" maxlength="100" required><br>
+	
+	        <label for="board-description">게시판 설명:</label><br>
+	        <textarea id="board-description" name="description" placeholder="게시판 설명" maxlength="255"></textarea><br>
+
+    		<!-- type="button" 으로 submit 막기 -->
+    		<button type="button" id="create-board-btn">생성</button>
+	   </form>
+	
+	    <div id="create-result" style="margin-top:20px;"></div>
+	</main>
+
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	        <div class="footer-spacer"></div>
+	    </div>
+	</footer>
+	
+		    <!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
+</body>
+</html>

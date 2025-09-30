@@ -2,9 +2,6 @@
 var debounceTimer;
 var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가져오기
 
-// 타이머 변수
-var debounceTimer;
-
 var currentKeyword = '';     
 var currentSearchType = 'keyword'; 
 
@@ -13,7 +10,6 @@ var sortBy = 'latest';
 //*****************************************Board ID Start*************************************************************
 // 도메인에서 '/'기준으로 배열화[] 5 -1  
 const pathParts = window.location.pathname.split("/");
-console.log("pathParts:", pathParts);
 // 도메인 배열에서 2번째 인덱스 boardId 가져오기
 const boardId = Number(pathParts[pathParts.length - 3]);
 // 도메인에서 마지막 인덱스 postId 가져오기
@@ -32,29 +28,25 @@ const no_searchList = "검색 결과가 없습니다.";
 const no_fin_noticeList ="고정된 공지 게시글이 없습니다.";
 const no_noticeList ="공지 게시글이 없습니다.";
 //*****************************************No Comment End*************************************************************
-// 이미지 영역(post_images_download)보여주기 메인, 부모 , 자식 게시글 공용으로 사용
-function shwo_image_download(imageUrls) {
+function show_image_download(images) {
+    const container = $("#post_images_download");
+    container.empty(); // 기존 내용 초기화
 
-	$("#post_images_download").empty(); //기존 내뇽 초기화
+    if (!images || images.length === 0) {
+        container.hide();
+        return;
+    }
 
-	if(imageUrls.length ===0) {
-		$("#post_images_download").hide();
-		return;
-	}
-	var image_span =`
-						<span id='image_downlad_span'>
-							이미지: 
-						</span>
-					`;
-	$("#post_images_download").append(image_span);
-    imageUrls.forEach(function(url) {
-		//split(/\#|\?/) = 확장자 뒤에 오는 query(?)/hash(#)배열화 제거, [0]= 순수 이미지 이름 가져오기
-        var fileName = url.split("/images/").pop().split(/\#|\?/)[0]; 
-        var link = `<a href="${url}" download="${fileName}" style="margin: 0 5px;">${fileName}</a>`
-        $("#post_images_download").append(link);
-    });
+    // "이미지:" 스팬 추가
+    let html = `<span id="image_download_span">이미지: </span>`;
 
-    $("#post_images_download").show(); // 부모 영역 표시
+    // 이미지 링크 추가
+    html += images.map(img => {
+        return `<a href="${img.imageUrl}" download="${img.originalFileName}" style="margin:0 5px;">${img.originalFileName}</a>`;
+    }).join(", "); // 콤마로 연결
+
+    container.append(html);
+    container.show();
 }
 //*****************************************Board Function End*************************************************************
 //*****************************************Function End*************************************************************
@@ -71,7 +63,7 @@ function view_count_increment(postId) {
 			getPostDetail(postId);
 		},
 		error: function(err) {
-			console.log("조회수 증가 실패: " + err.responseText);
+			("조회수 증가 실패: " + err.responseText);
 		}
 	})
 }
@@ -101,10 +93,52 @@ function getPostDetail() {
 			}
 		},
 		error: function(err) {
-			console.log("게시글 조회 실패: " + err.responseText);
+			("게시글 조회 실패: " + err.responseText);
 		}
 	})
 }
+
+// 게시글 수정 버튼 클릭
+$(document).on("click", "#btn_edit_post", function() {
+
+    if (!token) {
+        if (confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+            localStorage.setItem("redirectAfterLogin", window.location.href);
+            window.location.href = "/signin";
+        }
+        return;
+    }
+
+    // 작성자만 접근 가능 → renderPost()에서 버튼 자체는 작성자만 보이도록 처리했으므로,
+    // 여기서는 바로 수정 페이지로 이동만 하면 됨
+    window.location.href = `/board/${boardId}/normal/post/${postId}`;
+});
+
+// 게시글 삭제 버튼 클릭
+$(document).on("click", "#btn_delete_post", function() {
+
+	if(!token) {
+		if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+			localStorage.setItem("redirectAfterLogin", window.location.href);
+			window.location.href ="/signin";
+		}
+		return;	
+	}
+
+    if(!confirm("정말로 게시글을 삭제하시겠습니까?")) return;
+
+    ajaxWithToken({
+        url: `/posts/${postId}`,
+        type: "DELETE",
+        success: function() {
+            alert("게시글이 삭제되었습니다.");
+            window.location.href =`/board_normal/${boardId}`; // 목록 페이지로 이동
+        },
+        error: function(xhr) {
+            alert(xhr.responseText || "게시글 삭제 중 오류가 발생했습니다.");
+        }
+    });
+});
 
 // 상세 게시글 좋아요/싫어요 클릭 API (메인, 부모 , 자식 게시글 공용으로 사용)
 function reaction_api(postId,token) {
@@ -113,6 +147,7 @@ function reaction_api(postId,token) {
 
 		if(!token) {
 			if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+				localStorage.setItem("redirectAfterLogin", window.location.href);
 				window.location.href ="/signin";
 			}
 			return;	
@@ -149,6 +184,68 @@ function reaction_api(postId,token) {
 	    });
 	});
 }
+
+// -------------------- 게시글 신고 버튼 클릭 이벤트 --------------------
+// 동적 DOM 포함 (게시글 신고 버튼 클래스: .post_btn_report)
+$(document).on("click", "#post_btn_report", function() {
+
+	if(!token) {
+		if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+			localStorage.setItem("redirectAfterLogin", window.location.href);
+			window.location.href ="/signin";
+		}
+		return;	
+	}
+	
+    // URL에서 postId 추출
+    const pathParts = window.location.pathname.split("/");
+    const postId = Number(pathParts[pathParts.length - 1]);
+
+    openPostReportPopup(postId);
+});
+
+// -------------------- 게시글 신고 팝업 열기 --------------------
+function openPostReportPopup(postId) {
+    // textarea 초기화 & 포커스
+    $("#post_report_reason").val("").focus();
+
+    // postId 저장 (신고 제출 시 사용)
+    $("#btn_submit_post_report").data("postId", postId);
+
+    // 팝업 표시
+    $("#post_report_modal, #post_popup_overlay").fadeIn(200);
+}
+
+// -------------------- 게시글 신고 제출 --------------------
+$(document).on("click", "#btn_submit_post_report", function() {
+    const postId = $(this).data("postId");
+    const reason = $("#post_report_reason").val().trim();
+
+    if(reason.length < 10) {
+        alert("신고 사유는 최소 10글자 이상이어야 합니다.");
+        $("#post_report_reason").focus();
+        return;
+    }
+
+    ajaxWithToken({
+        url: `/posts/${postId}/report`,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ reason }),
+        success: function(response) {
+            alert(response || "신고가 접수되었습니다.");
+            $("#post_report_modal, #post_popup_overlay").fadeOut(200);
+        },
+        error: function(xhr) {
+            alert(xhr.responseText || "신고 처리 중 오류가 발생했습니다.");
+        }
+    });
+});
+
+// -------------------- 게시글 신고 팝업 취소 --------------------
+$(document).on("click", "#btn_cancel_post_report, #post_popup_overlay", function() {
+    $("#post_report_modal, #post_popup_overlay").fadeOut(200);
+});
 //*****************************************Post API End******************************************************************
 //*************************************************** Post 랜더링 Start ***************************************************//
 
@@ -162,12 +259,53 @@ function renderPost(post) {
 	$("#post_dislikes").text(post.dislikeCount);
 	$("#post_content").html(post.content);
 
-    if (post.imageUrls && post.imageUrls.length > 0) {
-        post.imageUrls.forEach(url => {
-        	$("#post_images").append(`<img src="${url}" alt="게시글 이미지">`);
-        });
-        shwo_image_download(post.imageUrls);
-    }
+	if(token) {
+		// 버튼 표시 제어
+		if (memberId === post.authorId) {
+		    // 작성자가 본인일 경우
+		    $("#post_manage_buttons").show();       // 수정/삭제 버튼 보이기
+		    $("#post_btn_report").hide();           // 신고 버튼 숨기기
+		} else {
+		    // 작성자가 본인이 아닐 경우
+		    $("#post_manage_buttons").hide();       // 수정/삭제 버튼 숨기기
+		    $("#post_btn_report").show();           // 신고 버튼 보이기
+		}
+	}else {
+		// 로그인이 안될시
+		$("#post_manage_buttons").hide();       // 수정/삭제 버튼 숨기기
+		$("#post_btn_report").hide();           // 신고 버튼 숨기기
+	}
+
+	getPostImages(postId);
+}
+
+// 기존 게시글 이미지 불러오기
+function getPostImages(postId) {
+    $.ajax({
+        url: `/posts/${postId}/images`,
+        method: 'GET',
+        success: function(images) {
+
+			if (images && images.length > 0) {
+			    // orderNum 기준 오름차순 정렬
+			    images.sort((a, b) => a.orderNum - b.orderNum);
+
+			    images.forEach(img => {
+			        $("#post_images").append(`<img src="${img.imageUrl}" alt="${img.originalFileName}">`);
+			    });
+
+			    // 다운로드 링크에도 원본 파일명 적용
+			    show_image_download(images.map(img => ({
+			        url: img.imageUrl,
+			        originalFileName: img.originalFileName
+			    })));
+			}
+			show_image_download(images);
+        },
+        error: function(err) {
+            alert("이미지 조회 실패: " + err.responseText);
+        }
+    });
 }
 
 //*************************************************** Post 랜더링 End ***************************************************//

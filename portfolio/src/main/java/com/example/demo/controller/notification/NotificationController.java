@@ -145,11 +145,30 @@ public class NotificationController {
 
 		if(response == null) {
 			logger.error("NotificationController countPostNotifications() INTERNAL_SERVER_ERROR : response = null");
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("회원이 존재하지 않습니다.");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
 		}
 
 		logger.info("NotificationController countPostNotifications() End");
 		return ResponseEntity.ok(response);
+	}
+
+	// 읽지 않은 게시글 알림 개수 조회
+	@GetMapping("/count/posts/unread")
+	public ResponseEntity<?> countUnreadPostNotifications(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+	    logger.info("NotificationController countUnreadPostNotifications() Start");
+
+	    Long memberId = customUserDetails.getMemberId();
+
+	    Long response = notificationService.countUnreadPostNotifications(memberId);
+
+	    if(response == null) {
+	        logger.error("NotificationController countUnreadPostNotifications() INTERNAL_SERVER_ERROR : response = null");
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+	    }
+
+	    logger.info("NotificationController countUnreadPostNotifications() End");
+	    return ResponseEntity.ok(response);
 	}
 
 	// 댓글 알림 개수 조회
@@ -171,6 +190,25 @@ public class NotificationController {
 		return ResponseEntity.ok(response);
 	}
 
+	// 읽지 않은 댓글 알림 개수 조회
+	@GetMapping("/count/comments/unread")
+	public ResponseEntity<?> countUnreadCommentNotifications(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+	    logger.info("NotificationController countUnreadCommentNotifications() Start");
+
+	    Long memberId = customUserDetails.getMemberId();
+
+	    Long response = notificationService.countUnreadCommentNotifications(memberId);
+
+	    if(response == null) {
+	        logger.error("NotificationController countUnreadCommentNotifications() INTERNAL_SERVER_ERROR : response = null");
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 에러");
+	    }
+
+	    logger.info("NotificationController countUnreadCommentNotifications() End");
+	    return ResponseEntity.ok(response);
+	}
+	
 	// 전체 알림 삭제 (논리적 삭제)
 	@DeleteMapping("/delete/all")
 	public ResponseEntity<?> softDeleteAllNotifications (@AuthenticationPrincipal CustomUserDetails customUserDetails) {

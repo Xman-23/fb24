@@ -1,7 +1,7 @@
 @charset "UTF-8";
 
 main {
-    max-width: 600px;
+    max-width: 1000px;
     margin: 50px auto;
     padding: 20px 30px;
     border: 1px solid #ddd;
@@ -10,34 +10,58 @@ main {
     background-color: #fff;
 }
 
-/* ============================== 제목 ============================== */
-main h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    font-size: 1.8em;
-    color: #333;
+#log_me_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 2px solid #eee;
+    background-color: #fafafa;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-/* ============================== 회원정보 ============================== */
+/* ============================== 회원정보 탭 ============================== */
+#info-tab {
+    animation: fadeIn 0.3s ease-in-out;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 회원정보 리스트 스타일 */
+#member-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 #member-info p {
     display: flex;
-    align-items: center; /* 수직 가운데 정렬 */
-    gap: 10px;           /* 라벨과 값 사이 간격 */
-    margin: 10px 0;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
     font-size: 1em;
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
+    color: #333;
+    border: 1px solid #eee;
+    transition: background-color 0.2s ease;
 }
 
+#member-info p:hover {
+    background-color: #f1faff;
+}
 
 #member-info p span {
-    font-weight: bold;
-    color: #555;
+    font-weight: 500;
+    color: #007bff;
 }
 
-/* 알림 상태 텍스트 색상 */
+/* 알림 상태 색상 */
 #member-info p span.notification-active {
-    color: blue;
+    color: green;
     font-weight: bold;
 }
 
@@ -46,58 +70,417 @@ main h2 {
     font-weight: bold;
 }
 
+/* 버튼 스타일 (내 게시글/댓글과 통일) */
+#update_info_btn,
+#withdraw-btn {
+    display: inline-block;
+    padding: 10px 16px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
 
-.boardBtn {
-    padding: 10px 20px;
-    background-color: #fff; /* 파란색 버튼 */
+#member-button-info {
+    display: flex;
+    justify-content: center; /* 가로 중앙 정렬 */
+    gap: 10px; /* 버튼 사이 간격 */
+    margin-top: 20px; /* 위쪽 여백 */
+}
+
+#update_info_btn {
+    background-color: #007bff;
+    color: white;
+}
+
+#update_info_btn:hover {
+    background-color: #0056b3;
+}
+
+#withdraw-btn {
+    background-color: #dc3545;
+    color: white;
+    margin-left: 10px;
+}
+
+#withdraw-btn:hover {
+    background-color: #a71d2a;
+}
+
+/* 관리자 전용 버튼 */
+#adminSection .boardBtn {
+    padding: 8px 12px;
+    background-color: #fff;
     border: 1px solid #007bff;
     color: #007bff;
     border-radius: 6px;
     font-size: 0.95em;
     cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
+    transition: background-color 0.3s ease;
 }
 
-.boardBtn:hover {
-    background-color: #e6f2ff; /* 연한 파란색 변경 */
-    transform: translateY(-2px); /* 살짝 올라오는 효과 */
+#adminSection .boardBtn:hover {
+    background-color: #e6f2ff;
 }
 
-/* ============================== 버튼 ============================== */
-
-#update_info_btn {
-    display: block;
-    width: 100%;
-    padding: 12px 0;
-    margin-top: 30px;
-    background-color: #fff; /* 버튼 색상 하얀색으로 변경 */
-    color: #007bff;          /* 글자색 파란색 유지 */
-    border: 1px solid #007bff; /* 테두리 파란색 추가 */
-    border-radius: 6px;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background-color 0.3s;
+/* ============================== 고급 탭 메뉴 ============================== */
+.member-tabs {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 2px solid #eee;
+    background-color: #fafafa;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-#withdraw-btn {
-    display: block;
-    width: 100%;
-    padding: 12px 0;
-    margin-top: 20px; /* 기존 30px보다 조금 아래로 */
-    background-color: #dc3545; /* 빨간색으로 탈퇴 느낌 강조 */
-    color: white;
+.tab-btn {
+    flex: 1;
+    padding: 14px 0;
+    background: transparent;
     border: none;
-    border-radius: 6px;
     font-size: 1em;
+    font-weight: 500;
+    color: #555;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-#update_info_btn:hover {
-    background-color: #0056b3; /* hover는 그대로 */
-    color: #fff;               /* hover 시 글자색 하얀색 */
+.tab-btn:hover {
+    background-color: #f5f5f5;
 }
 
-#withdraw-btn:hover {
-    background-color: gray; /* 탈퇴 버튼 hover */
+.tab-btn.active {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.tab-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    border-radius: 2px 2px 0 0;
+    transition: width 0.3s ease;
+}
+
+/* ============================== 탭 컨텐츠 ============================== */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+    padding: 20px 10px;
+    background-color: #fff;
+    border-radius: 0 0 8px 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ============================== 애니메이션 ============================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================== 내 게시글 탭 ============================== */
+#my-posts-tab {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 테이블 기본 스타일 */
+#my-posts-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    font-size: 0.95em;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* 헤더 스타일 (표준) */
+#my-posts-table th {
+    background-color: #f1f1f1;
+    color: #333;
+    font-weight: 600;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 1em;
+    border-bottom: 2px solid #ddd;
+}
+/* 데이터 셀 스타일 */
+#my-posts-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    background-color: #fff;
+    transition: background-color 0.3s ease;
+}
+
+/* 행 홀수/짝수 구분 색상 */
+#my-posts-table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+}
+
+/* 행 호버 효과 */
+#my-posts-table tr:hover td {
+    background-color: #eaf4ff;
+}
+
+/* 제목 컬럼 강조 */
+#my-posts-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 500;
+    color: #007bff;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+#my-posts-table td:nth-child(2):hover {
+    color: #0056b3;
+    transform: translateX(4px);
+}
+#my-posts-table-tbody a.post-link {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+
+/* ============================== 게시글 페이지네이션 ============================== */
+#my-posts-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+#my-posts-pagination button {
+    padding: 6px 12px;
+    background-color: #fff;
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+#my-posts-pagination button:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+#my-posts-pagination span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 페이지 버튼 강조 */
+#my-posts-page-buttons button {
+    padding: 6px 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#my-posts-page-buttons button.active {
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    #my-posts-table th, #my-posts-table td {
+        padding: 8px 5px;
+        font-size: 0.9em;
+    }
+    #my-posts-pagination {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    #my-posts-table th, #my-posts-table td {
+        padding: 6px 4px;
+        font-size: 0.85em;
+    }
+
+    #my-posts-table td:nth-child(2) {
+        font-size: 0.9em;
+    }
+
+    #my-posts-pagination {
+        flex-direction: column;
+    }
+}
+
+#my-posts-pagination button:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ============================== 내 댓글 탭 ============================== */
+#comments-tab {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 테이블 기본 스타일 */
+#my-comments-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    font-size: 0.95em;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* 헤더 스타일 (표준) */
+#my-comments-table th {
+    background-color: #f1f1f1;
+    color: #333;
+    font-weight: 600;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 1em;
+    border-bottom: 2px solid #ddd;
+}
+
+/* 데이터 셀 스타일 */
+#my-comments-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    background-color: #fff;
+    transition: background-color 0.3s ease;
+}
+
+/* 행 홀수/짝수 구분 색상 */
+#my-comments-table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+}
+
+/* 행 호버 효과 */
+#my-comments-table tr:hover td {
+    background-color: #eaf4ff;
+}
+
+/* 내용 컬럼 강조 */
+#my-comments-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 500;
+    color: #007bff;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+#my-comments-table td:nth-child(2):hover {
+    color: #0056b3;
+    transform: translateX(4px);
+}
+
+#my-comments-table-tbody a.comment-link {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+
+/* ============================== 댓글 페이지네이션 ============================== */
+#my-comments-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+#my-comments-pagination button  {
+    padding: 6px 12px;
+    background-color: #fff;
+    border: 1px solid #007bff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+#my-comments-pagination button:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+#my-comments-pagination span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 페이지 버튼 강조 */
+#my-comments-page-buttons button {
+    padding: 6px 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#my-comments-page-buttons button.active {
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    #my-comments-table th, #my-comments-table td {
+        padding: 8px 5px;
+        font-size: 0.9em;
+    }
+    #my-comments-pagination {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    #my-comments-table th, #my-comments-table td {
+        padding: 6px 4px;
+        font-size: 0.85em;
+    }
+
+    #my-comments-table td:nth-child(2) {
+        font-size: 0.9em;
+    }
+
+    #my-comments-pagination {
+        flex-direction: column;
+    }
+}
+#my-comments-pagination button:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
 }

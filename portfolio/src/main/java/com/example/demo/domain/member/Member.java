@@ -61,7 +61,7 @@ import lombok.ToString;
 @ToString(onlyExplicitlyIncluded = true) // 연관관계 제외
 @EqualsAndHashCode(onlyExplicitlyIncluded = true) // 연관관계 제외
 public class Member {
-
+   
 	@Id // 'PK' 어노테이션
 	@Column(name = "id")
 	@EqualsAndHashCode.Include

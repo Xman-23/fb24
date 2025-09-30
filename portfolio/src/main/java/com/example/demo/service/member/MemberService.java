@@ -105,7 +105,7 @@ public class MemberService {
         // 암호화된 비밀번호를 MemberEntity의 'password'에 setting
         member.setPassword(encodedPassword);
         member.setGradeScore(0);
-        member.setMemberGradeLevel(MemberGradeLevel.유생);
+        member.setMemberGradeLevel(MemberGradeLevel.백성);
 
         // 주민번호 암호화 (AES256Util)
         try {
@@ -160,8 +160,7 @@ public class MemberService {
     	// 'List'로 받을 수 밖에 없는 이유, 'email'을 파라미터로 사용하는경우 'email'은 'Unique' 하기때문에, 단 한번만 가져오기때문에 'Optimal<Member>' 또는 'Member'로 단 한건만 가져온다.
     	// 하지만, 'username' 즉 사용자 이름인 경우에는 같은 이름을 가진 사용자가 어려명 일 수 있므로, 그 여러명의 'Member Entity'를 담기위해서 List<Member>로 받아야한다.
     	List<Member> memberList = memberRepository.findByUsername(trimDtoUserName);
-    	
-    	
+
     	for(Member member : memberList) {
 
     		try{

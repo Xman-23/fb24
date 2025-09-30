@@ -131,6 +131,12 @@ main {
     text-align: center;
 }
 
+#page-buttons {
+
+    margin-top: 3px;
+
+}
+
 /* 모바일 대응 */
 @media (max-width: 768px) {
     .post-card {
@@ -177,3 +183,5 @@ main {
         font-size: 12px;
     }
 }
+
+

@@ -3,6 +3,8 @@ package com.example.demo.controller.post;
 
 import java.nio.charset.StandardCharsets; 
 
+
+
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -37,7 +39,6 @@ import com.example.demo.dto.post.PostBoardPostSearchPageResponseDTO;
 import com.example.demo.dto.post.PostPinUpdateRequestDTO;
 import com.example.demo.dto.MainPostPageResponseDTO;
 import com.example.demo.dto.post.PostCreateRequestDTO;
-import com.example.demo.dto.post.PostDeleteRequestDTO;
 import com.example.demo.dto.post.PostPageResponseDTO;
 import com.example.demo.dto.post.PostResponseDTO;
 import com.example.demo.dto.post.PostUpdateRequestDTO;
@@ -48,7 +49,6 @@ import com.example.demo.jwt.CustomUserDetails;
 import com.example.demo.service.post.PostService;
 import com.example.demo.service.post.PostServiceImpl;
 import com.example.demo.validation.board.BoardValidation;
-import com.example.demo.validation.comment.CommentValidation;
 import com.example.demo.validation.post.PostValidation;
 import com.example.demo.validation.string.WordValidation;
 
@@ -105,6 +105,7 @@ public class PostController {
 		*/
 
 		logger.info("PostController createPost() Start");
+		logger.info("PostController createPost() getImage: {}", postCreateRequestDTO.getImages());
 
 		if(bindingResult.hasErrors()) {
 			logger.error("PostController createPost() Error : 'PostCreateRequestDTO'가 유효하지 않습니다.");
@@ -153,7 +154,7 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 게시글 수정 API엔드포인트
+	// 게시글 수정 API엔드포인트 (컨트롤러 수정 API 처리)
 	/**테스트 완료*/
 	@PatchMapping("/{postId}")
 	public ResponseEntity<?> updatePost(@PathVariable(name = "postId") Long postId,
@@ -173,6 +174,16 @@ public class PostController {
 			logger.error("PostController updatePost() BAD_REQUEST Error : 입력값이 유효하지 않습니다.");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("입력값이 유효하지 않습니다.");
 		}
+		
+		if(!WordValidation.containsForbiddenWord(postUpdateRequestDTO.getTitle())) {
+			logger.error("PostServiceImpl updatePost() IllegalArgumentException : 게시글 제목에 비속어가 포함되어있습니다.");
+			throw new IllegalArgumentException("게시글 제목에 비속어가 포함되어있습니다.");
+		}		
+
+		if(!WordValidation.containsForbiddenWord(postUpdateRequestDTO.getContent())) {
+			logger.error("PostServiceImpl updatePost() IllegalArgumentException : 게시글 내용에 비속어가 포함되어있습니다.");
+			throw new IllegalArgumentException("게시글 내용에 비속어가 포함되어있습니다.");
+		}		
 
 		// Request
 		Long requestPostId = postId;
@@ -210,7 +221,6 @@ public class PostController {
 	/**테스트 완료*/
 	@DeleteMapping("/{postId}")
 	public ResponseEntity<?> deletePost(@PathVariable(name = "postId") Long postId,
-										@RequestBody PostDeleteRequestDTO postDeleteRequestDTO,
 										@AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
 		logger.info("PostController deletePost() Start");
@@ -223,10 +233,9 @@ public class PostController {
 		// Request
 		Long requestPostId = postId;
 		Long requestAuthorId = customUserDetails.getMemberId();
-		boolean requestIsDeleteImages = postDeleteRequestDTO.isDeleteImages();
 
 		try {
-			postService.deletePost(requestPostId, requestAuthorId, requestIsDeleteImages);
+			postService.deletePost(requestPostId, requestAuthorId);
 		} catch (SecurityException e) {
 			logger.error("PostController deletePost() SecurityException Error : {}", e.getMessage(), e);
 			// 작성자 외에는 게시글을 수정할 수 없음 -> 접근권한 없음(403)
@@ -278,6 +287,13 @@ public class PostController {
 		}
 
 		String reason = postReportRequestDTO == null ? null : postReportRequestDTO.getReason();
+
+		// 신고이유가 10글자 미만, 비속어 포함되면 신고내용이 유효하지 않음.
+		if(reason.length() < 10 && !WordValidation.containsReportForbiddenWord(reason)) {
+			logger.error("CommentController reportComment() reason : 신고 내용이 유효하지 않습니다.");
+			return ResponseEntity.badRequest().body("신고 내용이 유효하지 않습니다.");
+		}
+
 		Long requestReporterId = customUserDetails.getMemberId();
 
 		String response = null;
@@ -296,7 +312,7 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 이미지 목록 조회 API엔드포인트
+	// 이미지 목록 조회 API엔드포인트 (컨트롤러 수정 API 처리)
 	/**테스트 완료*/
 	@GetMapping("/{postId}/images")
 	public ResponseEntity<?> getPostImages(@PathVariable(name = "postId") Long postId) {
@@ -329,7 +345,7 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 이미지 정렬 순서 조정 API엔드포인트
+	// 이미지 정렬 순서 조정 API엔드포인트 (컨트롤러 수정 API 처리)
 	/**테스트 완료*/
 	@PatchMapping("/{postId}/images/order")
 	public ResponseEntity<?> updateImageOrder(@PathVariable(name = "postId") Long postId,
@@ -357,7 +373,7 @@ public class PostController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 이미지 단건 삭제 API엔드 포인트
+	// 이미지 단건 삭제 API엔드 포인트 (컨트롤러 수정 API 처리)
 	/**테스트 완료*/
 	// 'Delete'는 (@PathVariable, @RequestParam)으로 요청
 	@DeleteMapping("/{postId}/images/{imageId}")
@@ -388,7 +404,7 @@ public class PostController {
 		return ResponseEntity.ok("이미지가 정상적으로 삭제되었습니다.");
 	}
 
-	// 이미지 모두 삭제 API엔드포인트
+	// 이미지 모두 삭제 API엔드포인트 (컨트롤러 수정 API 처리)
 	/**테스트 완료*/
 	@DeleteMapping("/{postId}/images")
 	public ResponseEntity<?> deleteAllImages(@PathVariable(name = "postId") Long postId,
@@ -412,6 +428,16 @@ public class PostController {
 	    return ResponseEntity.ok("모든 이미지 삭제 완료");
 	}
 
+	// 내 정보 게시글 보기
+	@GetMapping("/me")
+    public ResponseEntity<?> getMyPosts(@AuthenticationPrincipal CustomUserDetails customUserDetails,
+    									@PageableDefault(size = 10) Pageable pageable){
+		logger.info("PostController getMyPosts() Start");
+		PostPageResponseDTO posts = postService.getPostsByAuthor(customUserDetails.getMemberId(), pageable);
+        logger.info("PostController getMyPosts() End");
+        return ResponseEntity.ok(posts);
+    }
+
 	// 조회수 증가
 	/**테스트 완료*/
 	@PatchMapping("/{postId}/view")
@@ -419,25 +445,23 @@ public class PostController {
 											   @AuthenticationPrincipal CustomUserDetails customUserDetails,
 											   HttpServletRequest request) {
 
-		logger.info("PostController increaseViewCount() Start");
+	    logger.info("PostController increaseViewCount() Start");
 
-        String userIdentifier;
+	    try {
+	        if (customUserDetails != null) {
+	            // 로그인 회원 → memberId 사용
+	            postService.increaseViewCount(postId, customUserDetails.getMemberId(), null);
+	        } else {
+	            // 비회원 → IP 사용
+	            String clientIp = this.getClientIp(request);
+	            postService.increaseViewCount(postId, null, clientIp);
+	        }
+	    } catch (NoSuchElementException e) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+	    }
 
-        if (customUserDetails != null) {
-            // 로그인 유저면 userId 사용
-            userIdentifier = String.valueOf(customUserDetails.getMemberId());
-        } else {
-            // 비로그인 유저면 IP 주소 사용
-            userIdentifier = this.getClientIp(request);
-        }
-        try {
-            postService.increaseViewCount(postId, userIdentifier);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
-
-		logger.info("PostController increaseViewCount() End");
-		return ResponseEntity.ok().build();
+	    logger.info("PostController increaseViewCount() End");
+	    return ResponseEntity.ok().build();
 	}
 
 	// 게시글 단건 조회 API엔드포인트
@@ -925,7 +949,7 @@ public class PostController {
     // 자동완성 타이틀 게시글 조회
     @GetMapping("/autocomplete/search")
     public ResponseEntity<?> autocompleteSearchPosts(@RequestParam(name = "keyword") String keyword,
-    		 													@PageableDefault(size = 10) Pageable pageable) {
+    		 										 @PageableDefault(size = 10) Pageable pageable) {
 
     	logger.info("PostController autocompleteSearchPosts() Start");
 

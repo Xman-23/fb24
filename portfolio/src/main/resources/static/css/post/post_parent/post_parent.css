@@ -1,5 +1,7 @@
 @charset "UTF-8";
-
+#parent_post {
+	margin-left: 40px;
+}
 /* -------------------------------------------------상세 게시글 Start----------------------------------------------------------------------*/
 
 /* 게시글 상세 영역 */
@@ -14,9 +16,41 @@
 
 /* 게시글 헤더 */
 #post_detail .post_header {
+    display: flex;
+    flex-direction: column; /* 세로 배치 */
+    gap: 6px;               /* 줄 간격 */
     margin-bottom: 12px;
     padding-bottom: 12px;
     border-bottom: 1px solid #4dabf7; /* 구분선 파랑 */
+}
+
+/* 메타데이터 + 관리버튼 한 줄 */
+#post_meta_manage {
+    display: flex;
+    justify-content: space-between; /* 좌: 메타 / 우: 버튼 */
+    align-items: center;
+}
+
+/* 게시글 관리 버튼 영역 */
+#post_manage_buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* 관리 버튼 스타일 (리액션 버튼과 통일, 파란색 테두리) */
+#post_manage_buttons button {
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid #4dabf7; /* 테두리 파랑 */
+    border-radius: 6px;        /* 둥근 모서리 */
+    background-color: #ffffff; /* 흰 배경 */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#post_manage_buttons button:hover {
+    background-color: #f2f2f2; /* hover 시 연한 회색 */
+    transform: translateY(-1px);
 }
 
 #post_detail #post_title {
@@ -33,25 +67,38 @@
     line-height: 1.4;
 }
 
-/* 본문 및 이미지 영역 */
-#post_detail #post_content_images {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 12px;
-}
+/* 본문 및 이미지 영역 Start */
 
 #post_detail #post_content {
-    font-size: 16px;
-    line-height: 1.6;
-    color: #2c3e50;
+    font-size: 17px;       /* 글자 살짝 키움 */
+    line-height: 1.8;
+    color: #333;
+    max-width: 700px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+}
+
+#post_content_images {
+    padding: 16px;
+    border-radius: 8px;
+}
+
+#post_images {
+    display: flex;
+    flex-direction: column; /* 세로 배열 유지 */
+    gap: 12px;              /* 이미지 간격 넓힘 */
 }
 
 #post_detail #post_images img {
     max-width: 100%;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    border-radius: 12px;
+    width: auto;       /* 고정 너비 대신 */
+    height: auto;      /* 원본 비율 유지 */
+    object-fit: contain; /* 잘리지 않고 보기 */
+    max-height: 400px;  /* 너무 큰 사진 제한 */
 }
+/* 본문 및 이미지 영역 End */
 
 /* 이미지 다운로드 영역 구분선 추가 */
 #post_detail #post_images_download {
@@ -75,6 +122,17 @@
     justify-content: center;
 }
 
+#post_detail #post_reactions #post_btn_report {
+    border: 1px solid #ff4d4d;
+    color: #000;
+    font-weight: bold;
+}
+
+#post_detail #post_reactions #post_btn_report:hover {
+    background-color: #ff4d4d;
+    transform: translateY(-1px);
+}
+
 #post_detail #post_reactions button {
     padding: 6px 12px;
     font-size: 14px;
@@ -91,3 +149,73 @@
 }
 
 /* -------------------------------------------------상세 게시글 End----------------------------------------------------------------------*/
+
+/* -------------------------------------------------  게시글 신고 영역 Start ------------------------------------------------- */
+
+/* 신고 팝업 overlay */
+#post_popup_overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: none; /* 초기 숨김 */
+    z-index: 1000;
+}
+
+/* 신고 팝업 */
+#post_report_modal {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 16px;
+    display: none; /* 초기 숨김 */
+    z-index: 1001;
+}
+
+/* 신고 팝업 제목 */
+#post_report_modal h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+/* 신고 사유 textarea */
+#post_report_reason {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+    background-color: #ffffff;
+    color: #2c3e50;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+
+/* 신고/취소 버튼 */
+#btn_submit_post_report,
+#btn_cancel_post_report {
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 6px;
+}
+
+#btn_submit_post_report:hover,
+#btn_cancel_post_report:hover {
+    background-color: #f5f5f5;
+}
+
+/* -------------------------------------------------  게시글 신고 영역 End ------------------------------------------------- */

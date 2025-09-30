@@ -23,6 +23,7 @@ import com.example.demo.dto.notification.NotificationPageResponseDTO;
 import com.example.demo.dto.notification.NotificationResponseDTO;
 import com.example.demo.repository.member.MemberRepository;
 import com.example.demo.repository.notification.NotificationRepository;
+import com.example.demo.repository.post.PostRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +34,7 @@ class NotificationServiceImpl implements NotificationService {
 
 	private final NotificationRepository notificationRepository;
 	private final MemberRepository memberRepository;
+	private final PostRepository postRepository;
 
 	// 게시글 타입 알림 (좋아요, 싫어요)
 	private static final List<NotificationType> POST_TYPES = List.of(NotificationType.POST_LIKE,
@@ -283,11 +285,21 @@ class NotificationServiceImpl implements NotificationService {
 		logger.info("NotificationServiceImpl getRecentPostNotifications() Start");
 		// size =4
 		Pageable pageable = PageRequest.of(0, NOTIFICATION_CURRENT_COUNT);
-		List<Notification> postTopNotifications = notificationRepository.findTopPostNotifications(receiverId, POST_TYPES, pageable);
+
+		// Object[0] = Notification, Object[1] boardId
+		List<Object[]> postTopNotifications = notificationRepository.findTopPostNotifications(receiverId, POST_TYPES, pageable);
+
+		
 
 		List<NotificationResponseDTO> result = postTopNotifications.stream()
-				                                            .map(NotificationResponseDTO :: fromDto)
-				                                            .collect(Collectors.toList());
+				                                                   .map(obj -> {
+																		// Object- > Notification(다운 캐스팅)
+																	    Notification notification = (Notification) obj[0];
+																	    // Object -> Long (다운 캐스팅)
+																	    Long boardId = (Long) obj[1];
+																	    return NotificationResponseDTO.fromDto(notification, boardId);
+																	  })
+				                                                   .collect(Collectors.toList());
 
 		logger.info("NotificationServiceImpl getRecentPostNotifications() End");
 		return result;
@@ -300,10 +312,18 @@ class NotificationServiceImpl implements NotificationService {
 		logger.info("NotificationServiceImpl getRecentCommentNotifications() Start");
 		// size = 4
 		Pageable pageable = PageRequest.of(0, NOTIFICATION_CURRENT_COUNT);
-		List<Notification> commentTopNotifications = notificationRepository.findTopCommentNotifications(receiverId, COMMENT_TYPES, pageable);
+
+		// Object[0] = Notification, Object[1] boardId
+		List<Object[]> commentTopNotifications = notificationRepository.findTopCommentNotifications(receiverId, COMMENT_TYPES, pageable);
 
 		List<NotificationResponseDTO> result = commentTopNotifications.stream()
-																	  .map(NotificationResponseDTO :: fromDto)
+																	  .map(obj -> {
+																			// Object- > Notification(다운 캐스팅)
+																		    Notification notification = (Notification) obj[0];
+																		    // Object -> Long (다운 캐스팅)
+																		    Long boardId = (Long) obj[1];
+																		    return NotificationResponseDTO.fromDto(notification, boardId);
+																		  })
 																	  .collect(Collectors.toList());
 		logger.info("NotificationServiceImpl getRecentCommentNotifications() End");
 		return result;
@@ -314,10 +334,18 @@ class NotificationServiceImpl implements NotificationService {
 	@Transactional(readOnly = true)
 	public NotificationPageResponseDTO getPostNotifications(Long receiverId, Pageable pageable) {
 		logger.info("NotificationServiceImpl getPostNotifications() Start");
+
 		// size = 10
-		Page<Notification> postPageNotifications = notificationRepository.findAllPostNotifications(receiverId, POST_TYPES, pageable);
+		// Object[0] = Notification, Object[1] boardId
+		Page<Object[]> postPageNotifications = notificationRepository.findAllPostNotifications(receiverId, POST_TYPES, pageable);
 	
-		Page<NotificationResponseDTO> postPageNotificationsDto = postPageNotifications.map(NotificationResponseDTO :: fromDto);
+		Page<NotificationResponseDTO> postPageNotificationsDto = postPageNotifications.map(obj -> {
+																									// Object- > Notification(다운 캐스팅)
+																								    Notification notification = (Notification) obj[0];
+																								    // Object -> Long (다운 캐스팅)
+																								    Long boardId = (Long) obj[1];
+																								    return NotificationResponseDTO.fromDto(notification, boardId);
+																								  });
 
 		NotificationPageResponseDTO result = NotificationPageResponseDTO.fromPage(postPageNotificationsDto);
 		logger.info("NotificationServiceImpl getPostNotifications() End");
@@ -330,9 +358,15 @@ class NotificationServiceImpl implements NotificationService {
 	public NotificationPageResponseDTO getCommentNotifications(Long receiverId, Pageable pageable) {
 		logger.info("NotificationServiceImpl getCommentNotifications() Start");
 		// size = 10
-		Page<Notification> commentPageNotifications = notificationRepository.findAllCommentNotifications(receiverId, COMMENT_TYPES, pageable);
+		Page<Object[]> commentPageNotifications = notificationRepository.findAllCommentNotifications(receiverId, COMMENT_TYPES, pageable);
 	
-		Page<NotificationResponseDTO> postPageNotificationsDto = commentPageNotifications.map(NotificationResponseDTO :: fromDto);
+		Page<NotificationResponseDTO> postPageNotificationsDto = commentPageNotifications.map(obj -> {
+																										// Object- > Notification(다운 캐스팅)
+																									    Notification notification = (Notification) obj[0];
+																									    // Object -> Long (다운 캐스팅)
+																									    Long boardId = (Long) obj[1];
+																									    return NotificationResponseDTO.fromDto(notification, boardId);
+																									  });
 
 		NotificationPageResponseDTO result = NotificationPageResponseDTO.fromPage(postPageNotificationsDto);
 		logger.info("NotificationServiceImpl getCommentNotifications() End");
@@ -359,12 +393,34 @@ class NotificationServiceImpl implements NotificationService {
 		return result;
 	}
 
+	// 읽지 않은 게시글 알림 총 개수
+	@Override
+	@Transactional(readOnly = true)
+	public long countUnreadPostNotifications(Long receiverId) {
+		logger.info("NotificationServiceImpl countUnreadPostNotifications() Start");
+		long result = notificationRepository.countUnreadPostNotifications(receiverId, POST_TYPES);
+		logger.info("NotificationServiceImpl countUnreadPostNotifications() result: {}", result);
+		logger.info("NotificationServiceImpl countUnreadPostNotifications() End");
+		return result;
+	}
+
 	// 댓글 알림 총 개수
 	@Override
 	@Transactional(readOnly = true)
 	public long countCommentNotifications(Long receiverId) {
 		logger.info("NotificationServiceImpl countCommentNotifications() Start");
 		long result = notificationRepository.countCommentNotifications(receiverId, COMMENT_TYPES);
+		logger.info("NotificationServiceImpl countCommentNotifications() End");
+		return result;
+	}
+	
+	// 읽지 않은 댓글 알림 총 개수
+	@Override
+	@Transactional(readOnly = true)
+	public long countUnreadCommentNotifications(Long receiverId) {
+		logger.info("NotificationServiceImpl countCommentNotifications() Start");
+		long result = notificationRepository.countUnreadCommentNotifications(receiverId, COMMENT_TYPES);
+		logger.info("NotificationServiceImpl countUnreadCommentNotifications() result: {}", result);
 		logger.info("NotificationServiceImpl countCommentNotifications() End");
 		return result;
 	}

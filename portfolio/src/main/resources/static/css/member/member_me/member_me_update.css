@@ -64,6 +64,70 @@ main h2 {
     font-size: 14px;
 }
 
+/* ============================== 주소 영역 ============================== */
+.form-item h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: #333;
+    text-align: left; /* 왼쪽 정렬 */
+}
+
+/* 우편번호 + 검색 버튼 */
+.form-item.flex-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#postcode {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f5f5f5; /* 읽기 전용 느낌 */
+}
+
+#search-address-btn {
+    padding: 6px 12px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#search-address-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 기본 주소 */
+#address {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f5f5f5; /* 읽기 전용 느낌 */
+    margin-bottom: 10px;
+}
+
+/* 상세 주소 */
+#detailAddress {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* focus 시 강조 효과 */
+#postcode:focus,
+#address:focus,
+#detailAddress:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
 /* ============================== 알림 체크박스 ============================== */
 #member-info input[type="checkbox"] {
     margin-left: 5px;

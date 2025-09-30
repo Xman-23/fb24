@@ -3,6 +3,7 @@ package com.example.demo.controller;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
 
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -79,10 +81,10 @@ public class MainController {
 	public ResponseEntity<?> getMainPopularPostsAuthor(@PathVariable(name = "nickname") String nickname,
 			                                           @PageableDefault(size = 10) Pageable pageable) {
 
-		logger.info("MainController getMainPopularPostsSearch() Start");
+		logger.info("MainController getMainPopularPostsAuthor() Start");
 		
 		if(!PostValidation.isValidString(nickname) || nickname.trim().length() < 2) {
-			logger.error("MainController getMainPopularPostsSearch() : 'keyword'가 유효하지 않습니다.");
+			logger.error("MainController getMainPopularPostsAuthor() : 'keyword'가 유효하지 않습니다.");
 			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지 //빈페이지
 		}
 
@@ -90,11 +92,18 @@ public class MainController {
 		String keywordUTF8 = UriUtils.decode(nickname, StandardCharsets.UTF_8).trim();
 
 		if(!WordValidation.containsForbiddenWord(keywordUTF8)) {
-			logger.error("MainController getMainPopularPostsSearch() : 'keyword'가 유효하지 않습니다.");
+			logger.error("MainController getMainPopularPostsAuthor() : 'keyword'가 유효하지 않습니다.");
 			return ResponseEntity.ok(Page.empty(pageable)); //빈페이지
 		}
 
-		MainPostPageResponseDTO response = mainService.getMainPopularPostsAuthor(keywordUTF8, pageable);
+		MainPostPageResponseDTO response = null;
+
+		try {
+			response = mainService.getMainPopularPostsAuthor(keywordUTF8, pageable);
+		} catch (NoSuchElementException e) {
+			logger.error("MainController getMainPopularPostsAuthor() NoSuchElementException : {}",e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		}
 
 		logger.info("MainController getMainPopularPostsSearch() End");
 

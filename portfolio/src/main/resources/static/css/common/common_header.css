@@ -29,7 +29,96 @@
     background: linear-gradient(90deg, #ffffff, #007BFF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
 }
+
+/* 중앙 검색창 */
+.hearder-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 500px;   /* 검색창 최대 너비 */
+    width: 100%;
+    margin: 0 auto;     /* 중앙 배치 */
+}
+
+/* 입력/버튼 높이 맞춤 */
+.hearder-search input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  flex: 1; /* 입력창이 넓게 차지 */
+}
+
+.hearder-search .total_search_btn {
+    background-color: #ffffff;
+    color: #555;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 16px;
+    padding: 0 12px;
+    height: 34px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hearder-search .total_search_btn:hover {
+    background-color: #0056b3;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.hearder-search select {
+    height: 36px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0 6px;
+}
+
+#totalsearch_type {
+
+    margin-left: 350px;
+
+}
+
+/* 자동완성 wrapper */
+.hearder_autocomplete_wrapper {
+    position: relative;
+    flex: 1;
+}
+
+/* 자동완성 리스트 */
+.total_autocomplete_items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 150px;
+    overflow-y: auto;
+    background-color: #fff;
+    z-index: 1000;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.total_autocomplete_items li {
+    padding: 5px 8px;
+    cursor: pointer;
+}
+
+.total_autocomplete_items li:hover {
+    background-color: #f0f0f0;
+}
+
+
 
 /* 로그인/회원가입 버튼 */
 #user-actions button {
@@ -67,6 +156,12 @@
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
+}
+
+#user-actions #notification-btn {
+	
+    margin-left: 0px;
+
 }
 
 #user-actions #member-info-btn:hover {
@@ -156,4 +251,15 @@
 /* 부모 게시판 hover 시 자식 게시판 보이기 */
 .board-item:hover > .child-boards {
     display: block;
+}
+
+.comment-notification-no-data,
+.post-notification-no-data {
+    padding: 12px;
+    text-align: center;
+    color: #888;          /* 회색 톤 */
+    font-size: 14px;
+    font-style: italic;   /* 기울임체로 강조 */
+    background-color: #f9f9f9;  /* 살짝 배경 */
+    border-radius: 4px;
 }

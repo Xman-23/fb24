@@ -1,0 +1,166 @@
+@charset "UTF-8";
+
+/* ==================== 알림 팝업 스타일 (크기 조정 버전) ==================== */
+#notification-popup {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    width: 280px; /* 너비 줄임 */
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    padding: 10px; /* 여백 줄임 */
+    z-index: 1000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* 섹션 구분 */
+.notification-section {
+    margin-bottom: 12px; /* 간격 줄임 */
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px; /* padding 줄임 */
+}
+
+/* 섹션 헤더 */
+.notification-header {
+    font-weight: bold;
+    font-size: 14px; /* 크기 축소 */
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 알림 목록 */
+.notification-section ul {
+    list-style: none;
+    padding-left: 0;
+    max-height: 180px; /* 높이 줄임 */
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+/* 개별 알림 */
+.notification-section li {
+    padding: 6px 8px; /* padding 줄임 */
+    border-radius: 6px;
+    margin-bottom: 4px; /* 간격 줄임 */
+    font-size: 13px; /* 폰트 줄임 */
+    line-height: 1.4;
+    transition: background 0.2s ease;
+}
+
+.notification-section li:hover {
+    background: #f9f9f9;
+}
+
+/* 링크 스타일 */
+.notification-section li a.notification-link {
+    color: #007BFF;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+}
+
+.notification-section li a.notification-link:hover {
+    text-decoration: underline;
+}
+
+/* 더보기 버튼 */
+.notification-more-btn {
+    width: 100%;
+    background: #007BFF;
+    color: white;
+    border: none;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px; /* 폰트 줄임 */
+    font-weight: 500;
+    margin-top: 5px;
+    transition: background 0.2s ease;
+}
+
+.notification-more-btn:hover {
+    background: #0056b3;
+}
+
+/* 푸터 버튼 */
+.notification-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+/* ==================== 알림 푸터 버튼 호버 스타일 ==================== */
+.notification-footer button {
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background: #f5f5f5;
+    transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+/* 버튼 호버 시 */
+.notification-footer button:hover {
+    background: #e0e0e0;
+    transform: translateY(-2px); /* 살짝 떠오르는 효과 */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* 알림 전체 삭제 버튼 특별 스타일 */
+#delete-all-notifications {
+    background: #ff4d4f;
+    color: white;
+    font-weight: bold;
+}
+
+#delete-all-notifications:hover {
+    background: #d9363e;
+}
+
+/* 모두 읽기 버튼 특별 스타일 */
+#mark-all-read {
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+}
+
+#mark-all-read:hover {
+    background: #3e8e41;
+}
+
+
+/* 읽지 않은 알림 강조 */
+.notification-section li.unread {
+    background: #f0f8ff;
+    font-weight: bold;
+}
+
+/* 스크롤바 꾸미기 */
+.notification-section ul::-webkit-scrollbar {
+    width: 5px; /* 스크롤바 너비 줄임 */
+}
+
+.notification-section ul::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.notification-section ul::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#delete-all-notifications:disabled,
+#mark-all-read:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}

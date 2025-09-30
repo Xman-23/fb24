@@ -8,14 +8,7 @@ var comment_totalPages = 0; // 서버에서 받은 totalPages 저장
 // 1. 댓글 가져오기 (통합 검색 부모, 자식 게시글에 공통으로 빼기)
 function loadComments(postId, page = 0) {
     // 현재 스크롤 위치 저장
-    var scrollPos = $(window).scrollTop(0);
-
-
-	console.log("loadComments sortBy:", comment_currentSort);
-	
-	console.log("loadComments postId:", postId); 
-	
-	console.log("loadComments page:", page);
+    var scrollPos = $(window).scrollTop();
 
     $.ajax({
         url: `/comments/post/${postId}?sortBy=${comment_currentSort}&page=${page}`,
@@ -26,8 +19,7 @@ function loadComments(postId, page = 0) {
 			    // 전역 변수 동기화
 			    comment_totalPages = response.totalPages; // 서버 총페이지
 			    comment_currentPage = page;// 현재 
-				
-				console.log("loadComments comment_currentSort:", comment_currentSort);
+
 			    // 댓글 수 업데이트
 			    $("#post_comments").text(`${response.activeTotalElements}`);
 
@@ -71,6 +63,7 @@ function createPopularCommentElem(comment) {
     var actionsHtml = "";
     var replyButtonHtml = "";
     var reportButtonHtml = "";
+	
 
     // 로그인 상태일 때만 답글, 수정/삭제, 신고 버튼 처리
     if (token) {
@@ -87,30 +80,34 @@ function createPopularCommentElem(comment) {
         }
     }
 
+	// 로그인 여부 상관없이 바로가기 버튼 추가
+	var gotoButtonHtml = `<button id="popular_comment_btn_goto_${comment.commentId}" class="popular_comment_btn_goto">댓글로 이동</button>`;
+
     var popularCommentDiv = $(`
-        <div class="popular_comment" data_popular_comment_id="${comment.commentId}">
-            <div class="popular_comment_header">
-                <div class="popular_comment_info">
-                    <span class="popular_comment_hot">🔥</span>
-                    <span class="popular_comment_author">${comment.authorNickname}</span>
-                    <span class="popular_comment_created">${comment.updatedAgo || comment.createdAt}</span>
-                </div>
-                <span class="popular_comment_actions">
-                    ${replyButtonHtml}
-                    ${actionsHtml}
-                    ${reportButtonHtml}
-                    <button id="popular_comment_btn_like_${comment.commentId}" class="popular_comment_btn_like">
-                        👍 <span class="popular_comment_like_count">${comment.likeCount}</span>
-                    </button>
-                    <button id="popular_comment_btn_dislike_${comment.commentId}" class="popular_comment_btn_dislike">
-                        👎 <span class="popular_comment_dislike_count">${comment.dislikeCount}</span>
-                    </button>
-                </span>
-            </div>
-            <div class="popular_comment_content">${comment.content}</div>
-            <div class="popular_comments_child"></div>
-        </div>
-    `);
+						        <div  id="comment-${comment.commentId}" class="popular_comment" data_popular_comment_id="${comment.commentId}">
+						            <div class="popular_comment_header">
+						                <div class="popular_comment_info">
+						                    <span class="popular_comment_hot">🔥</span>
+						                    <span class="popular_comment_author">${comment.authorNickname}</span>
+						                    <span class="popular_comment_created">${comment.updatedAgo || comment.createdAt}</span>
+						                </div>
+						                <span class="popular_comment_actions">
+											${gotoButtonHtml}
+						                    ${replyButtonHtml}
+						                    ${actionsHtml}
+						                    ${reportButtonHtml}
+						                    <button id="popular_comment_btn_like_${comment.commentId}" class="popular_comment_btn_like">
+						                        👍 <span class="popular_comment_like_count">${comment.likeCount}</span>
+						                    </button>
+						                    <button id="popular_comment_btn_dislike_${comment.commentId}" class="popular_comment_btn_dislike">
+						                        👎 <span class="popular_comment_dislike_count">${comment.dislikeCount}</span>
+						                    </button>
+						                </span>
+						            </div>
+						            <div class="popular_comment_content">${comment.content}</div>
+						            <div class="popular_comments_child"></div>
+						        </div>
+    						  `);
 
     // 좋아요/싫어요 클릭 이벤트
     popularCommentDiv.find(`#popular_comment_btn_like_${comment.commentId}`).off('click').on('click', function() {
@@ -123,8 +120,52 @@ function createPopularCommentElem(comment) {
         var onlyId = btnId.split("_").pop();
         popularHandleReaction(onlyId, 'DISLIKE', $(this));
     });
+	
+	popularCommentDiv.find(`#popular_comment_btn_goto_${comment.commentId}`)
+	                 .off('click')
+	                 .on('click', function() {
+	                	goToComment(comment.commentId);
+	    			  });
 
     return popularCommentDiv;
+}
+
+function goToComment(commentId) {
+    $.ajax({
+		url: `/comments/${commentId}/goto-page?pageSize=10`,
+        type: "GET",
+		data: { sortBy: comment_currentSort },
+        success: function(response) {
+			console.log(response);
+            const pageNumber = response.pageNumber;
+            const positionInPage = response.positionInPage;
+
+            // 페이지 이동
+            goToPage(pageNumber);
+
+            // 페이지 로딩 완료 후 스크롤
+			const checkExist = setInterval(function() {
+			    const targetComment = $(`.comment[data_comment_id='${commentId}']`);
+			    if (targetComment.length) {
+			        clearInterval(checkExist);
+
+			        $('html, body').animate({
+			            scrollTop: targetComment.offset().top - 100
+			        }, 500);
+
+			        // 강조 효과
+					targetComment.css("background-color", "#fff8c4");
+
+					setTimeout(() => {
+					    targetComment.css("background-color", "");
+					}, 3000);
+			    }
+			}, 100);
+        },
+        error: function(err) {
+            alert(err.responseText);
+        }
+    });
 }
 
 // 댓글 아래에 대댓글 입력창 생성
@@ -181,6 +222,13 @@ function create_child_popular_comment() {
 	        }),
 	        success: function(res) {
 	            loadComments(postId, comment_currentPage);
+
+				// 새로 작성한 대댓글로 이동
+				if (res && res.commentId) {
+				    setTimeout(() => {
+				        goToComment(res.commentId);
+				    }, 300);
+				}
 	        },
 	        error: function(err) {
 	            alert("답글 작성 중 에러가 발생했습니다.: ",err.responseText);
@@ -237,7 +285,7 @@ $(document).on('click', `.popular_comment_btn_edit`, function() {
 	        type: "PATCH",
 	        contentType: "application/json",
 	        data: JSON.stringify({ content: newContent }),
-	        success: function(response) {
+	        success: function() {
 	            editForm.remove();
 				loadComments(postId, comment_currentPage);
 	        },
@@ -290,8 +338,6 @@ $(document).on("click", ".comment_btn_report, .popular_comment_btn_report", func
 
 function openCommentReportPopup(commentId) {
 	
-	console.log("들어옵니까??");
-	
     $("#report_reason").val(""); // 초기화
     $("#comment_report_popup, #popup_overlay").show();
 
@@ -299,6 +345,7 @@ function openCommentReportPopup(commentId) {
         var reason = $("#report_reason").val().trim();
         if(reason.length < 10) {
             alert("신고 사유는 최소 10글자 이상이어야 합니다.");
+			$("#report_reason").focus();
             return;
         }
 
@@ -326,6 +373,7 @@ function openCommentReportPopup(commentId) {
 function popularHandleReaction(commentId, type, buttonElem) {
 	if(!token) {
 		if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+			localStorage.setItem("redirectAfterLogin", window.location.href);
 			window.location.href ="/signin";
 		}
 		return;	
@@ -495,7 +543,9 @@ function create_child_comment() {
 	    var parentDiv = $(this).closest('.comment');
 	    var parentCommentId = parentDiv.attr('data_comment_id');
 	    var content = parentDiv.find('.child_comment_text').val().trim();
-	    if (!content) return alert("댓글 내용을 입력하세요.");
+	    if (!content){
+			return alert("댓글 내용을 입력하세요.");
+		}
 
 	    ajaxWithToken({
 	        url: '/comments',
@@ -506,7 +556,7 @@ function create_child_comment() {
 	            parentCommentId: parentCommentId,
 	            content: content
 	        }),
-	        success: function(res) {
+	        success: function() {
 	            loadComments(postId, comment_currentPage);
 	        },
 	        error: function(err) {
@@ -565,7 +615,7 @@ $(document).on('click', '.comment_btn_edit', function() {
             type: "PATCH",
             contentType: "application/json",
             data: JSON.stringify({ content: newContent }),
-			success: function(response) {
+			success: function() {
 			    // 수정 후 현재 페이지 기준으로 댓글 다시 불러오기
 			    editForm.remove();
 			    loadComments(postId, comment_currentPage);
@@ -612,6 +662,7 @@ $(document).on("click", ".comment_btn_delete", function() {
 function handleReaction(commentId, type, buttonElem) {
 	if(!token) {
 		if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+			localStorage.setItem("redirectAfterLogin", window.location.href);
 			window.location.href ="/signin";
 		}
 		return;	
@@ -667,6 +718,7 @@ function check_comment_login() {
 	    var token = localStorage.getItem('accessToken');
 	    if (!token) {
 	        if (confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+				localStorage.setItem("redirectAfterLogin", window.location.href);
 	            window.location.href = "/signin";
 	        }
 	        $(this).val(''); // 입력 초기화
@@ -676,45 +728,47 @@ function check_comment_login() {
 
 // 부모 (최상위 댓글 작성)
 function create_parent_comment() {
-	// 댓글 작성 버튼 클릭 시 토큰 확인 및 댓글 생성
-	$('#btn_add_comment').off('click').on('click',function() {
-	    var token = localStorage.getItem('accessToken');
-	    if (!token) {
-	        if (confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
-	            window.location.href = "/signin";
-	        }
-	        return; // 토큰 없으면 댓글 생성 중단
-	    }
+    $('#btn_add_comment').off('click').on('click', function() {
+        var token = localStorage.getItem('accessToken');
+        if (!token) {
+            if (confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+                localStorage.setItem("redirectAfterLogin", window.location.href);
+                window.location.href = "/signin";
+            }
+            return;
+        }
 
-	    var content = $('#new_comment_content').val().trim();
-	    if (!content) {
-	        alert("댓글 내용을 입력해주세요.");
-	        return;
-	    }
+        var content = $('#new_comment_content').val().trim();
+        if (!content) {
+            alert("댓글 내용을 입력해주세요.");
+            return;
+        }
 
-	    // 여기서 ajax로 댓글 생성 API 호출
-	    ajaxWithToken({
-	        url: '/comments',
-	        type: 'POST',
-	        contentType: 'application/json',
-	        data: JSON.stringify({ postId: postId,
-								   parentCommentId: null, // 부모 댓글이므로 null 
-				                   content: content }),
-	        success: function(res) {
-	            $('#new_comment_content').val(''); // 입력 초기화
-	            loadComments(postId, comment_currentPage);
-	        },
-	        error: function(err) {
-	            alert("댓글 작성 중 에러가 발생했습니다. |", err.responseText);
-	        }
-	    });
-	});
+        ajaxWithToken({
+            url: '/comments',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ postId: postId, parentCommentId: null, content: content }),
+            success: function(res) {
+                $('#new_comment_content').val('');
+
+				if (res && res.commentId) {
+				    setTimeout(() => {
+				        goToComment(res.commentId);
+				    }, 300);
+				}
+            },
+            error: function(err) {
+                alert("댓글 작성 중 에러가 발생했습니다. | " + err.responseText);
+            }
+        });
+    });
 }
 //*****************************************부모 댓글 작성 End******************************************************************* */
 
+//***************************************** 댓글 페이징 처리 Start ******************************************************************* */
 // 페이지 이동 + 댓글 로딩 공통 함수
 function goToPage(page) {
-	console.log("goToPage Start")
     // 범위 체크
     if (page < 0) {
 		page = 0;
@@ -727,12 +781,10 @@ function goToPage(page) {
 	// 현재 페이지 작업
     comment_currentPage = page;
     loadComments(postId,comment_currentPage);
-	console.log("goToPage End")
 }
 
 // 댓글 페이지네이션 렌더링 
 function comment_renderPagination(data) {
-	console.log("comment_renderPagination", data);
     var currentPage = data.pageNumber; // 현재 페이지 index
     var totalPages = data.totalPages;  // 총 페이지 수
     var lastPage = totalPages - 1;
@@ -784,22 +836,29 @@ function comment_renderPagination(data) {
              						if (data.hasLast) goToPage(lastPage);
         					});
 }
+//***************************************** 댓글 페이징 처리 End ******************************************************************* */
 
-
+// 댓글 정렬 함수
 function change_comment_sort() {
 	// 정렬 변경
 	$('#comment_sort').off('change').on('change', function() {
-		console.log("comment_sort change function Start");
 		// 셀렉트 박스 value값을 전역변수인 "comment_currentSort" setting
 	    comment_currentSort = $(this).val();
 		// 정렬할시 첫페이지로 이동
 	    goToPage(0);
-		console.log("comment_sort change function End");
 	});
-
 }
 
 $(document).ready(function() {
+	
+	const hash = window.location.hash;
+	if (hash.startsWith("#comment-")) {
+	    const commentId = hash.replace("#comment-", "");
+	    if (commentId) {
+	        goToComment(commentId);
+	    }
+	}
+
 	// 페이지 초기화 Start
 	goToPage(0);
 	change_comment_sort();

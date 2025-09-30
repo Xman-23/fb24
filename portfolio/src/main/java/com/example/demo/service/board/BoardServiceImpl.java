@@ -223,8 +223,8 @@ public class BoardServiceImpl implements BoardService {
 		}
 
 		List<BoardHierarchyResponseDTO> response = parents.stream()
-				                                           .map(BoardHierarchyResponseDTO :: convertToHierarchy)
-													       .collect(Collectors.toList());
+				                                          .map(BoardHierarchyResponseDTO :: convertToHierarchy)
+													      .collect(Collectors.toList());
 
 
 		logger.info("BoardServiceImpl  getBoardFullHierarchy() Success End");

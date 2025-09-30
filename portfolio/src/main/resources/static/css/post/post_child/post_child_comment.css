@@ -1,5 +1,10 @@
 @charset "UTF-8";
 
+/* 강조 표시 */
+.comment {
+    transition: background-color 1s ease;
+}
+
 /* -------------------------------------------------댓글 헤더 Start----------------------------------------------------------------------*/
 #post_comments_header {
     display: flex;
@@ -176,7 +181,7 @@
 
 /* 작성자 */
 .comment_author {
-    font-weight: 700;
+    font-weight: 500;
     color: #666666; /* 작성자 이름 회색 */
 }
 
@@ -225,6 +230,17 @@
     font-weight: 700; /* 필요하면 강조 */
 }
 
+/* pinned 댓글의 자기 버튼만 색상 적용 */
+.comment.root-comment.pinned > .comment_header > .comment_actions > button,
+.comment.child-comment.pinned > .comment_header > .comment_actions > button {
+    border: 1px solid #4dabf7;
+    background-color: #e7f5ff;
+}
+
+.comment.root-comment.pinned > .comment_header > .comment_actions > button:hover,
+.comment.child-comment.pinned > .comment_header > .comment_actions > button:hover {
+    background-color: #d0ebff;
+}
 
 /* ------------------------------------------------- 일반 댓글 End ------------------------------------------------- */
 

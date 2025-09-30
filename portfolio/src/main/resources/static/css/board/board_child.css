@@ -29,7 +29,6 @@ main {
 
 /* 자식 게시판 이름 */
 #child-name {
-    color: #3498db; /* 파란색 강조 */
     font-size: 22px;
     font-weight: 700;
 }

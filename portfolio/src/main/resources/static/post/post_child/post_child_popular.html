@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+<!-- jQuery Setting -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- js Setting -->
+<!-- 헤더 Start -->
+<script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
+<script src="/js/common/member/member_signin_signup_button.js"></script>
+<script src="/js/common/common_header/common_header_search/common_header_search.js"></script>
+<script src="/js/common/board/board.js"></script>
+<!-- 헤더 End -->
+<!-- Main Start -->
+<script src="/js/post/post_child/post_child_popular.js"></script>
+<script src="/js/post/post_child/post_child_comment.js"></script>
+<script src="/js/post/post_child/post_child_board.js"></script>
+<script src="/js/board/board_page/board_page.js"></script>
+<script src="/js/common/board/search.js"></script>
+<!-- Main Start -->
+<!-- 바텀 Start -->
+<script src="/js/common/visitor/visitor.js"></script>
+<!-- 바텀 Start -->
+<!-- js Setting -->
+<!-- CSS Setting -->
+<link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent_comment.css">
+<link rel="stylesheet" href="/css/post/post_parent/post_parent_comment_button.css">
+<link rel="stylesheet" href="/css/post/post_child/post_child_board.css">
+<link rel="stylesheet" href="/css/common/common_page_button.css">
+<link rel="stylesheet" href="/css/board/board_common_footer.css">
+
+</head>
+<body>
+	<!-- header Start -->
+	<!-- 헤더 영역 -->
+	<header id="header">
+		<!-- 첫 번째 줄 -->
+		<div class="header-top">
+			<div id="logo">
+    			<a href="/">Log<span class="cursor">_</span></a>
+			</div>
+
+			<div id="total_search">
+				<div class="hearder-search">
+	        		<select id="totalsearch_type">
+	        			<option value="total_keyword">제목/본문</option>
+	        			<option value="total_author">작성자</option>
+	        			<option value="total_autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+	        		</select>
+			    <div class="hearder_autocomplete_wrapper">
+			        <input type="text" id="total_search_input" placeholder="통합 검색어 입력..." />
+			        <ul id="total_autocomplete_list" class="total_autocomplete_items"></ul>
+			    </div>
+	            	<button class="total_search_btn">🔍</button>
+	        	</div>
+			</div>
+			        	    <!-- 오른쪽: 균형용 스페이서 -->
+    		<div class="footer-spacer"></div>
+			<!-- 오른쪽 사용자 메뉴 -->
+			<div id="user-actions">
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
+			</div>
+		</div>
+
+		<nav id="board-tabs">
+			<ul id="parent-boards">
+			<!-- 게시판 영역  -->
+			</ul>
+		</nav>
+	</header>
+	<!-- header End -->
+
+	<main>
+		<div id="parent_post">
+			<!-- 메인 인기 게시글(post) 보여주기 -->
+			<section id="main_post_section">
+				<!-- 공통으로 빼기 -->
+				<!-- 게시글 단 한건이므로, '<article></article> 태그  -->
+				<article id="post_detail">
+					<header class="post_header">
+					    <h1 id="post_title">게시글 제목</h1>
+
+					    <div id="post_meta_manage">
+					        <p id="post_meta">
+					            작성자: <span id="post_author">작성자</span> |
+					            조회수: <span id="post_views">0</span> <br>
+					            게시판: <span id="post_board">게시판 이름</span> |
+					            작성일: <span id="post_created">2025-08-28 15:00</span>
+					        </p>
+					
+					        <div id="post_manage_buttons">
+					            <button id="btn_edit_post">수정</button>
+					            <button id="btn_delete_post">삭제</button>
+					        </div>
+					    </div>
+					</header>
+
+					<!-- 본문 영역-->
+					<div id="post_content_images">
+						<div id="post_content"> <!-- script 'id'사용 -->
+							게시글 내용이 들어가는 영역
+						</div>
+						<!-- 이미지 영역 -->
+						<div id="post_images"> <!-- script 'id'사용 -->
+							<!-- <img src="이미지URL" alt="게시글 이미지"> 형태로 jQuery 렌더링 -->
+						</div>
+					</div>
+
+					<!-- 이미지 다운로드 영역 (이미지 있을때만 보여주기(show())-->
+					<div id="post_images_download" style="display: none"> <!-- script 'id'사용 -->
+						<!-- <img src="이미지URL" alt="게시글 이미지"> 형태로 jQuery 렌더링 -->
+					</div>
+
+					<!-- 좋아요 영역 -->
+					<div id="post_reactions">
+						<button id="post_btn_like">👍 좋아요 <span id="post_likes">0</span></button> <!-- script 'id'사용 --> 
+						<button id="post_btn_dislike">👎 싫어요 <span id="post_dislikes">0</span></button> <!-- script 'id'사용 -->
+
+						<!-- 신고 버튼 -->
+    					<button id="post_btn_report">🚨 신고</button>
+					</div>
+				</article>
+				<!-- 공통으로 빼기 -->
+			</section>
+						<!-- 2. 댓글 섹션 자리  공토으로 빼기-->
+			<section id="comments_section">
+				<div id="post_comments_header">
+					<div id="comments_count">댓글: <span id="post_comments">0</span></div>
+					<select id="comment_sort">
+	            		<option value="normal">원래대로</option>
+	            		<option value="recent">최신순</option>
+	            		<option value="like">좋아요순+최신순</option>
+	        		</select>
+        		</div>
+        		<div id="comment_list_body">
+	        		<div id="all_commnet_list">
+		        		<div id="popular_comments_list">
+							<!-- 인기 댓글은 나중에 jQuery로 렌더링 -->
+						</div>
+						<div id="comments_list">
+							<!-- 댓글은 나중에 jQuery로 렌더링 -->
+						</div>
+	        		</div>
+        		</div>
+	        	<!-- 댓글 페이징 버튼 영역 Start -->
+	    		<div id="comment_pagination_container">
+	        		<button id="comment_first_page">처음</button>
+	        		<button id="comment_prev_page">이전</button>
+	        		<span id="comment_page_buttons"><!-- 페이지 번호 버튼 생성 --></span>
+	        		<button id="comment_next_page">다음</button>
+	        		<button id="comment_last_page">마지막</button>
+	    		</div>
+	    		<!-- 댓글 페이징 버튼 영역 End -->
+				<div id="commet_write_footer">
+				    <div id="comment_write_section">
+				        <div class="textarea_wrapper">
+				            <textarea id="new_comment_content" placeholder="댓글을 입력하세요."></textarea>
+				            <button id="btn_add_comment">댓글 작성</button>
+				        </div>
+				    </div>
+				</div>
+			</section>
+		</div>
+	    <div class="board-header">
+	        <h2>
+	            <span id="child-name">자식 게시판 이름</span>
+	            <span id="child-description">(설명)</span>
+	        </h2>
+	        <div class="sort-box">
+	            <select id="sortSelect">
+	                <option value="latest">최신순</option>
+	                <option value="popular">좋아요순</option>
+	            </select>
+	        </div>
+	    </div>
+	
+	    <!-- 자식게시판 인기 게시글 -->
+	    <div id="child_popular_post">
+	        <ul id="child_popular_post_list"></ul>
+	    </div>
+	
+	    <!-- 일반 게시글 -->
+	    <div id="child_normal_post">
+	        <ul id="child_normal_post_list"></ul>
+	    </div>
+	
+	    <!-- 페이징 버튼 영역 -->
+	    <div id="pagination-container">
+	        <button id="first-page">처음</button>
+	        <button id="jump-backward">&lt;&lt;</button>
+	        <button id="prev-page">이전</button>
+	        <span id="page-buttons"><!-- 페이지 번호 버튼 생성 --></span>
+	        <button id="next-page">다음</button>
+	        <button id="jump-forward">&gt;&gt;</button>
+	        <button id="last-page">마지막</button>
+	    </div>
+	</main>
+
+	<footer id="main-footer">
+	    <div class="footer-container">
+	        <div class="footer-stats">
+	            <span>오늘 접속자: <strong id="today-visitors">0</strong></span>
+	            <span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+	        </div>
+	        <div class="footer-search">
+	            <select id="searchType">
+	                <option value="keyword">제목/본문</option>
+	                <option value="author">작성자</option>
+	                <option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+	            </select>
+	            <div class="autocomplete-wrapper">
+	                <input type="text" id="searchInput" placeholder="검색어 입력..." />
+	                <ul id="autocomplete-list" class="autocomplete-items"></ul>
+	            </div>
+	            <button class="search-btn">🔍</button>
+	        </div>
+	        <div class="footer-spacer">
+	       		<!-- 관리자 버튼 -->
+				<div id="admin-footer-buttons" style="display:none; margin-top:10px;">
+				    <!--<button id="createChildBoardBtn">자식게시판 만들기</button> -->
+				    <button id="editParentBoardBtn">자식게시판 수정하기</button>
+				    <button id="deleteParentBoardBtn">자식게시판 삭제하기</button>
+				</div>
+	        </div>
+	    </div>
+	</footer>
+
+	<!-- 게시글 신고 팝업 -->
+	<div id="post_report_popup">
+	    <!-- 팝업 overlay (공통, 하나만 사용) -->
+	    <div id="post_popup_overlay" style="display:none;"></div>
+	
+	    <!-- 실제 신고 팝업 -->
+	    <div id="post_report_modal" style="display:none;">
+	        <h3>게시글 신고</h3>
+	        <textarea id="post_report_reason" placeholder="신고 사유를 10자 이상 작성"></textarea>
+	        <br>
+	        <button id="btn_submit_post_report">신고 제출</button>
+	        <button id="btn_cancel_post_report">취소</button>
+	    </div>
+	</div>
+
+	<!-- 신고 팝업 -->
+	<!-- 공통으로 빼야됨 일반, 부모 -->
+	<div id="post_comment_popup">
+		<div id="comment_report_popup" style="display:none;">
+		    <h3>댓글 신고</h3>
+		    <textarea id="report_reason" placeholder="신고 사유를 10자 이상 작성"></textarea>
+		    <br>
+		    <button id="btn_submit_report">신고 제출</button>
+		    <button id="btn_cancel_report">취소</button>
+		</div>
+		
+		<div id="popup_overlay" style="display:none;"></div>
+	</div>
+
+			    <!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
+</body>
+</html>

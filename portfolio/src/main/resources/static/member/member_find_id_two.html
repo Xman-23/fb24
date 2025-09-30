@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>아이디 찾기</title>
+<title>Log_아이디 찾기</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -10,6 +10,8 @@
 <script src="/js/common/member/member_signin_signup_button.js"></script>
 <script src="/js/common/board/board.js"></script>
 <script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/common/visitor/visitor.js"></script>
+<script src="/js/member/member_find_id/member_find_id_two.js"></script>
 <!-- CSS -->
 <link rel="stylesheet" href="/css/common/common_header.css">
 <link rel="stylesheet" href="/css/member/member_find_id/member_find_id_two.css">
@@ -20,11 +22,11 @@
     <header id="header">
         <div class="header-top">
             <div id="logo">
-                <a href="/">Log</a>
+                <a href="/">Log<span class="cursor">_</span></a>
             </div>
             <div id="user-actions">
-                <button id="login-btn">로그인</button>
-                <button id="register-btn">회원가입</button>
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
             </div>
         </div>
         <nav id="board-tabs">
@@ -50,59 +52,4 @@
         <div class="footer-spacer"></div>
     </footer>
 </body>
-
-<script>
-
-	//*************************************************** 변수 START ***************************************************//
-	// 세션에서 토큰 가져오기
-	var token = sessionStorage.getItem("findEmailToken");
-
-	//*************************************************** 변수 End ***************************************************//
-
-	//*************************************************** 페이지 초기화  Start ***************************************************/
-
-    login_move();
-
-    find_id_two_api();
-
-	//*************************************************** 페이지 초기화  Start ***************************************************//
-
-	//*************************************************** Function Start ***************************************************//
-
-	function login_move() {
-		// 로그인 이동 버튼
-	    $("#go-login").on("click", function() {
-	        window.location.href = "/signin";
-	    });
-	}
-
-	//*************************************************** Function Start ***************************************************//
-
-	//*************************************************** API START ***************************************************//
-
-	function find_id_two_api() {
-	    if (!token) {
-	        alert("먼저 1단계를 완료해주세요.");
-	        window.location.href = "/find_id_one";
-	    } else {
-	        // 서버에서 아이디 조회
-	        $.ajax({
-	            url: "/members/show-email",
-	            type: "GET",
-	            headers: {'Authorization': 'Bearer ' + token},
-	            dataType: 'json',
-	            success: function(res) {
-	                $("#user-id").html("회원님의 아이디는 <strong>" + res.email + "</strong> 입니다.");
-	            },
-	            error: function(xhr) {
-	                alert("아이디 조회 실패: " + xhr.responseText);
-	                //window.location.href = "/find_id_one";
-	            }
-	        });
-	    }
-	}
-
-	//*************************************************** API START ***************************************************//
-
-</script>
 </html>

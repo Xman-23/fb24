@@ -24,6 +24,17 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
+    @Query(
+    		"SELECT p "
+    	  + "  FROM Post p "
+    	  + " WHERE p.author.id = :authorId "
+    	  + "   AND p.status = :status "
+    	  + " ORDER BY p.createdAt DESC "
+    	  )
+    Page<Post> findByAuthor(@Param("authorId") Long authorId,
+            				@Param("status") PostStatus status,
+            				Pageable pageable);
+	
 	// 상단 공지 게시글 3개뽑기
 	@Query(
 			"SELECT p "
@@ -104,7 +115,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	// 통합검색 제목 또는 내용에 키워드를 포함한 게시글 검색 (ACTIVE 상태만 검색, 대소문자 무시, 페이징 처리) 사용
 	@Query( "SELECT p " 
 		  + "  FROM Post p " 
-		  + " WHERE p.status = 'ACTIVE' " 
+		  + " WHERE p.status = 'ACTIVE' "
+		  + "   AND p.isNotice = false " 
 		  + "   AND (" 
 		  + "         LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " 
 		  + "    OR "
@@ -119,16 +131,18 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     		"SELECT p.title "
     	  + "FROM Post p " 
           + "WHERE p.status = 'ACTIVE' "
+          + "  AND p.isNotice = false "
           + "  AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
           + "ORDER BY p.createdAt DESC"
           )
-     List<String> searchTitlesByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    Page<String> searchTitlesByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 	// 통합검색 자동완성 제목 게시글 조회
 	@Query(
 		    "SELECT p "
 		  + "  FROM Post p "
 		  + " WHERE p.status = 'ACTIVE' "
+		  + "   AND p.isNotice = false "
 		  + "   AND p.title = :title "
 		  + " ORDER BY p.createdAt DESC"
 		)
@@ -139,6 +153,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 			"SELECT p "
 		  + "  FROM Post p "
 		  + " WHERE p.author = :member "
+		  + "   AND p.isNotice = false "
 		  + "   AND p.status = :status "
 		  + " ORDER BY p.createdAt DESC "
 		  )

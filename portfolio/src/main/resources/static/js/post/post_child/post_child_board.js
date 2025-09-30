@@ -59,7 +59,7 @@ function adminButton() {
                 ajaxWithToken({
                     url: `/boards/admin/${boardId}`,
                     type: 'DELETE',
-                    success: function(res) {
+                    success: function() {
                         alert("삭제 완료");
                         window.location.href = '/'; // 메인으로 이동
                     },
@@ -106,7 +106,7 @@ function renderPopularPosts(posts) {
 
 // 일반글 렌더링
 function renderNormalPosts(posts) {
-	console.log("renderNormalPosts");
+	("renderNormalPosts");
     if (check_posts(posts)) {
         $("#child_normal_post_list").append(no_posts_tag(no_normalList));
         return;
@@ -140,7 +140,7 @@ function getBoardInfo() {
     	return; 
     }
     $.getJSON(`/boards/${boardId}`, function(board) {
-    	document.title = "Log | " + board.name;
+    	document.title = "Log_" + board.name;
         $("#child-name").text(board.name);
         $("#child-description").text(`(${board.description})`);
     }).fail(function(xhr) {
@@ -154,8 +154,8 @@ function getMain(page = 0) {
 	$("#child_popular_post_list").empty();
 	$("#child_normal_post_list").empty();
 	
-	console.log("getMain page:", page);
-	console.log("getMain sortBy:", sortBy);
+	("getMain page:", page);
+	("getMain sortBy:", sortBy);
 
 	currentMode = 'post';
 
@@ -196,7 +196,7 @@ function executeSearch(page = 0) {
     } else if (currentSearchType=== "author") {
     	url = `/posts/boards/child/${boardId}/search/author/${encodeURIComponent(currentKeyword)}?page=${page}`;
     }  else if(currentSearchType === "autocomplete") {
-    	url = `/posts/boards/child/${boardId}/autocomplete/search?keyword=${encodeURIComponent(currentKeyword)}`;
+    	url = `/posts/boards/child/${boardId}/autocomplete/search?keyword=${encodeURIComponent(currentKeyword)}&page=${page}`;
     }
 
 	$("#child_popular_post_list").empty();
@@ -207,7 +207,7 @@ function executeSearch(page = 0) {
 		method : "GET",
 		success: function(data) {
 
-			console.log("executeSearch: ", data);
+			("executeSearch: ", data);
 
             // 제목 변경: 검색 결과일 경우
             $("#parent-name").text(`검색 결과: "${currentKeyword}"`);
@@ -221,6 +221,8 @@ function executeSearch(page = 0) {
 			post_renderPagination(data);
 		},
 		error: function(xhr) {
+			$("#child-name").text(`검색 결과: "${currentKeyword}"`);
+			$("#child-description").text("");
 			$("#child_normal_post_list").append(no_posts_tag(no_searchList));
 			post_renderPagination(errorPage);
 		    alert(xhr.responseText || "");
@@ -271,7 +273,23 @@ function auto_search() {
     });
 }
 
+function create_post() {
+	$("#create_post_button").off("click").on("click", function() {
+		if(!token) {
+			if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+				localStorage.setItem("redirectAfterLogin", window.location.href);
+				window.location.href = "/signin"; // 로그인 페이지 이동
+			}
+			return;	
+		}
+
+		window.location.href=`/board/${boardId}/normal/post`;
+	})
+}
+
+
 // 실행
 $(document).ready(function() {
     check_child_board();
+	create_post();
 });

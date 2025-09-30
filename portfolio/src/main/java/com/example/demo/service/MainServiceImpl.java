@@ -326,6 +326,7 @@ class MainServiceImpl implements MainService {
 
 	    Member member = memberRepository.findByNickname(nickname)
 				                        .orElseThrow(() -> {
+				                        	logger.info("MainServiceImpl getMainPopularPostsAuthor() NoSuchElementException: 회원이 존재하지 않습니다.");
 				                        	return new NoSuchElementException("회원이 존재하지 않습니다.");
 				                        });
 		// 2. 인기글 조회(페이징 포함)

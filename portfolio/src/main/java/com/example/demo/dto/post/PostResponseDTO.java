@@ -1,8 +1,9 @@
 package com.example.demo.dto.post;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.example.demo.domain.post.Post;
@@ -72,6 +73,8 @@ public class PostResponseDTO {
 	private List<String> imageUrls;
 
 	private String userNickname;
+
+	private boolean pinned;
 	// 필드 End
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -83,12 +86,11 @@ public class PostResponseDTO {
 														   int likeCount,
 														   int disLikeCount) {
 
-		List<String> images = post.getImages() // List<PostImage>
-                				  .stream() // Stream<PostImage>
-                				  // 'image'는 'PostImage'의 '참조변수' -> 'PostImage.getImageUrl()' 의해서,
-                				  // Stream<PostImage> -> Stream<String>
-                				  .map(image -> image.getImageUrl()) 
-                				  .collect(Collectors.toList()); // Stream<String> -> List<String>
+		List<String> images = Optional.ofNullable(post.getImages())
+                                      .orElse(Collections.emptyList())
+                                      .stream()
+                                      .map(PostImage::getImageUrl)
+                                      .collect(Collectors.toList());
 
     	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
     	String formatUpdatedAt = DATE_TIME_FORMATTER.format(post.getUpdatedAt());
@@ -109,6 +111,7 @@ public class PostResponseDTO {
 							  .updatedAt(formatUpdatedAt)
 							  .imageUrls(images)
 							  .userNickname(userNickname)
+							  .pinned(post.isPinned())
 							  .build();
 	}
 }

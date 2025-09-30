@@ -30,7 +30,9 @@ main {
     padding: 0 36px;
     box-sizing: border-box;
 }
-
+#board_parent_h2 {
+    margin-left: 5px;
+}
 .board-header h2 {
     margin-bottom: 10px;
     font-size: 20px;
@@ -88,11 +90,11 @@ main {
 }
 
 /* ================= 공지글 높이 조정 ================= */
-.post-card.notice {
-    min-height: 70px;           /* 세로 길이 줄임 */
-    padding: 4px 10px;          /* 기존 패딩 유지 */
-    background-color: #fff9db;  /* 연한 노란색 배경 */
-}
+/*.post-card.notice {
+/*    min-height: 70px;           /* 세로 길이 줄임 */
+/*    padding: 4px 10px;          /* 기존 패딩 유지 */
+/*   background-color: #fff9db;  /* 연한 노란색 배경 */
+/*}
 
 /* ================= 게시글 X ================= */
 .no-posts {
@@ -102,14 +104,6 @@ main {
     color: #999;
     padding: 20px;
     text-align: center;
-}
-@media (hover: hover) {
-    .post-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        background-color: #f9f9f9;
-        cursor: pointer;
-    }
 }
 
 /* 썸네일 이미지 */
@@ -181,6 +175,15 @@ main {
 
     .post-meta {
         font-size: 11px;
+    }
+}
+
+@media (hover: hover) {
+    .post-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background-color: #f9f9f9;
+        cursor: pointer;
     }
 }
 

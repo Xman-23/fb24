@@ -32,6 +32,7 @@ function check_parent_board_number(parentBoardIds) {
         adminButton();
     } else {
         alert("잘못된 접근입니다. 일반 게시판이 아닙니다.");
+		window.location.href ="/";
     }
 }
 
@@ -56,7 +57,7 @@ function adminButton() {
 	            ajaxWithToken({
 	                url: `/boards/admin/${boardId}`,
 	                type: 'DELETE',
-	                success: function(res) {
+	                success: function() {
 	                    alert("삭제 완료");
 	                    window.location.href = '/'; // 메인으로 이동
 	                },
@@ -71,6 +72,7 @@ function adminButton() {
 //*************************************************** Function End ***************************************************//
 
 //*************************************************** 랜더링 Start ***************************************************//
+/*
 // 공지 게시글 렌더링
 function renderNoticePosts(posts) {
 	// 공지 게시글 유효성 체크
@@ -96,7 +98,7 @@ function renderNoticePosts(posts) {
 		}
 	})
 }
-
+*/
 // 인기 게시글 렌더링
 function renderPosts(posts) {
 
@@ -140,7 +142,7 @@ function get_board_api(boardId) {
     }
 	// 현재 게시판 정보 조회 API
     $.getJSON(`/boards/${boardId}`, function(board) {
-    	document.title = "Log | " + board.name;
+    	document.title = "Log_" + board.name;
         $('#parent-name').text(board.name);
         $('#board-description').text("(" + board.description + ")");
 
@@ -173,7 +175,7 @@ function get_board_api(boardId) {
 // 부모 게시판 인기글,게시글 불러오기
 function getMain(page = 0) {
 
-    $("#post_notice_list").empty();
+    //$("#post_notice_list").empty();
     $("#post_popluar_list").empty();
 
     currentMode = 'post';
@@ -181,12 +183,14 @@ function getMain(page = 0) {
         url: `/posts/boards/${boardId}/posts?page=${page}`,
         method: "GET",
         success: function(response) {
-        	console.log(response);
+        	(response);
+			/*
         	// '0페이지' 일때만 공지 페이지 보여주기
         	if(page === 0) {
         		const noticePosts = [...response.topNotices || [] ]
         		renderNoticePosts(noticePosts);
         	}
+			*/
             const posts = [...(response.popularPosts || [])];
             
             renderPosts(posts);
@@ -194,7 +198,7 @@ function getMain(page = 0) {
         },
         error: function(xhr) {
 
-        	$("#post_notice_list").append(no_posts_tag(no_fin_noticeList));
+        	//$("#post_notice_list").append(no_posts_tag(no_fin_noticeList));
 
 			$("#post_popluar_list").append(no_posts_tag(no_popularList));
 
@@ -234,7 +238,7 @@ function executeSearch(page = 0) {
     	url = `/posts/boards/${boardId}/autocomplete/search?title=${encodeURIComponent(currentKeyword)}&page=${page}`
     }
 
-    $("#post_notice_list").empty();
+    //$("#post_notice_list").empty();
     $("#post_popluar_list").empty();
 
 	$.ajax({
@@ -255,6 +259,8 @@ function executeSearch(page = 0) {
 			}
 		},
 		error: function(xhr) {
+			$("#parent-name").text(`검색 결과: "${currentKeyword}"`);
+			$("#board-description").text("");
 			$("#post_popluar_list").append(no_posts_tag(no_searchList));
 			post_renderPagination(errorPage);
 		    alert(xhr.responseText || "");
@@ -307,8 +313,23 @@ function auto_search() {
     });
 }
 
+function create_post() {
+	$("#create_post_button").off("click").on("click", function() {
+		if(!token) {
+			if(confirm("로그인이 필요한 기능입니다. 로그인하시겠습니까?")) {
+				localStorage.setItem("redirectAfterLogin", window.location.href);
+				window.location.href = "/signin"; // 로그인 페이지 이동
+			}
+			return;	
+		}
+
+		window.location.href=`/board/${boardId}/popular/post`;
+	})
+}
+
 //*************************************************** API End ***************************************************//
 
 $(document).ready(function() {
 	check_parent_board_number(parentBoardIds);
+	create_post();
 });

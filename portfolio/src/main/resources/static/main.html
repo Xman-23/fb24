@@ -4,13 +4,16 @@
 <meta charset="UTF-8">
 <!-- 모바일에서 사이트접속을 위한 반응형 웹 선언-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Log | 메인 페이지</title>
+<title>Log_메인 페이지</title>
 <!-- jQuery Setting -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- js Setting -->
 <!-- Common -->
 <script src="/js/common/jwt_token_refresh/jwt_auth.js"></script>
 <script src="/js/common/member/member_signin_signup_button.js"></script>
+<!-- dd -->
+<script src="/js/common/common_header/common_header_search/common_header_search.js"></script>
+<!-- dd -->
 <script src="/js/common/board/board.js"></script>
 <script src="/js/common/visitor/visitor.js"></script>
 <script src="/js/main_board.js"></script>
@@ -18,24 +21,42 @@
 <!-- Common -->
 <!-- CSS Setting Start -->
 <link rel="stylesheet" href="/css/common/common_header.css">
+<link rel="stylesheet" href="/css/common/common_notification/common_notification.css">
 <link rel="stylesheet" href="/css/main/main_board.css">
 <link rel="stylesheet" href="/css/main/main_board_button.css">
 <link rel="stylesheet" href="/css/common/common_footer.css">
 <!-- CSS Setting End-->
 </head>
 <body>
-	
+
 	<!-- 헤더 영역 -->
 	<header id="header">
 		<!-- 첫 번째 줄 -->
 		<div class="header-top">
 			<div id="logo">
-    			<a href="/">Log</a>
+    			<a href="/">Log<span class="cursor">_</span></a>
 			</div>
+			
+			<div id="total_search">
+				<div class="hearder-search">
+	        		<select id="totalsearch_type">
+	        			<option value="total_keyword">제목/본문</option>
+	        			<option value="total_author">작성자</option>
+	        			<option value="total_autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
+	        		</select>
+			    <div class="hearder_autocomplete_wrapper">
+			        <input type="text" id="total_search_input" placeholder="통합 검색어 입력..." />
+			        <ul id="total_autocomplete_list" class="total_autocomplete_items"></ul>
+			    </div>
+	            	<button class="total_search_btn">🔍</button>
+	        	</div>
+			</div>
+			        	    <!-- 오른쪽: 균형용 스페이서 -->
+    		<div class="footer-spacer"></div>
 			<!-- 오른쪽 사용자 메뉴 -->
 			<div id="user-actions">
-				<button id="login-btn">로그인</button>
-				<button id="register-btn">회원가입</button>
+				<button id="login-btn">Log_In</button>
+				<button id="register-btn">Log_Up</button>
 			</div>
 		</div>
 
@@ -45,6 +66,7 @@
 			</ul>
 		</nav>
 	</header>
+
 	<!-- 메인 바디 영역(메인 인기 게시글) -->
 	<main>
 		<section id="popular-posts">
@@ -69,8 +91,8 @@
 		<div class="footer-container">
 			<!-- 접속자 영역 -->
 			<div class="footer-stats">
-				<span>오늘 접속자: <strong id="today-visitors">0</strong></span>
-				<span>한 달 접속자: <strong id="month-visitors">0</strong></span>
+				<span>오늘 접속자: <strong id="today-visitors"></strong></span>
+				<span>한 달 접속자: <strong id="month-visitors"></strong></span>
 			</div>
         	<!-- 중앙: 검색창 -->
         	<div class="footer-search">
@@ -80,7 +102,7 @@
         			<option value="autocomplete" hidden>자동완성</option> <!-- hidden 처리 -->
         		</select>
 		    <div class="autocomplete-wrapper">
-		        <input type="text" id="searchInput" placeholder="검색어 입력..." />
+		        <input type="text" id="searchInput" placeholder="메인 검색어 입력..." />
 		        <ul id="autocomplete-list" class="autocomplete-items"></ul>
 		    </div>
             	<button class="search-btn">🔍</button>
@@ -89,5 +111,33 @@
     		<div class="footer-spacer"></div>
     	</div>
 	</footer>
+	
+	<!-- 알림 팝업 -->
+	<div id="notification-popup" style="display:none;">
+	    <div class="notification-section" id="post-notifications">
+	        <div class="notification-header">
+	            <span>게시글 알림 (<span id="posts-unread-count"></span> / <span id="posts-total-count"></span>)</span>
+	        </div>
+	        <ul id="post-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-post-more-btn">게시글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-section" id="comment-notifications">
+	        <div class="notification-header">
+	            <span>댓글 알림 (<span id="comments-unread-count"></span> / <span id="comments-total-count"></span>)</span>
+	        </div>
+	        <ul id="comment-notification-list"></ul>
+	        <button class="notification-more-btn" id="notification-comment-more-btn">댓글 알림 페이지 이동</button>
+	    </div>
+	
+	    <hr>
+	
+	    <div class="notification-footer">
+	        <button id="delete-all-notifications">알림 전체 삭제</button>
+	        <button id="mark-all-read">모두 읽기</button>
+	    </div>
+	</div>
 </body>
 </html>

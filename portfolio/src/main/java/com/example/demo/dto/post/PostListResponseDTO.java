@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /*
 	게시글 목록 응답 DTO
@@ -29,6 +30,7 @@ import lombok.NoArgsConstructor;
 	createdAt		(게시글 생성일자)
 */
 
+@Setter
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -61,8 +63,9 @@ public class PostListResponseDTO {
     private int commentCount;
 
     private String thumbnailImageUrl;
-    // 필드 End
 
+    private long no;
+    // 필드 End
     private static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
  
@@ -119,6 +122,22 @@ public class PostListResponseDTO {
                                   .userNickname(userNickname)
                                   .commentCount(commentCount)
                                   .thumbnailImageUrl(thumbnailUrl)
+                                  .boardId(post.getBoard().getBoardId())
+                                  .build();
+    }
+    
+    // 내정보 게시글 보기용
+    public static PostListResponseDTO fromEntity(Post post, int reactionCount) {
+
+    	String formatCreatedAt = DATE_TIME_FORMATTER.format(post.getCreatedAt());
+
+        return PostListResponseDTO.builder()
+                                  .postId(post.getPostId())
+                                  .title(post.getTitle())
+                                  .boardName(post.getBoard().getName())
+                                  .viewCount(post.getViewCount())
+                                  .reactionCount(reactionCount)
+                                  .createdAt(formatCreatedAt)
                                   .boardId(post.getBoard().getBoardId())
                                   .build();
     }
