@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.example.demo.domain.comment.Comment;
 import com.example.demo.domain.comment.commentenums.CommentStatus;
+import com.example.demo.domain.member.memberenums.MemberGradeLevel;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,6 +73,9 @@ public class CommentResponseDTO {
 
     private CommentStatus status;
 
+    // 기존 필드...
+    private MemberGradeLevel memberGradeLevel;
+
     private static final Logger logger = LoggerFactory.getLogger(CommentResponseDTO.class);
 
     // 시간 변경 (DB에 밀리터리 초까지 저장되므로 "yyyy-MM-dd HH:mm:ss.SSSSSS"로 parsing)
@@ -93,6 +97,7 @@ public class CommentResponseDTO {
         this.dislikeCount = other.dislikeCount;
         this.isPinned = other.isPinned;
         this.status = other.status;
+        this.memberGradeLevel = other.memberGradeLevel;
         this.childComments = other.childComments != null 
                 								 ? new ArrayList<>(other.childComments) 
                 								 : new ArrayList<>();
@@ -191,6 +196,41 @@ public class CommentResponseDTO {
                                                    .isPinned(isPinned)
                                                    .status(comment.getStatus())
                                                    .authorNickname(authorNickname)
+                                                   .content(comment.getContent())
+                                                   .build();
+        logger.info("CommentResponseDTO fromEntity() End");
+        return dto;
+    }
+    
+    // Entity -> DTO 변환 메서드
+    public static CommentResponseDTO fromEntity(Comment comment, 
+    		                                    int likeCount, 
+    		                                    int dislikeCount, 
+    		                                    boolean isPinned, 
+    		                                    String authorNickname,
+    		                                    MemberGradeLevel memberGradeLevel) {
+    	logger.info("CommentResponseDTO fromEntity() Start");
+    	
+        String createdAtStr = comment.getCreatedAt().format(formatter);
+        String updatedAtStr = comment.getUpdatedAt() != null 
+                              						 ? comment.getUpdatedAt().format(formatter) 
+                              						 : null;
+
+    	// 여기에 시간 포맷 추가
+        CommentResponseDTO dto = CommentResponseDTO.builder()
+                                                   .commentId(comment.getCommentId())
+                                                   .postId(comment.getPost().getPostId())
+                                                   .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null)
+                                                   .authorId(comment.getMember().getId())
+                                                   .createdAt(createdAtStr)
+                                                   .updatedAt(updatedAtStr)
+                                                   .updatedAgo(calculateUpdatedAgo(createdAtStr, updatedAtStr))
+                                                   .likeCount(likeCount)
+                                                   .dislikeCount(dislikeCount)
+                                                   .isPinned(isPinned)
+                                                   .status(comment.getStatus())
+                                                   .authorNickname(authorNickname)
+                                                   .memberGradeLevel(memberGradeLevel) // 추가
                                                    .content(comment.getContent())
                                                    .build();
         logger.info("CommentResponseDTO fromEntity() End");

@@ -1,6 +1,7 @@
 @charset "UTF-8";
 
 /****************************************** Header CSS Start ********************************************/
+/* ------------------------------------------- 첫번째 Header End --------------------------------------------------- *
 /* 헤더 전체 */
 #header {
     background-color: #ffffff;
@@ -13,7 +14,7 @@
 
 /* 첫 번째 줄 */
 .header-top {
-    padding: 12px 25px;
+    padding: 12px 60px;
     border-bottom: none;
     box-shadow: none;
     background-color: transparent;
@@ -132,10 +133,30 @@
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
 }
+/* 로그인 버튼 */
+#user-actions #login-btn {
+	border: 1px solid #007BFF;
+}
+
+/* 회원가입 버튼 */
+#user-actions #register-btn {
+	padding: 6px 12px;
+    border: 1px solid #007BFF;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#user-actions span strong {
+    color: #007BFF;
+    font-weight: 700;
+}
 
 /* 로그인 상태 텍스트 */
 #user-actions span {
-    margin-right: 12px;
     font-size: 14px;
     color: #333;
 }
@@ -184,6 +205,10 @@
 #user-actions #logout-btn:hover {
     background-color: #0056b3;
 }
+
+/* ------------------------------------------- 첫번째 Header End --------------------------------------------------- */
+
+/* ------------------------------------------- 두번째 Header Start ---------------------------------------------------
 
 /* 공지게시판 + 부모 게시판 ul */
 #board-tabs > ul, #main-boards {
@@ -263,3 +288,36 @@
     background-color: #f9f9f9;  /* 살짝 배경 */
     border-radius: 4px;
 }
+
+/* ------------------------------------------- 두번째 Header End --------------------------------------------------- */
+
+/* ------------------------------------------- 회원 등급별 이미지 Start --------------------------------------------------- */
+/* 공통 스타일 */
+#member-grade-level::before {
+    margin-right: 4px;
+}
+
+/* 각 등급별 이모티콘 */
+/* 공통 스타일 */
+#member-grade-level::before {
+    margin-right: 4px;
+}
+
+/* 등급별 아이콘 */
+.grade-백성::before { content: "👤"; }
+.grade-유생::before { content: "📖"; }
+.grade-급제자::before { content: "✍️"; }
+.grade-현감::before { content: "🏯"; }
+.grade-부사::before { content: "📜"; }
+.grade-참판::before { content: "⚖️"; }
+.grade-암행어사::before { content: "🕵️"; }
+.grade-병조판서::before { content: "⚔️"; }
+.grade-좌의정::before { content: "📌"; }
+.grade-영의정::before { content: "👑"; }
+.grade-왕자::before { content: "🤴"; }
+.grade-세자::before { content: "👶"; }
+.grade-왕::before { content: "👑"; }
+.grade-관리자::before { content: "🛠️"; }
+
+/* ------------------------------------------- 회원 등급별 이미지 End --------------------------------------------------- */
+

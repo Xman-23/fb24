@@ -63,6 +63,13 @@ function createPopularCommentElem(comment) {
     var actionsHtml = "";
     var replyButtonHtml = "";
     var reportButtonHtml = "";
+	// 회원 등급 HTML 생성
+	var gradeHtml = "";
+
+	if (comment.memberGradeLevel) {
+	    gradeHtml = `<span class="grade-${comment.memberGradeLevel}"></span>`;
+	}
+
 	
 
     // 로그인 상태일 때만 답글, 수정/삭제, 신고 버튼 처리
@@ -88,8 +95,9 @@ function createPopularCommentElem(comment) {
 						            <div class="popular_comment_header">
 						                <div class="popular_comment_info">
 						                    <span class="popular_comment_hot">🔥</span>
+											${gradeHtml} <!-- 등급 표시 추가 -->
 						                    <span class="popular_comment_author">${comment.authorNickname}</span>
-						                    <span class="popular_comment_created">${comment.updatedAgo || comment.createdAt}</span>
+						                    <span class="popular_comment_created">${comment.updatedAgo || comment.createdAt.substring(0, 19 )}</span>
 						                </div>
 						                <span class="popular_comment_actions">
 											${gotoButtonHtml}
@@ -428,9 +436,15 @@ function createCommentElem(comment) {
     var typeClass = comment.parentCommentId ? " child-comment" : " root-comment";
     // pinned 여부
     var pinnedClass = comment.pinned ? " pinned" : "";
-
     // 기본 버튼 HTML
 	var actionButtons = "";
+
+	// 회원 등급 HTML 생성
+	var gradeHtml = "";
+
+	if (comment.memberGradeLevel) {
+	    gradeHtml = `<span class="grade-${comment.memberGradeLevel}"></span>`;
+	}
 	
 	// 상태가 ACTIVE 일 때만 버튼 노출
 	if (comment.status === "ACTIVE" && token) { // <-- token 체크 추가
@@ -461,8 +475,9 @@ function createCommentElem(comment) {
             <div class="comment_header">
                 <div class="comment_info">
                     <span class="comment_hot">${comment.pinned ? '🔥' : ''}</span>
+					${gradeHtml} <!-- 등급 표시 추가 -->
                     <span class="comment_author">${comment.authorNickname}</span>
-                    <span class="comment_created">${comment.updatedAgo || comment.createdAt}</span>
+                    <span class="comment_created">${comment.updatedAgo || comment.createdAt.substring(0, 19)}</span>
                 </div>
                 <span class="comment_actions">
                     ${actionButtons}

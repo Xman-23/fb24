@@ -1,6 +1,11 @@
 //*************************************************** 전역변수 Start ***************************************************/
 var notificationMemberInfo;
 
+
+// 총 카운트
+var notificationPageTotalCounts = { postsTotalCount: 0, commentsTotalCount: 0 };
+// 읽지 않은  알림 갯수
+var notificationPageUnReadCounts = { postsUnReadCount: 0, commentsUnReadCount: 0 };
 //*************************************************** 전역변수 End ***************************************************/
 
 //*************************************************** Helper Method Start ***************************************************/
@@ -82,10 +87,7 @@ function notification_comment_render(res) {
 //*************************************************** API Start ***************************************************/
 
 // 전체 알림 읽음 처리
-$(document).on("click", "#mark-all-read", function() {
-    if (!confirm("notification_hader_mark_all_read")) {
-		return;
-	}
+$(document).on("click", "#notification_hader_mark_all_read", function() {
 
     ajaxWithToken({
         url: "/notifications/read/all",
@@ -134,135 +136,175 @@ function notification_init(initialTabId) {
 	    },
 	    error: function(xhr) {
 	        alert.error(xhr.responseText);
-	        // 인증 실패 시 토큰 제거 후 다시 로그인/회원가입 버튼 표시
-	        localStorage.removeItem('accessToken');
-			localStorage.removeItem("refreshToken");
+			logout();
 	    }
 	});
 
-}
-
-function notification_total_init(memberInfo) {
-
-	$("#page-posts-unread-count").empty();
-	$("#page-posts-total-count").empty();
-	$("#page-comments-unread-count").empty();
-	$("#page-comments-total-count").empty();
-
-	// 게시글 알림 사용 여부 체크
-	if (!memberInfo.postNotificationEnabled) {
-		$("#my-posts-notification-table-tbody").empty();
-	    $("#my-posts-notification-table-tbody").append(`
-	        <tr>
-				<td colspan="3">
-					<button id="go-post-settings">알림 설정하러 가기</button>
-				</td>
-			</tr>
-	    `);
-	    $("#page-posts-unread-count").text(0);
-	    $("#page-posts-total-count").text(0);
-	} else {
-	    loadPostNotificationsCount();
-	}
-
-	// 댓글 알림 사용 여부 체크
-	if (!memberInfo.commentNotificationEnabled) {
-		$("#my-comments-notification-table-tbody").empty();
-	    $("#my-comments-notification-table-tbody").append(`
-			<tr>
-				<td colspan="3">
-					<button id="go-comment-settings">알림 설정하러 가기</button>
-				</td>
-			</tr>
-	    `);
-	    $("#page-comments-unread-count").text(0);
-	    $("#page-comments-total-count").text(0);
-	} else {
-	    loadCommentNotificationsCount();
-	}
-	//
-	updateDeleteAllButtonState();
 }
 
 // 게시글 알림 갯수
-function loadPostNotificationsCount() {
-	var postCountUrl = "/notifications/count/posts/unread";
-	
-	
-	ajaxWithToken({
-	    url: postCountUrl,
-	    type: "GET",
-	    success: function(postunReadCount) {
-			// 게시글 알림이 100개 이상이면 "100+"로 표시
-			if (postunReadCount > 1000) {
-			    $("#page-posts-unread-count").text("1000+");
-			} else {
-			    $("#page-posts-unread-count").text(postunReadCount);
-			}
+function loadPostNotificationsCount(callback) {
+    var postCountUrl = "/notifications/count/posts/unread";
 
-			ajaxWithToken({
-			    url: "/notifications/count/posts",
-			    type: "GET",
-			    success: function(postTotal) {
-					if (postTotal > 1000) {
-					    $("#page-posts-total-count").text("1000+");
-					} else {
-					    $("#page-posts-total-count").text(postTotal);
-					}
-			    },
-				error: function() {
-				    console.error("게시글 읽은 알림 개수 조회 실패");
-				}
-			});
-	    },
-	    error: function() {
-	        console.error("게시글 안 읽은 알림 개수 조회 실패");
-	    }
-	});
+    ajaxWithToken({
+        url: postCountUrl,
+        type: "GET",
+        success: function(postunReadCount) {
+            notificationPageUnReadCounts.postsUnReadCount = postunReadCount;
+            $("#page-posts-unread-count").text(postunReadCount > 1000 ? "1000+" : postunReadCount);
+
+            ajaxWithToken({
+                url: "/notifications/count/posts",
+                type: "GET",
+                success: function(postTotal) {
+                    notificationPageTotalCounts.postsTotalCount = postTotal;
+                    $("#page-posts-total-count").text(postTotal > 1000 ? "1000+" : postTotal);
+
+                    if (callback) callback(); // 서버와 통신이 끝나고 콜백(호출한곳으로 돌아가기) 실행
+                },
+                error: function(xhr) {
+                    alert.error(xhr.responseText);
+                    if (callback) callback();
+                }
+            });
+        },
+        error: function(xhr) {
+            alert.error(xhr.responseText);
+            if (callback) callback();
+        }
+    });
 }
 
-function loadCommentNotificationsCount() {
-	var commentCountUrl = "/notifications/count/comments/unread";
-	
-	ajaxWithToken({
-	    url: commentCountUrl,
-	    type: "GET",
-	    success: function(commentunReadCount) {
-			// 게시글 알림이 100개 이상이면 "100+"로 표시
-			if (commentunReadCount > 1000) {
-			    $("#page-comments-unread-count").text("1000+");
-			} else {
-			    $("#page-comments-unread-count").text(commentunReadCount);
-			}
-			
-			
-			ajaxWithToken({
-			    url: "/notifications/count/comments",
-			    type: "GET",
-			    success: function(commentTotal) {
-					// 게시글 알림이 100개 이상이면 "100+"로 표시
-					if (commentTotal > 1000) {
-					    $("#page-comments-total-count").text("1000+");
-					} else {
-					    $("#page-comments-total-count").text(commentTotal);
-					}
-			    },
-				error: function() {
-				    console.error("댓글 읽은 알림 개수 조회 실패");
-				}
-			});
-	    },
-	    error: function() {
-	        console.error("댓글 안 읽은 알림 개수 조회 실패");
-	    }
-	});
+// 댓글 알림 갯수
+function loadCommentNotificationsCount(callback) {
+    var commentCountUrl = "/notifications/count/comments/unread";
+
+    ajaxWithToken({
+        url: commentCountUrl,
+        type: "GET",
+        success: function(commentunReadCount) {
+            notificationPageUnReadCounts.commentsUnReadCount = commentunReadCount;
+            $("#page-comments-unread-count").text(commentunReadCount > 1000 ? "1000+" : commentunReadCount);
+
+            ajaxWithToken({
+                url: "/notifications/count/comments",
+                type: "GET",
+                success: function(commentTotal) {
+                    notificationPageTotalCounts.commentsTotalCount = commentTotal;
+                    $("#page-comments-total-count").text(commentTotal > 1000 ? "1000+" : commentTotal);
+
+                    if (callback) callback(); // 서버와 통신이 끝나고 콜백(호출한곳으로 돌아가기) 실행
+                },
+                error: function(xhr) {
+                    alert.error(xhr.responseText);
+                    if (callback) callback();
+                }
+            });
+        },
+        error: function(xhr) {
+            alert.error(xhr.responseText);
+            if (callback) callback();
+        }
+    });
+}
+
+// 알림 갯수 세팅
+function notification_total_init(memberInfo) {
+    $("#page-posts-unread-count").empty();
+    $("#page-posts-total-count").empty();
+    $("#page-comments-unread-count").empty();
+    $("#page-comments-total-count").empty();
+
+    // 게시글 알림이 비활성화 이고,
+    if (!memberInfo.postNotificationEnabled) {
+        $("#my-posts-notification-table-tbody").empty().append(`
+            <tr>
+                <td colspan="3">
+                    <button id="go-post-settings">알림 설정하러 가기</button>
+                </td>
+            </tr>
+        `);
+        $("#page-posts-unread-count").text(0);
+        $("#page-posts-total-count").text(0);
+
+        // 댓글 알림은 활성화시 댓글 알림 갯수만 조회
+        if (memberInfo.commentNotificationEnabled) {
+            loadCommentNotificationsCount(function() {
+                updateDeleteAllButtonState();
+            });
+        } else {
+            $("#my-comments-notification-table-tbody").empty().append(`
+                <tr>
+                    <td colspan="3">
+                        <button id="go-comment-settings">알림 설정하러 가기</button>
+                    </td>
+                </tr>
+            `);
+            $("#page-comments-unread-count").text(0);
+            $("#page-comments-total-count").text(0);
+
+            updateDeleteAllButtonState();
+        }
+
+    } else {
+        // 게시글 알림이 활성화되어있면 게시글 갯수 세기
+        loadPostNotificationsCount(function() {
+			// 댓글 알림 도 활성화 되어있으면 댓글 갯수 세기
+            if (memberInfo.commentNotificationEnabled) {
+                loadCommentNotificationsCount(function() {
+					// 마지막에 버튼 상태 업데이트
+                    updateDeleteAllButtonState();
+                });
+				// 게시글 알림도 활성화 되어있지 않고, 댓글도 활성화 되어있지않다면은
+            } else {
+                $("#my-comments-notification-table-tbody").empty().append(`
+                    <tr>
+                        <td colspan="3">
+                            <button id="go-comment-settings">알림 설정하러 가기</button>
+                        </td>
+                    </tr>
+                `);
+                $("#page-comments-unread-count").text(0);
+                $("#page-comments-total-count").text(0);
+				// 알림 설정하러가기 후 , 버튼 업데이트
+                updateDeleteAllButtonState();
+            }
+        });
+    }
 }
 
 // 모두 읽기, 모두 삭제 활성화 여부 
 function updateDeleteAllButtonState() {
-	
-}
+    const postsTotal = Number(notificationPageTotalCounts.postsTotalCount) || 0;
+    const commentsTotal = Number(notificationPageTotalCounts.commentsTotalCount) || 0;
+    const postsUnread = Number(notificationPageUnReadCounts.postsUnReadCount) || 0;
+    const commentsUnread = Number(notificationPageUnReadCounts.commentsUnReadCount) || 0;
 
+    const unreadTotal = postsUnread + commentsUnread;   // 전체 안 읽은 알림 수
+    const totalCount = postsTotal + commentsTotal;      // 전체 알림 수
+
+    // 모두 읽기 버튼 (읽지 않은 알림이 있을 때만 활성화)
+    if (unreadTotal > 0) {
+        $("#notification_hader_mark_all_read")
+            .prop("disabled", false)
+            .removeClass("disabled-btn");
+    } else {
+        $("#notification_hader_mark_all_read")
+            .prop("disabled", true)
+            .addClass("disabled-btn");
+    }
+
+    // 모두 삭제 버튼 (전체 알림이 있을 때만 활성화)
+    if (totalCount > 0) {
+        $("#notification_hader_delete_all_button")
+            .prop("disabled", false)
+            .removeClass("disabled-btn");
+    } else {
+        $("#notification_hader_delete_all_button")
+            .prop("disabled", true)
+            .addClass("disabled-btn");
+    }
+}
 // 탭 활성화 처리 함수
 function activateTab(tabId) {
     // 버튼 active 처리
@@ -296,7 +338,6 @@ function load_my_posts_notification_api(page=0) {
         url: `/notifications/posts?page=${page}`, 
         type: "GET",
         success: function(res) {
-
 
             $("#my-posts-notification-table-tbody").empty();
 

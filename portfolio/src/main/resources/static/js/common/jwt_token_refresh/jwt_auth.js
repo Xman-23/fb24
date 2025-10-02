@@ -1,9 +1,11 @@
-// ===================== 전역 변수 =====================
+// ===================== 전역 변수 Start =====================
 var refreshTimer = null;        // setTimeout 중복 방지용 타이머 변수
 var refreshRetryCount = 0;      // 자동 갱신 재시도 카운트
 var MAX_RETRY = 3;              // 토큰 갱신 최대 재시도 횟수
 var RETRY_INTERVAL = 5000;      // 실패 시 재시도 간격 (밀리초 단위)
 var ajaxRetryCountMap = {};     // AJAX 요청별 401 재시도 카운트 저장
+
+var autoLogoutTimer = null;
 
 var memberInfo;
 
@@ -11,8 +13,22 @@ var memberInfo;
 var totalCounts = { postsTotalCount: 0, commentsTotalCount: 0 };
 // 읽지 않은  알림 갯수
 var unReadCounts = { postsUnReadCount: 0, commentsUnReadCount: 0 };
+// ===================== 전역 변수 End =====================
 
-// ===================== JWT 파싱 =====================
+// ===================== Helper Function Start =====================
+
+// 알림 데이터 갱신 함수
+function refreshNotifications() {
+    fetchUnreadNotificationsCount(function() {
+        fetchAllNotificationCounts(function() {
+            updateNotificationButtons();
+            loadNotifications();
+        });
+    });
+}
+
+// ===================== Helper Function End =====================
+
 function parseJwt(token) {
 	// '토큰' 유효성 체크
     if (!token || typeof token !== 'string') {
@@ -37,7 +53,25 @@ function parseJwt(token) {
         return null;
     }
 }
+// 토큰 만료 로그아웃
+function scheduleAutoLogout() {
+    var refreshTokenValue = localStorage.getItem('refreshToken');
+    if (!refreshTokenValue) return;
 
+    var payload = parseJwt(refreshTokenValue);
+    if (!payload || !payload.exp) return;
+
+    var exp = payload.exp * 1000;
+    var now = Date.now();
+    var timeout = exp - now;
+
+    if (timeout <= 0) {
+        logout();
+    } else {
+        if (autoLogoutTimer) clearTimeout(autoLogoutTimer); // 기존 타이머 제거
+        autoLogoutTimer = setTimeout(logout, timeout);      // 자동 로그아웃 예약
+    }
+}
 // ===================== 토큰 갱신 스케줄링 =====================
 function scheduleTokenRefresh() {
     var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가져오기
@@ -71,7 +105,6 @@ function refreshToken(callback) {
 
 	// 만약 리프레쉬 토큰이 존재하지 않다면은
 	if (!localStorage.getItem('refreshToken')) {
-	    console.error("refreshToken 없음 → 로그아웃 처리");
 		// 로그아웃 처리 후
 	    logout();
 		// 프로세스 종료
@@ -91,8 +124,9 @@ function refreshToken(callback) {
 
             refreshRetryCount = 0; // 재시도 카운트 초기화
             scheduleTokenRefresh(); // 다음 갱신 스케줄링
-			// 첫 refreshToken() 호출 실패(error)후 
-			// 다시(callback) refreshToken()을 호출 했다면
+			scheduleAutoLogout(); // 갱신 후 자동 로그아웃 스케줄링
+
+			// 만약 수행할 로직이 남아있다면은 호출한 함수로 돌아가 나머지 로직 수행
             if (callback){
 				// refreshToken()을 호출한 외부 함수로 'res.accessToken'를 반환 
 				callback(res.accessToken)
@@ -145,6 +179,7 @@ function ajaxWithToken(options) {
 				ajaxRetryCountMap[options.url] = ajaxRetryCountMap[options.url] || 0;
 				// 3번 ajax 다시 시도했다면,
                 if (ajaxRetryCountMap[options.url] >= MAX_RETRY) {
+					logout(); // 안전하게 로그아웃 처리
 					// 프로세스 종료
 					return;
 				}
@@ -195,8 +230,7 @@ function updateUserMenu() {
         error: function(xhr) {
             alert.error(xhr.responseText);
             // 인증 실패 시 토큰 제거 후 다시 로그인/회원가입 버튼 표시
-            localStorage.removeItem('accessToken');
-            updateUserMenu();
+			logout();
         }
     });
 }
@@ -205,8 +239,8 @@ function updateUserMenu() {
 function renderUserMenu(memberInfo) {
 
 	fetchUnreadNotificationsCount(function() {
+		var gradeHtml = "";
 	    var notificationCount = unReadCounts.postsUnReadCount + unReadCounts.commentsUnReadCount;
-
 
 		// 게시글 알림만 켜져있으면
 		if (memberInfo.postNotificationEnabled && !memberInfo.commentNotificationEnabled) {
@@ -225,20 +259,15 @@ function renderUserMenu(memberInfo) {
 		    notificationCount = 0;
 		}
 
-		if (notificationCount > 0) {
-		    $("#delete-all-notifications").prop("disabled", false).removeClass("disabled-btn");
-		    $("#mark-all-read").prop("disabled", false).removeClass("disabled-btn");
-		} else {
-		    $("#delete-all-notifications").prop("disabled", true).addClass("disabled-btn");
-		    $("#mark-all-read").prop("disabled", true).addClass("disabled-btn");
-		}
-
+		gradeHtml = `<span class="grade-${memberInfo.memberGradeLevel}"></span>`;
+		
 	    var userHtml = `
-	        <span>안녕하세요, <strong>${memberInfo.nickname}</strong>님 (${memberInfo.memberGradeLevel})</span>
+	        <span>안녕하세요, <strong>${memberInfo.nickname}(${gradeHtml})</strong>님 </span>
 	        <button id="notification-btn">Log_🔔(${notificationCount})</button>
 	        <button id="member-info-btn">Log_Me</button>
 	        <button id="logout-btn">Log_Out</button>
 	    `;
+
 	    $('#user-actions').html(userHtml);
 
 	    $("#member-info-btn").off('click').on('click',function(){
@@ -246,16 +275,12 @@ function renderUserMenu(memberInfo) {
 	    });
 
 	    $('#logout-btn').off('click').on('click', function() {
-	        localStorage.removeItem('accessToken');
-	        localStorage.removeItem('refreshToken');
-	        localStorage.removeItem('memberId');
-	        updateUserMenu();
-	        window.location.href ="/";
+			logout();
 	    });
 	});
 }
 
-// ===================== 댓글 알림 갯수 =====================
+// ===================== 안 읽은 알림(댓글, 게시글) 갯수 Start =====================
 function fetchUnreadNotificationsCount(callback) {
     var postCountUrl = "/notifications/count/posts/unread";
     var commentCountUrl = "/notifications/count/comments/unread";
@@ -274,15 +299,61 @@ function fetchUnreadNotificationsCount(callback) {
 
                     if (callback) callback(); // 데이터 갱신 후 렌더링 실행
                 },
-                error: function() {
-                    console.error("댓글 알림 개수 조회 실패");
+                error: function(xhr) {
+                    alert.error(xhr.responseText);
+					// 만약 수행할 로직이 남아있다면은 호출한 함수로 돌아가 나머지 로직 수행
+					if (callback) callback();
                 }
             });
         },
-        error: function() {
-            console.error("게시글 알림 개수 조회 실패");
+		error: function(xhr) {
+		    alert.error(xhr.responseText);
+			// 만약 수행할 로직이 남아있다면은 호출한 함수로 돌아가 나머지 로직 수행
+			if (callback) callback();
+		}
+    });
+}
+// ===================== 안 읽은 알림(댓글, 게시글) 갯수 End =====================
+
+// ===================== 읽은 알림(댓글, 게시글) 갯수 Start =====================
+function fetchAllNotificationCounts(callback) {
+    ajaxWithToken({
+        url: "/notifications/count/posts",
+        type: "GET",
+        success: function(postTotal) {
+            totalCounts.postsTotalCount = postTotal;
+
+            ajaxWithToken({
+                url: "/notifications/count/comments",
+                type: "GET",
+                success: function(commentTotal) {
+                    totalCounts.commentsTotalCount = commentTotal;
+					// 만약 수행할 로직이 남아있다면은 호출한 함수로 돌아가 나머지 로직 수행
+                    if (callback) callback();
+                },
+				error: function(xhr) {
+				    alert.error(xhr.responseText);
+					// 만약 수행할 로직이 남아있다면은 호출한 함수로 돌아가 나머지 로직 수행
+					if (callback) callback();
+				}
+            });
         }
     });
+}
+// ===================== 읽은 알림(댓글, 게시글) 갯수 End =====================
+
+function updateNotificationButtons() {
+    if ((unReadCounts.postsUnReadCount + unReadCounts.commentsUnReadCount) > 0) {
+        $("#mark-all-read").prop("disabled", false).removeClass("disabled-btn");
+    } else {
+        $("#mark-all-read").prop("disabled", true).addClass("disabled-btn");
+    }
+
+    if ((totalCounts.postsTotalCount + totalCounts.commentsTotalCount) > 0) {
+        $("#delete-all-notifications").prop("disabled", false).removeClass("disabled-btn");
+    } else {
+        $("#delete-all-notifications").prop("disabled", true).addClass("disabled-btn");
+    }
 }
 
 // 알림 버튼 클릭 이벤트
@@ -291,7 +362,7 @@ $(document).on('click', '#notification-btn', function(e) {
     $('#notification-popup').toggle();
 
     if ($('#notification-popup').is(':visible')) {
-        loadNotifications(); // 팝업이 열리면 알림 데이터 로드
+		refreshNotifications();
     }
 });
 
@@ -335,22 +406,18 @@ function loadNotifications() {
 function loadPostNotifications() {
 
 	// 안 읽은 게시글 알림
-	$("#posts-unread-count").text(unReadCounts.postsUnReadCount);
-	
-    ajaxWithToken({
-        url: "/notifications/count/posts",
-        type: "GET",
-        success: function(postTotal) {
-			totalCounts.postsTotalCount = postTotal;
+	if (unReadCounts.postsUnReadCount > 100) {
+	    $("#posts-unread-count").text("100+");
+	} else {
+	    $("#posts-unread-count").text(unReadCounts.postsUnReadCount);
+	}
 
-			// 게시글 알림이 100개 이상이면 "100+"로 표시
-			if (totalCounts.postsTotalCount > 100) {
-			    $("#posts-total-count").text("100+");
-			} else {
-			    $("#posts-total-count").text(totalCounts.postsTotalCount);
-			}
-        }
-    });
+	// 게시글 알림이 100개 이상이면 "100+"로 표시
+	if (totalCounts.postsTotalCount > 100) {
+	    $("#posts-total-count").text("100+");
+	} else {
+	    $("#posts-total-count").text(totalCounts.postsTotalCount);
+	}
 
 	ajaxWithToken({
 	    url: "/notifications/posts/recent",
@@ -360,7 +427,6 @@ function loadPostNotifications() {
 	        let html = "";
 
 	        if (!posts || posts.length === 0) {
-				console.log("들어옴??");
 	            html = `<li class="post-notification-no-data">최근 게시글 알림이 없습니다.</li>`;
 	        } else {
 	            posts.forEach(post => {
@@ -374,30 +440,30 @@ function loadPostNotifications() {
 	        }
 
 	        $("#post-notification-list").html(html);
-	    }
+	    },
+		error: function(xhr) {
+		    alert.error(xhr.responseText);
+		}
 	});
 }
 
 // 댓글 알림
 function loadCommentNotifications() {
 
-	// 안 읽은 댓글 알림
-	$("#comments-unread-count").text(unReadCounts.commentsUnReadCount);
+	// 안 읽은 게시글 알림
+	if (unReadCounts.commentsUnReadCount > 100) {
+	    $("#comments-unread-count").text("100+");
+	} else {
+	    $("#comments-unread-count").text(unReadCounts.commentsUnReadCount);
+	}
 
-    ajaxWithToken({
-        url: "/notifications/count/comments",
-        type: "GET",
-        success: function(commentTotal) {
-			totalCounts.commentsTotalCount = commentTotal;
+	// 게시글 알림이 100개 이상이면 "100+"로 표시
+	if (totalCounts.commentsTotalCount > 100) {
+	    $("#comments-total-count").text("100+");
+	} else {
+	    $("#comments-total-count").text(totalCounts.commentsTotalCount);
+	}
 
-			// 게시글 알림이 100개 이상이면 "100+"로 표시
-			if (totalCounts.commentsTotalCount > 100) {
-			    $("#comments-total-count").text("100+");
-			} else {
-			    $("#comments-total-count").text(totalCounts.commentsTotalCount);
-			}
-        }
-    });
 
     ajaxWithToken({
         url: "/notifications/comments/recent",
@@ -423,7 +489,10 @@ function loadCommentNotifications() {
 			}
 
 			$("#comment-notification-list").html(html);
-        }
+        },
+		error: function(xhr) {
+		    alert.error(xhr.responseText);
+		}
     });
 }
 
@@ -464,14 +533,13 @@ $(document).on("click", ".notification-more-btn", function() {
 
 // 전체 알림 읽음 처리
 $(document).on("click", "#mark-all-read", function() {
-    if (!confirm("모든 알림을 읽음 처리하시겠습니까?")) return;
 
     ajaxWithToken({
         url: "/notifications/read/all",
         type: "PATCH",
         success: function() {
             alert("모든 알림이 읽음 처리되었습니다.");
-			location.reload(); // 페이지 새로고침
+			refreshNotifications();
         },
         error: function(xhr) {
             alert(xhr.responseText || "모든 알림 읽음 처리에 실패했습니다.");
@@ -488,7 +556,7 @@ $(document).on("click", "#delete-all-notifications", function() {
         type: "DELETE",
         success: function() {
             alert("모든 알림이 삭제되었습니다.");
-			location.reload(); // 페이지 새로고침
+			refreshNotifications();
         },
         error: function(xhr) {
             alert(xhr.responseText || "모든 알림 삭제에 실패했습니다.");
@@ -501,13 +569,16 @@ function logout() {
     localStorage.removeItem('accessToken'); // 액세스 토큰 삭제
     localStorage.removeItem('refreshToken'); // 리프레시 토큰 삭제
 	localStorage.removeItem('memberId'); // 토큰 삭제
+	localStorage.removeItem('role');
 	updateUserMenu();
-	window.location.href ="/";
+	window.location.href ="/signin";
 }
 
 // ===================== 페이지 로드 시 자동 시작 =====================
 $(document).ready(function() {
-	scheduleTokenRefresh(); // 페이지 로드 시 토큰 갱신 스케줄링 시작
-	updateUserMenu();
+    if (localStorage.getItem('accessToken') && localStorage.getItem('refreshToken')) {
+        scheduleTokenRefresh(); // 토큰 갱신 예약
+        scheduleAutoLogout();    // 자동 로그아웃 예약
+    }
+    updateUserMenu();
 });
-

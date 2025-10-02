@@ -90,7 +90,7 @@ public class CommentServiceImpl implements CommentService {
     private static final Logger logger = LoggerFactory.getLogger(CommentServiceImpl.class);
 
 
-    
+    //*************************************************** Helper Method START ***************************************************//
     // DFS(재귀함수) : 자식 댓글 최신순 정렬
     private void sortChildComments(List<CommentResponseDTO> comments, boolean isRoot, String sortBy) {
 
@@ -142,7 +142,6 @@ public class CommentServiceImpl implements CommentService {
     	}
     }
 
-  //*************************************************** Helper Method START ***************************************************//
     private CommentResponseDTO convertCommentToDtoRecursive(Comment comment, Map<Long, Map<PostReactionType, Long>> reactionCountMap) {
 
     	logger.info("CommentServiceImpl convertCommentToDtoRecursive() Start");
@@ -161,7 +160,8 @@ public class CommentServiceImpl implements CommentService {
         		                                               likeCount, 
         		                                               dislikeCount, 
         		                                               false, 
-        		                                               memberNickname);
+        		                                               memberNickname,
+        		                                               comment.getMember().getMemberGradeLevel());
 
         // 자식댓글이 존재한다면
         if (comment.getChildComments() != null && !comment.getChildComments().isEmpty()) {

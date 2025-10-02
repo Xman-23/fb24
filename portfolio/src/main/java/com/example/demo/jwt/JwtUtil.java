@@ -22,8 +22,8 @@ public class JwtUtil {
 	 // 액세스 토큰 만료 시간: 30분 (1000ms * 60s * 30)
 	 private final long accessExpirationMs = 1000 * 60 * 30;
 
-	 // 리프레시 토큰 만료 시간: 7일
-	 private final long refreshExpirationMs = 1000 * 60 * 60 * 24 * 7;
+	 // 리프레시 토큰 만료 시간: 3일
+	 private final long refreshExpirationMs = 1000 * 60 * 60 * 24 * 3;
 
 	 // 비밀 키를 이용해 HMAC SHA 알고리즘을 적용한 키 객체 생성
 	 private final Key secretKey = Keys.hmacShaKeyFor(secret.getBytes());

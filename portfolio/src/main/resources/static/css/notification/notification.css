@@ -87,6 +87,15 @@ main {
 }
 
 
+#notification_hader_delete_all_button:disabled,
+#notification_hader_mark_all_read:disabled {
+    background-color: #ddd;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 /* ============================== 고급 탭 메뉴 ============================== */
 .notification-tabs {
     display: flex;
