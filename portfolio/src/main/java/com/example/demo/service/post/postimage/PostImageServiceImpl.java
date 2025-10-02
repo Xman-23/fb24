@@ -1,6 +1,9 @@
 package com.example.demo.service.post.postimage;
 
 
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.File;
 
 
@@ -10,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
+
+import javax.imageio.ImageIO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +65,7 @@ public class PostImageServiceImpl implements PostImageService {
         }
 
         String contentType = file.getContentType();
+        logger.info("FileServiceImpl uploadToLocal() contentType: {}", contentType);
 
         // 이미지 파일이 있는경우 (MIME타입 검사)
         // "image/jpeg", "image/png", "application/pdf" 이외의 콘텐츠는 예외 발생
@@ -106,7 +112,36 @@ public class PostImageServiceImpl implements PostImageService {
 
         try {
         	// 실제 파일 업로드
-            file.transferTo(fullPath.toFile());
+            // file.transferTo(fullPath.toFile());
+        	// 파일이 이미지인지 체크
+        	logger.info("FileServiceImpl uploadToLocal() 이미지 리사이즈 if 분기 Start");
+        	if (contentType != null && contentType.toLowerCase().startsWith("image/")) {
+
+                logger.info("FileServiceImpl uploadToLocal() 이미지 리사이즈 if 분기 In");
+
+                BufferedImage originalImage = ImageIO.read(file.getInputStream());
+
+                int targetWidth = 600;
+                int targetHeight = 400;
+
+                logger.info("원본 이미지 사이즈: {}x{}", originalImage.getWidth(), originalImage.getHeight());
+
+                // 고정 크기 적용
+                BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = resizedImage.createGraphics();
+                g2d.drawImage(originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH), 0, 0, null);
+                g2d.dispose();
+
+                logger.info("변환 후 이미지 사이즈: {}x{}", targetWidth, targetHeight);
+
+                ImageIO.write(resizedImage, ext, fullPath.toFile());
+
+        	} else {
+        	    // 이미지가 아니면 (pdf 같은거) 그냥 저장
+        		logger.info("FileServiceImpl uploadToLocal() 이미지 리사이즈 IF 분기 else Start");
+        	    file.transferTo(fullPath.toFile());
+        	    logger.info("FileServiceImpl uploadToLocal() 이미지 리사이즈 IF 분기 else End");
+        	}
         } catch (IOException e) {
         	logger.error("FileServiceImpl uploadToLocal IOException : 파일 업로드 실패",e);
             throw new IllegalStateException("파일 업로드 실패", e);

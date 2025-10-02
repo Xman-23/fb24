@@ -85,15 +85,15 @@
     display: flex;
     flex-direction: column; /* 세로 배열 유지 */
     gap: 12px;              /* 이미지 간격 넓힘 */
+    align-items: center;    /* 이미지 중앙 정렬 */
 }
 
-#post_detail #post_images img {
-    max-width: 100%;
+#post_images img {
+    width: 600px;
+    height: 400px;
+    object-fit: cover; /* 이미지 잘림 없이 꽉 채우기 */
     border-radius: 12px;
-    width: auto;       /* 고정 너비 대신 */
-    height: auto;      /* 원본 비율 유지 */
-    object-fit: contain; /* 잘리지 않고 보기 */
-    max-height: 400px;  /* 너무 큰 사진 제한 */
+    display: block;
 }
 /* 본문 및 이미지 영역 End */
 

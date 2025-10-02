@@ -76,7 +76,7 @@
 .popular_comment_info {
     display: flex;
     align-items: center;
-    gap: 8px; /* 작성자와 작성일 사이 간격 */
+    gap: 5px; /* 작성자와 작성일 사이 간격 */
 }
 
 /* 작성자 */
@@ -176,7 +176,7 @@
 .comment_info {
     display: flex;
     align-items: center;
-    gap: 8px; /* 작성자와 작성일 사이 간격 */
+    gap: 5px; /* 작성자와 작성일 사이 간격 */
 }
 
 /* 작성자 일반 댓글: 기본 글자색, pinned 댓글: 분홍 */
