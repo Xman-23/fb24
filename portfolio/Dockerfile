@@ -1,4 +1,5 @@
-FROM openjdk:17-jdk-slim AS builder
+# 배포시 반드시 내 java 버전을 확인하여 버전 맞추기 (cmd -> - java version)
+FROM openjdk:22-jdk-slim AS builder
 WORKDIR /app
 
 # gradlew와 프로젝트 복사
