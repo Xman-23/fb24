@@ -13,5 +13,5 @@ RUN chmod +x gradlew
 RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
 RUN dos2unix gradlew
 
-# Gradle wrapper 업데이트 & 빌드
+# Gradle wrapper로 빌드
 RUN ./gradlew clean build -x test
