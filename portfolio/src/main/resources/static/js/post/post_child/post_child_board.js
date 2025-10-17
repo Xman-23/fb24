@@ -55,7 +55,7 @@ function adminButton() {
 	    });
 
         $('#deleteParentBoardBtn').off('click').on('click', function() {
-            if(confirm("정말 이 부모게시판을 삭제하시겠습니까?")) {
+            if(confirm("정말 게시판을 삭제하시겠습니까?")) {
                 ajaxWithToken({
                     url: `/boards/admin/${boardId}`,
                     type: 'DELETE',
