@@ -1093,7 +1093,7 @@ public class PostServiceImpl implements PostService {
 	    			                                                                    popularLikeThreshold,
 	    			                                                                    popularNetLikeThreshold,
 	    			                                                                    recentThreshold,
-	    			                                                                    popularLimit
+	    			                                                                    PageRequest.of(0, popularLimit)
 	    			                                                                    );
 
 	    	List<Long> topPostIds = topPopularPosts.stream()
@@ -1175,7 +1175,7 @@ public class PostServiceImpl implements PostService {
 	    			                                                                    popularLikeThreshold,
 	    			                                                                    popularNetLikeThreshold,
 	    			                                                                    recentThreshold,
-	    			                                                                    popularLimit
+	    			                                                                    PageRequest.of(0, popularLimit)
 	    			                                                                    );
 
 	    	List<Long> topPostIds = topPopularPosts.stream()

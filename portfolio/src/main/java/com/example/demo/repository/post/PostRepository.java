@@ -339,14 +339,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		  + "   AND COALESCE(pr_summary.like_count, 0) >= :likeThreshold "
 		  + "   AND pr_summary.net_like_count >= :netLikeThreshold "
 		  + " ORDER BY COALESCE(pr_summary.like_count, 0) DESC, "
-		  + "          p.created_at DESC "
-		  + " LIMIT :limit ", 
+		  + "          p.created_at DESC ", 
 		  nativeQuery = true)
 	List<Post> findTopPostsByBoardWithNetLikes(@Param("boardId") Long boardId,
 											   @Param("likeThreshold") int likeThreshold,
 											   @Param("netLikeThreshold") int netLikeThreshold,
 											   @Param("recentThreshold") LocalDateTime recentThreshold,
-											   @Param("limit") int limit);
+											   Pageable pageable);
 
 	/* 좋아요 60일 기준으로 가중치 계산 
 	 한 페이지당 받을 데이터(content)와 데이터의 총 갯수 (totalElements) 구하기
