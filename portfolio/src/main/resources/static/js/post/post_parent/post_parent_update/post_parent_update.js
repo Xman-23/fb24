@@ -2,7 +2,7 @@ var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가�
 
 let allPreviews = [];  // 전체 preview DOM 저장
 let files = [];
-const maxCount = 10;   // 최대 업로드 개수 10개로 제한
+const maxCount = 7;   // 최대 업로드 개수 10개로 제한
 
 let existingImages = [];    // 기존 게시글 이미지 정보 저장
 

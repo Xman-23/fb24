@@ -2,7 +2,7 @@ var token = localStorage.getItem('accessToken'); // 현재 액세스 토큰 가�
 
 let allPreviews = [];  // 전체 preview DOM 저장
 let files = [];
-const maxCount = 10;   // 최대 업로드 개수 10개로 제한
+const maxCount = 7;   // 최대 업로드 개수 10개로 제한
 
 let existingImages = [];    // 기존 게시글 이미지 정보 저장
 
@@ -35,29 +35,6 @@ function updateFileNameList() {
 }
 
 //**************************************************************게시글 조회 Start******************************************************************************** */
-// 게시글 호출 API
-function getPostDetail() {
-    $.ajax({
-        url: `/posts/${postId}`,
-        method: 'GET',
-        success: function(post) {
-            if(post) {
-                // 제목, 내용 입력창에 값 세팅
-                $("#title").val(post.title);
-                $("#content").val(post.content);
-
-				get_board_api(post.boardId);
-
-                // 이미지 목록도 불러오기
-                getPostImages(postId);
-            }
-        },
-        error: function(err) {
-            alert("게시글 조회 실패: " + err.responseText);
-        }
-    });
-}
-
 // 게시판 정보 + 자식 게시판 조회
 function get_board_api(childBoardId) {
 	// 게시판ID 유효성 체크
@@ -77,11 +54,38 @@ function get_board_api(childBoardId) {
 			        `<option value="${child.boardId}" ${selected}>${child.name}</option>`
 			    );
 			});
+			getPostDetail();
         }).fail(function(xhr) {
         	console.error("자식 게시판 조회 실패:", xhr.responseText);
         });
     }).fail(function(xhr) {
     	console.error("게시판 단건 조회 실패:", xhr.responseText);
+    });
+}
+
+// 게시글 호출 API
+function getPostDetail() {
+    $.ajax({
+        url: `/posts/${postId}`,
+        method: 'GET',
+        success: function(post) {
+            if(post) {
+                // 제목, 내용 입력창에 값 세팅
+                $("#title").val(post.title);
+                $("#content").val(post.content);
+
+				// 게시판 선택 값 세팅 (boardId 가 내려온다고 가정)
+				/*if (post.boardId) {
+				    $("#board_select").val(post.boardId);
+				}*/
+
+                // 이미지 목록도 불러오기
+                getPostImages(postId);
+            }
+        },
+        error: function(err) {
+            alert("게시글 조회 실패: " + err.responseText);
+        }
     });
 }
 
@@ -125,7 +129,8 @@ function getPostImages(postId) {
     });
 }
 
-//**************************************************************게시글 조회 Start******************************************************************************** */
+//**************************************************************게시글 조회 End******************************************************************************** */
+
 //**************************************************************이미지 생성 Start********************************************************************************* */
 function image_visible() {
     $("#images").on("change", function (event) {
@@ -245,7 +250,6 @@ function image_orderNumber_change() {
 	        }
 	    }
 	});
-	// ========================================================================
 }
 
 //**************************************************************게시글 수정 End******************************************************************************** */
@@ -330,4 +334,6 @@ $(document).on("click", ".remove-image-btn", function() {
 //**************************************************************게시글 삭제 End******************************************************************************** */
 $(document).ready(function() {
 	getPostDetail();
+	image_visible();
+	image_orderNumber_change();
 });
