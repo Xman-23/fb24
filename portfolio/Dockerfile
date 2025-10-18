@@ -21,4 +21,4 @@ RUN mkdir -p /app/upload/image
 
 COPY --from=builder /app/build/libs/portfolio-0.0.1-SNAPSHOT.jar app.jar
 # 3단계: Render 사이트의 DB환경변수 연결을 위한 배포용 application-prod.properties 설정 ("--spring.profiles.active=prod")
-ENTRYPOINT ["sh", "-c", "java -jar app.jar --spring.profiles.active=prod"]
+ENTRYPOINT ["sh", "-c", "java -Xmx128m -Xms64m -XX:+UseSerialGC -jar app.jar --spring.profiles.active=prod"]
