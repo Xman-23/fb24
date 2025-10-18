@@ -1,22 +1,19 @@
 # 배포시 반드시 내 java 버전을 확인하여 버전 맞추기 (cmd -> - java version)
-# Rend
+# 1단계: 빌드
 FROM openjdk:22-jdk-slim AS builder
 WORKDIR /app
-
-# gradlew와 프로젝트 복사
 COPY gradlew .
 COPY gradle/ gradle/
 COPY build.gradle .
 COPY settings.gradle .
 COPY src/ src/
-
-# 실행 권한 + line ending 문제 해결
 RUN chmod +x gradlew
 RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
 RUN dos2unix gradlew
-
-# Gradle wrapper로 빌드
 RUN ./gradlew clean build -x test
 
-COPY build/libs/portfolio-0.0.1-SNAPSHOT.jar app.jar
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# 2단계: 실행
+FROM openjdk:22-jdk-slim
+WORKDIR /app
+COPY --from=builder /app/build/libs/portfolio-0.0.1-SNAPSHOT.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
