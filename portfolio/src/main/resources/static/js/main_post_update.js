@@ -35,6 +35,30 @@ function updateFileNameList() {
 }
 
 //**************************************************************게시글 조회 Start******************************************************************************** */
+
+// 게시글 호출 API
+function getPostDetail() {
+    $.ajax({
+        url: `/posts/${postId}`,
+        method: 'GET',
+        success: function(post) {
+            if(post) {
+                // 제목, 내용 입력창에 값 세팅
+                $("#title").val(post.title);
+                $("#content").val(post.content);
+
+				get_board_api(post.boardId);
+
+                // 이미지 목록도 불러오기
+                getPostImages(postId);
+            }
+        },
+        error: function(err) {
+            alert("게시글 조회 실패: " + err.responseText);
+        }
+    });
+}
+
 // 게시판 정보 + 자식 게시판 조회
 function get_board_api(childBoardId) {
 	// 게시판ID 유효성 체크
@@ -54,7 +78,6 @@ function get_board_api(childBoardId) {
 			        `<option value="${child.boardId}" ${selected}>${child.name}</option>`
 			    );
 			});
-			getPostDetail();
         }).fail(function(xhr) {
         	console.error("자식 게시판 조회 실패:", xhr.responseText);
         });
@@ -63,31 +86,6 @@ function get_board_api(childBoardId) {
     });
 }
 
-// 게시글 호출 API
-function getPostDetail() {
-    $.ajax({
-        url: `/posts/${postId}`,
-        method: 'GET',
-        success: function(post) {
-            if(post) {
-                // 제목, 내용 입력창에 값 세팅
-                $("#title").val(post.title);
-                $("#content").val(post.content);
-
-				// 게시판 선택 값 세팅 (boardId 가 내려온다고 가정)
-				/*if (post.boardId) {
-				    $("#board_select").val(post.boardId);
-				}*/
-
-                // 이미지 목록도 불러오기
-                getPostImages(postId);
-            }
-        },
-        error: function(err) {
-            alert("게시글 조회 실패: " + err.responseText);
-        }
-    });
-}
 
 // 기존 게시글 이미지 불러오기
 function getPostImages(postId) {
