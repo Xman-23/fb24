@@ -1,5 +1,8 @@
 package com.example.demo.config;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
@@ -19,12 +22,15 @@ public class WebConfig implements WebMvcConfigurer {
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 
-		// file:// 프로토콜 /C:/upload/images/ 로컬경로
-		String resourceLocation = "file:///" + basePath + "/";
+	    registry.addResourceHandler("/images/default/**")
+        .addResourceLocations("classpath:/static/images/default/");
 
-		registry.addResourceHandler("/images/**") // 요청 경로
-		        .addResourceLocations(resourceLocation); // 셀제 로컬 경로
-		// URL 요청: /images/abc.jpg → 실제 로컬 경로: C:/upload/image/abc.jpg
+	    //운영 환경에서는 basePath(로컬 경로) 등록하지 않음
+	    Path uploadPath = Path.of(basePath);
+	    if (Files.exists(uploadPath)) { // 존재할 때만 등록
+	        registry.addResourceHandler("/images/**")
+	                .addResourceLocations("file:///" + basePath + "/");
+	    }
 	}
 
 	@Override
