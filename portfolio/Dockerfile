@@ -1,4 +1,5 @@
 # 배포시 반드시 내 java 버전을 확인하여 버전 맞추기 (cmd -> - java version)
+# Rend
 FROM openjdk:22-jdk-slim AS builder
 WORKDIR /app
 
@@ -16,3 +17,6 @@ RUN dos2unix gradlew
 
 # Gradle wrapper로 빌드
 RUN ./gradlew clean build -x test
+
+COPY build/libs/portfolio-0.0.1-SNAPSHOT.jar app.jar
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
